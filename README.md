@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Integra - Dashboard de Formación
 
 Aplicativo interno de gestión de formación con KPIs en tiempo real. Diseño futurista y **optimizado para bajo consumo** de recursos.
@@ -35,3 +36,7 @@ Aplicativo interno de gestión de formación con KPIs en tiempo real. Diseño fu
 ## Datos
 
 Por defecto usa datos de ejemplo. Para conectar con un backend, modificar `loadMockData()` en `js/integra.js` para consumir tu API.
+=======
+# Integra
+Red 
+>>>>>>> 753143b4491a8dccac30d28bc37962a6020b532c
