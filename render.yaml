@@ -1,0 +1,13 @@
+# Render.com - Despliegue de Integra
+# https://dashboard.render.com → New → Blueprint
+
+services:
+  - type: web
+    name: integra
+    runtime: node
+    rootDir: server
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_VERSION
+        value: 20

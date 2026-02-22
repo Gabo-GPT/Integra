@@ -1,0 +1,921 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Integra - Dashboard de Formación</title>
+  <meta name="theme-color" content="#2a2e36">
+  <link rel="stylesheet" href="css/integra.css">
+</head>
+<body class="integra-dashboard">
+  <div id="loginOverlay" class="login-overlay">
+    <div class="login-card">
+      <div class="login-brand">
+        <span class="login-logo">◆</span>
+        <span>INTEGRA</span>
+      </div>
+      <h2 class="login-title">Portal de Servicios</h2>
+      <p class="login-subtitle">Ingresa con tu cuenta institucional</p>
+      <form class="login-form" id="loginForm">
+        <div class="login-field">
+          <label for="loginUsuario">Usuario o correo</label>
+          <input type="text" id="loginUsuario" placeholder="ej. 2024001 o estudiante@instituto.edu" autocomplete="username" required>
+        </div>
+        <div class="login-field">
+          <label for="loginPassword">Contraseña</label>
+          <input type="password" id="loginPassword" placeholder="••••••••" autocomplete="current-password" required>
+        </div>
+        <label class="login-remember">
+          <input type="checkbox" id="loginRemember" checked>
+          <span>Recordar sesión</span>
+        </label>
+        <button type="submit" class="login-btn">Iniciar sesión</button>
+      </form>
+      <div class="login-links">
+        <a href="#" class="login-link">¿Olvidaste tu contraseña?</a>
+        <a href="#" class="login-link">¿Eres agente? Regístrate aquí</a>
+      </div>
+    </div>
+    <p class="login-footer">INTEGRA · Acceso seguro</p>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-brand">
+        <span class="brand-icon">◆</span>
+        <span>Integra</span>
+      </div>
+      <button type="button" class="sidebar-toggle" aria-label="Menú" id="sidebarToggle">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+      </button>
+    </div>
+    <nav class="sidebar-nav">
+      <a href="#dashboard" class="nav-item active" data-section="dashboard">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
+        <span>Inicio</span>
+      </a>
+      <a href="#gestion" class="nav-item" data-section="gestion" data-user-only>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+        <span>Mi Gestión</span>
+      </a>
+      <a href="#tablero-mensual" class="nav-item" data-section="tablero-mensual" data-user-only>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="12" width="4" height="9"/><rect x="10" y="8" width="4" height="13"/><rect x="17" y="4" width="4" height="17"/></svg>
+        <span>Tablero Mensual</span>
+      </a>
+      <a href="#formacion" class="nav-item" data-section="formacion">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+        <span>Formación</span>
+      </a>
+      <a href="#calidad" class="nav-item" data-section="calidad" data-admin-only>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        <span>Matriz de Calidad</span>
+      </a>
+      <a href="#bolsa" class="nav-item" data-section="bolsa" data-admin-only>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+        <span>Bolsa</span>
+      </a>
+      <a href="#bolsa-hfc" class="nav-item" data-section="bolsa-hfc" data-admin-only>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+        <span>Bolsa HFC</span>
+      </a>
+      <a href="#agentes" class="nav-item" data-section="agentes" data-admin-only>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+        <span>Agentes</span>
+      </a>
+      <a href="#perfil" class="nav-item" data-section="perfil" data-admin-only>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+        <span>Perfil</span>
+      </a>
+    </nav>
+    <div class="sidebar-footer">
+      <span class="version">v1.0</span>
+    </div>
+  </aside>
+
+  <div class="main-wrap">
+    <header class="topbar">
+      <button type="button" class="topbar-menu" aria-label="Menú" id="topbarMenu">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+      </button>
+      <div class="topbar-title-wrap">
+        <h1 class="topbar-title" id="topbarTitle">Inicio</h1>
+        <button type="button" class="topbar-download" id="btnDescargarInforme" title="Descargar informe" aria-label="Descargar informe">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        </button>
+      </div>
+      <div class="topbar-search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <input type="search" placeholder="Buscar" aria-label="Buscar" id="searchInput">
+      </div>
+      <div class="topbar-user" id="topbarUser">
+        <span class="user-name" id="userName">Usuario</span>
+        <span class="user-role user-role-admin" id="userRole">Administrador</span>
+        <button type="button" class="btn-logout" id="btnCerrarSesion" title="Cerrar sesión" aria-label="Cerrar sesión">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          <span>Cerrar sesión</span>
+        </button>
+      </div>
+    </header>
+
+    <main class="content">
+      <section id="section-dashboard" class="section active">
+        <div class="dashboard-admin-content" id="dashboardAdminContent" data-admin-only>
+        <!-- Gestión Operación - HFC -->
+        <div class="calidad-header-bar" id="gestionOperacionHfcHeaderBar">
+          <h2 class="section-subtitle">GESTIÓN OPERACIÓN - HFC</h2>
+          <button type="button" class="calidad-toggle-btn" id="toggleGestionOperacionHfc" aria-label="Minimizar o expandir Gestión Operación - HFC" title="Minimizar/Expandir">
+            <svg class="icon-expand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+            <svg class="icon-collapse" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/></svg>
+          </button>
+        </div>
+        <div id="gestionOperacionHfcContent">
+        <div class="calidad-block">
+          <h3 class="eyn-titulo">Cierres y Reincidencias</h3>
+          <div class="eyn-cajitas" id="eynCajitasHfc">
+            <article class="card eyn-caja">
+              <h3>Cierres con Contacto</h3>
+              <div class="eyn-caja-body" id="hfcCierresContacto"></div>
+            </article>
+            <article class="card eyn-caja">
+              <h3>Cierres con Buzón</h3>
+              <div class="eyn-caja-body" id="hfcCierresBuzon"></div>
+            </article>
+            <article class="card eyn-caja">
+              <h3>Reincidencias</h3>
+              <div class="eyn-caja-body" id="hfcReincidencias"></div>
+            </article>
+          </div>
+          <div class="dashboard-bottom" style="margin-top:1.5rem">
+            <div class="card hfc-comparativo-card" style="width:100%">
+              <h3>Comparativo: Cierres con Contacto vs Buzón de voz</h3>
+              <div class="hfc-comparativo-chart" id="hfcComparativoChart">
+                <div class="hfc-comparativo-row">
+                  <span class="hfc-comparativo-label">Cierres con Contacto</span>
+                  <div class="hfc-comparativo-track"><div class="hfc-comparativo-fill hfc-fill-contacto" id="hfcBarContacto" style="width:0%"></div></div>
+                  <span class="hfc-comparativo-val" id="hfcValContacto">0</span>
+                  <span class="hfc-comparativo-pct" id="hfcPctContacto">0%</span>
+                </div>
+                <div class="hfc-comparativo-row">
+                  <span class="hfc-comparativo-label">Cierres con Buzón</span>
+                  <div class="hfc-comparativo-track"><div class="hfc-comparativo-fill hfc-fill-buzon" id="hfcBarBuzon" style="width:0%"></div></div>
+                  <span class="hfc-comparativo-val" id="hfcValBuzon">0</span>
+                  <span class="hfc-comparativo-pct" id="hfcPctBuzon">0%</span>
+                </div>
+              </div>
+            </div>
+            <div class="card hfc-donuts-panel" style="width:100%">
+              <div class="donuts-row hfc-donuts-row" id="hfcDonutsWrap">
+                <div class="donut-mini">
+                  <div class="donut-ring hfc-donut" style="--pct:36;--c:var(--integra-cyan)" id="hfcDonut1"></div>
+                  <span class="donut-label" id="hfcDonut1Label">36%</span>
+                </div>
+                <div class="donut-mini">
+                  <div class="donut-ring hfc-donut" style="--pct:64;--c:var(--integra-rose)" id="hfcDonut2"></div>
+                  <span class="donut-label" id="hfcDonut2Label">64%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        </div>
+
+        <hr class="section-divider" aria-hidden="true">
+
+        <!-- Gestión Operación - FO -->
+        <div class="calidad-header-bar" id="gestionOperacionHeaderBar">
+          <h2 class="section-subtitle">Gestión Operación - FO</h2>
+          <button type="button" class="calidad-toggle-btn" id="toggleGestionOperacion" aria-label="Minimizar o expandir Gestión Operación - FO" title="Minimizar/Expandir">
+            <svg class="icon-expand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+            <svg class="icon-collapse" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/></svg>
+          </button>
+        </div>
+        <div id="gestionOperacionContent">
+        <div class="calidad-block">
+          <h3 class="eyn-titulo">Casos Abiertos</h3>
+          <div class="eyn-cajitas" id="eynCajitas">
+            <article class="card eyn-caja">
+              <h3>EYN- Soporte Back Negocios</h3>
+              <div class="eyn-caja-body" id="eynBackNegocios"></div>
+            </article>
+            <article class="card eyn-caja">
+              <h3>EYN- Soporte Negocios GI</h3>
+              <div class="eyn-caja-body" id="eynNegociosGI"></div>
+            </article>
+            <article class="card eyn-caja">
+              <h3>EYN- PROACTIVIDAD VIP</h3>
+              <div class="eyn-caja-body" id="eynProactividad"></div>
+            </article>
+          </div>
+          <p class="calidad-section-sub">SLA y rankings de agentes</p>
+          <div class="calidad-grid">
+            <article class="card">
+              <h3>SLA - Fase de cierre (50%/75%)</h3>
+              <div class="sla-fase-cierre-list" id="slaFaseCierreList"></div>
+            </article>
+            <article class="card">
+              <h3>Estado Resuelto</h3>
+              <div class="ranking-list" id="rankingMasCierran"></div>
+            </article>
+          </div>
+        </div>
+        <div class="dashboard-bottom">
+          <div class="panel-reincidencia-chart">
+            <div class="panel-reincidencia-header">
+              <h3>TOP 10 CÓDIGOS DE SERVICIO MÁS REINCIDENTES</h3>
+              <svg class="icon-trofeo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 21h8"/><path d="M12 17v4"/><path d="M7 4h10v7a5 5 0 0 1-10 0V4z"/><path d="M7 4a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v3h4V4z"/><path d="M17 4a2 2 0 0 1 2-2h1a2 2 0 0 1 2 2v3h-4V4z"/><path d="M5 7H3v2a5 5 0 0 0 4 4.9V7z"/><path d="M21 7h-2v2a5 5 0 0 1-4 4.9V7z"/></svg>
+            </div>
+            <div class="reincidencia-chart-wrap" id="reincidenciaChartWrap">
+              <div class="reincidencia-bars" id="reincidenciaBars"></div>
+            </div>
+          </div>
+          <div class="panel-reincidencia-chart panel-reincidencia-sin-enlace">
+            <div class="panel-reincidencia-header">
+              <h3>TOP 10 CI/AFECTADO SIN ENLACE (NITs)</h3>
+              <svg class="icon-trofeo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+            </div>
+            <div class="reincidencia-chart-wrap" id="reincidenciaSinEnlaceChartWrap">
+              <div class="reincidencia-bars" id="reincidenciaBarsSinEnlace"></div>
+            </div>
+          </div>
+        </div>
+        </div>
+
+        <hr class="section-divider" aria-hidden="true">
+
+        <!-- Calidad -->
+        <div class="calidad-header-bar" id="calidadHeaderBar">
+          <h2 class="section-subtitle">Matriz de Calidad</h2>
+          <button type="button" class="calidad-toggle-btn" id="toggleCalidad" aria-label="Minimizar o expandir Matriz de Calidad" title="Minimizar/Expandir">
+            <svg class="icon-expand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+            <svg class="icon-collapse" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/></svg>
+          </button>
+        </div>
+        <div id="calidadDashboardContent">
+        <div class="calidad-block calidad-block-orden">
+          <div class="calidad-grid">
+            <article class="card card-semaforo" id="calidadSemaforoCard">
+              <h3>Estado general de calidad</h3>
+              <div class="semaforo-wrap" id="calidadSemaforoWrap"></div>
+            </article>
+            <article class="card">
+              <h3>Área con mayor impacto en calidad</h3>
+              <div class="letra-mas-afectada-wrap" id="letraMasAfectadaWrap"></div>
+            </article>
+            <article class="card">
+              <h3>Procesos con mayor incidencia de error</h3>
+              <div class="top3-macro-wrap" id="top3MacroWrap"></div>
+            </article>
+            <article class="card card-insight" id="calidadInsightCard">
+              <h3>💡 Insight de calidad</h3>
+              <div class="insight-wrap" id="calidadInsightWrap"></div>
+            </article>
+          </div>
+          <div class="calidad-tendencia" id="calidadTendenciaWrap"></div>
+        </div>
+        </div>
+
+        <div id="dashboardAgentContent" class="dashboard-agent-content" style="display:none" data-user-only>
+          <div id="productividadAgenteWrap"></div>
+        </div>
+
+        <hr class="section-divider" aria-hidden="true">
+
+        <!-- Formación -->
+        <div class="formacion-header-bar" id="formacionHeaderBar">
+          <h2 class="section-subtitle">Formación</h2>
+          <button type="button" class="formacion-toggle-btn" id="toggleFormacion" aria-label="Minimizar o expandir Formación" title="Minimizar/Expandir">
+            <svg class="icon-expand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+            <svg class="icon-collapse" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/></svg>
+          </button>
+        </div>
+        <div id="formacionDashboardContent">
+        <!-- Fila 1: Nota certificación | Certificación Mensual | Cobertura -->
+        <div class="dashboard-row1">
+          <div class="kpi-group kpi-group-teal">
+            <h3 class="kpi-group-title">Nota de certificación</h3>
+            <div class="kpi-row">
+              <div class="kpi-box">
+                <span class="kpi-val" id="kpiCertAprobados">25</span>
+                <span class="kpi-label">Aprobados</span>
+              </div>
+              <div class="kpi-box">
+                <span class="kpi-val" id="kpiCertReprobados">3</span>
+                <span class="kpi-label">Reprobados</span>
+              </div>
+              <div class="kpi-box">
+                <span class="kpi-val" id="kpiCertCobertura">65 %</span>
+                <span class="kpi-label">Cobertura</span>
+              </div>
+            </div>
+            <div class="sparkline-wrap" id="sparkCert">
+              <svg class="sparkline" viewBox="0 0 200 50" preserveAspectRatio="none">
+                <line class="sparkline-reference" x1="0" y1="25" x2="200" y2="25" stroke="#f472b6" stroke-width="1" stroke-dasharray="4 2" stroke-opacity="0.9"/>
+                <polyline fill="none" stroke="var(--integra-cyan)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+          </div>
+          <div class="panel-aprobacion panel-aprobacion-futuro">
+            <h3>Certificación Mensual</h3>
+            <div class="aprobacion-futuro-grid">
+              <div class="aprobacion-col-izq">
+                <div class="aprobacion-tasa-num" id="aprobacionTasaNum">80.6%</div>
+                <div class="aprobacion-tasa-label">Tasa de Aprobación</div>
+                <ul class="aprobacion-lista">
+                  <li><span class="aprobacion-icon aprobacion-icon-rose"></span><span id="leyendaReprobo">Reprobó 2</span></li>
+                  <li><span class="aprobacion-icon aprobacion-icon-orange"></span><span id="leyendaNovedades">Novedades 4</span></li>
+                  <li><span class="aprobacion-icon aprobacion-icon-total"></span><span id="leyendaTotalEval">Total evaluados 31</span></li>
+                </ul>
+              </div>
+              <div class="aprobacion-col-der">
+                <div class="pie-aprobacion-wrap-futuro">
+                  <div class="pie-aprobacion pie-aprobacion-futuro" id="pieAprobacion" role="img" aria-label="Certificación mensual"></div>
+                  <div class="pie-aprobacion-center">
+                    <span class="pie-aprobacion-val" id="pieAprobacionVal">80.6%</span>
+                    <span class="pie-aprobacion-label">Tasa de Aprobación</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="aprobacion-footer">
+              <span class="leyenda-item"><i class="leyenda-dot" style="background:var(--integra-rose)"></i> <span id="leyendaReproboFooter">Reprobó 2</span></span>
+              <span class="leyenda-item"><i class="leyenda-dot" style="background:var(--integra-orange)"></i> <span id="leyendaNovedadesFooter">Novedades 4</span></span>
+              <span class="leyenda-item"><i class="leyenda-dot" style="background:var(--integra-text-muted)"></i> <span id="leyendaTotalFooter">Total evaluados 31</span></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Fila 2: Estatus del preturno + Promedio -->
+        <div class="dashboard-row2">
+          <div class="kpi-group">
+            <h3 class="kpi-group-title">Estatus del preturno</h3>
+            <div class="sparkline-wrap sparkline-pret" id="sparkPret">
+              <svg class="sparkline" viewBox="0 0 200 50" preserveAspectRatio="none">
+                <polyline class="sparkline-agentes" fill="none" stroke="var(--integra-success)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                <polyline class="sparkline-staff" fill="none" stroke="#f472b6" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            <div class="desempeno-leyenda">
+              <span class="desempeno-leyenda-item"><i class="desempeno-dot" style="background:var(--integra-success)"></i> Preturnos Agentes</span>
+              <span class="desempeno-leyenda-item"><i class="desempeno-dot" style="background:var(--integra-rose)"></i> Preturnos Staff</span>
+            </div>
+            <div class="desempeno-chart">
+              <div class="desempeno-bar-wrap">
+                <span class="desempeno-label">Preturnos Agentes</span>
+                <div class="desempeno-bar-bg"><div class="desempeno-bar" id="desempenoBarAgentes" style="--pct:99"></div></div>
+                <span class="desempeno-val" id="desempenoValAgentes">99.4</span>
+              </div>
+              <div class="desempeno-bar-wrap">
+                <span class="desempeno-label">Preturnos Staff</span>
+                <div class="desempeno-bar-bg"><div class="desempeno-bar desempeno-bar-staff" id="desempenoBarStaff" style="--pct:89"></div></div>
+                <span class="desempeno-val" id="desempenoValStaff">89 %</span>
+              </div>
+            </div>
+          </div>
+          <div class="panel-promedio">
+            <h3>Preturnos Agentes</h3>
+            <div class="gauge-wrap">
+              <svg class="gauge-svg gauge-segmented" viewBox="0 0 200 130" aria-label="Preturnos Agentes">
+                <g class="gauge-segments">
+                  <path class="gauge-seg gauge-seg-red" d="M 25 95 A 75 75 0 0 1 29.5 69.4"/>
+                  <path class="gauge-seg gauge-seg-red" d="M 29.5 69.4 A 75 75 0 0 1 42.5 46.8"/>
+                  <path class="gauge-seg gauge-seg-red" d="M 42.5 46.8 A 75 75 0 0 1 62.5 30"/>
+                  <path class="gauge-seg gauge-seg-yellow" d="M 62.5 30 A 75 75 0 0 1 87 21"/>
+                  <path class="gauge-seg gauge-seg-yellow" d="M 87 21 A 75 75 0 0 1 113 21"/>
+                  <path class="gauge-seg gauge-seg-green" d="M 113 21 A 75 75 0 0 1 137.5 30"/>
+                  <path class="gauge-seg gauge-seg-green" d="M 137.5 30 A 75 75 0 0 1 157.5 46.8"/>
+                  <path class="gauge-seg gauge-seg-green" d="M 157.5 46.8 A 75 75 0 0 1 170.5 69.4"/>
+                  <path class="gauge-seg gauge-seg-green" d="M 170.5 69.4 A 75 75 0 0 1 175 95"/>
+                </g>
+                <g class="gauge-labels">
+                  <text x="22" y="78">10%</text><text x="35" y="55">20%</text><text x="50" y="38">30%</text>
+                  <text x="72" y="26">40%</text><text x="100" y="18">50%</text><text x="128" y="26">60%</text>
+                  <text x="150" y="38">70%</text><text x="165" y="55">80%</text><text x="178" y="78">90%</text>
+                </g>
+                <path class="gauge-base" d="M 85 95 A 15 15 0 0 1 115 95" fill="var(--integra-border)"/>
+                <line class="gauge-needle" id="promedioNeedleDash" x1="100" y1="95" x2="100" y2="35" stroke="var(--integra-text)" stroke-width="3" stroke-linecap="round"/>
+              </svg>
+              <span class="gauge-valor" id="promedioValorDash">99.4</span>
+              <span class="gauge-mes" id="promedioMesDash"></span>
+            </div>
+          </div>
+          <div class="panel-promedio panel-promedio-staff">
+            <h3>Preturnos Staff</h3>
+            <div class="gauge-wrap">
+              <svg class="gauge-svg gauge-segmented" viewBox="0 0 200 130" aria-label="Preturnos Staff">
+                <g class="gauge-segments">
+                  <path class="gauge-seg gauge-seg-red" d="M 25 95 A 75 75 0 0 1 29.5 69.4"/>
+                  <path class="gauge-seg gauge-seg-red" d="M 29.5 69.4 A 75 75 0 0 1 42.5 46.8"/>
+                  <path class="gauge-seg gauge-seg-red" d="M 42.5 46.8 A 75 75 0 0 1 62.5 30"/>
+                  <path class="gauge-seg gauge-seg-yellow" d="M 62.5 30 A 75 75 0 0 1 87 21"/>
+                  <path class="gauge-seg gauge-seg-yellow" d="M 87 21 A 75 75 0 0 1 113 21"/>
+                  <path class="gauge-seg gauge-seg-green" d="M 113 21 A 75 75 0 0 1 137.5 30"/>
+                  <path class="gauge-seg gauge-seg-green" d="M 137.5 30 A 75 75 0 0 1 157.5 46.8"/>
+                  <path class="gauge-seg gauge-seg-green" d="M 157.5 46.8 A 75 75 0 0 1 170.5 69.4"/>
+                  <path class="gauge-seg gauge-seg-green" d="M 170.5 69.4 A 75 75 0 0 1 175 95"/>
+                </g>
+                <g class="gauge-labels">
+                  <text x="22" y="78">10%</text><text x="35" y="55">20%</text><text x="50" y="38">30%</text>
+                  <text x="72" y="26">40%</text><text x="100" y="18">50%</text><text x="128" y="26">60%</text>
+                  <text x="150" y="38">70%</text><text x="165" y="55">80%</text><text x="178" y="78">90%</text>
+                </g>
+                <path class="gauge-base" d="M 85 95 A 15 15 0 0 1 115 95" fill="var(--integra-border)"/>
+                <line class="gauge-needle" id="promedioStaffNeedleDash" x1="100" y1="95" x2="100" y2="35" stroke="var(--integra-text)" stroke-width="3" stroke-linecap="round"/>
+              </svg>
+              <span class="gauge-valor" id="promedioStaffValorDash">89 %</span>
+              <span class="gauge-mes" id="promedioStaffMesDash"></span>
+            </div>
+          </div>
+        </div>
+        </div>
+        </div>
+      </section>
+
+      <section id="section-gestion" class="section">
+        <div class="agentes-header">
+          <h2>Mi Gestión</h2>
+          <p>Documenta tus casos y lleva el conteo de cuántos has tocado</p>
+        </div>
+        <div class="gestion-counter-card">
+          <span class="gestion-counter-icon gestion-counter-icon-red">📄</span>
+          <span class="gestion-counter-val" id="gestionCasosCount">0</span>
+          <span class="gestion-counter-label">Casos que has tocado</span>
+          <button type="button" class="gestion-counter-download" id="btnGestionDescargarExcel" title="Descargar Excel" aria-label="Descargar Excel">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M12 18v-6"/><path d="M9 15l3 3 3-3"/></svg>
+          </button>
+        </div>
+        <div class="portal-card gestion-form-card">
+          <h3 class="portal-card-title">Gestión Inmediata</h3>
+          <div class="gestion-form">
+            <div class="gestion-section">
+              <h4>Datos del caso</h4>
+              <div class="gestion-row">
+                <div class="portal-field"><label for="gestionNombre">Nombre del Técnico</label><input type="text" id="gestionNombre" placeholder="Nombre del técnico"></div>
+                <div class="portal-field"><label for="gestionNumero">Número</label><input type="text" id="gestionNumero" placeholder="Número"></div>
+                <div class="portal-field"><label for="gestionNit">Digite Enlace <span class="gestion-required">*</span></label><input type="text" id="gestionNit" placeholder="Enlace" required></div>
+              </div>
+            </div>
+            <div class="gestion-section">
+              <h4>Área y función</h4>
+              <div class="gestion-row">
+                <div class="portal-field"><label for="gestionAliado">Aliado</label><select id="gestionAliado" aria-label="Seleccione aliado">
+                  <option value="">Seleccione aliado</option>
+                  <option value="DICO">DICO</option>
+                  <option value="TABASCO">TABASCO</option>
+                  <option value="ALGAR">ALGAR</option>
+                  <option value="INMEL">INMEL</option>
+                  <option value="CINCO">CINCO</option>
+                  <option value="TELCOS">TELCOS</option>
+                  <option value="DOMINIUM">DOMINIUM</option>
+                  <option value="SICTE">SICTE</option>
+                  <option value="CONECTAR">CONECTAR</option>
+                  <option value="POSITIVO">POSITIVO</option>
+                </select></div>
+                <div class="portal-field"><label for="gestionFuncion">Función</label><select id="gestionFuncion" aria-label="Seleccione función">
+                  <option value="">Seleccione</option>
+                  <option value="DATOS">DATOS</option>
+                  <option value="PLANTA">PLANTA</option>
+                </select></div>
+                <div class="portal-field"><label for="gestionImot">IM/OT</label><input type="text" id="gestionImot" placeholder="IM/OT"></div>
+              </div>
+            </div>
+            <div class="gestion-section">
+              <h4>Transferencia y cliente</h4>
+              <div class="gestion-row">
+                <div class="portal-field"><label for="gestionTransferencia">Transferencia</label><select id="gestionTransferencia" aria-label="Seleccione transferencia">
+                  <option value="">Seleccione</option>
+                  <option value="SI">SI</option>
+                  <option value="NO">NO</option>
+                </select></div>
+                <div class="portal-field"><label for="gestionCliente">Cliente recibe servicio</label><input type="text" id="gestionCliente" placeholder="Nombre del cliente"></div>
+                <div class="portal-field"><label for="gestionPqr">Confirmación de PQR</label><input type="text" id="gestionPqr" placeholder="Confirma SD"></div>
+              </div>
+              <div class="gestion-row gestion-transferencia-extras" id="gestionTransferenciaExtras" style="display:none">
+                <div class="portal-field"><label for="gestionAreaTransferir">Área a transferir</label><select id="gestionAreaTransferir" aria-label="Seleccione área">
+                  <option value="">Seleccione área</option>
+                  <option value="Empresas GI" data-ext="41491000000">Empresas GI</option>
+                  <option value="Clientes especiales remotos/Front" data-ext="41492000000">Clientes especiales remotos/Front</option>
+                  <option value="NOC Clientes especiales" data-ext="41453200000">NOC Clientes especiales</option>
+                  <option value="NOC LAN" data-ext="41491600000">NOC LAN</option>
+                  <option value="NOC Negocios/IRE Negocios" data-ext="41490800000">NOC Negocios/IRE Negocios</option>
+                  <option value="EYN - NOC Corporativo – P1" data-ext="41491500000">EYN - NOC Corporativo – P1</option>
+                  <option value="LAN ADMINISTRADA" data-ext="93105634345">LAN ADMINISTRADA</option>
+                  <option value="Datacenter - Red Corporativa" data-ext="41776200000">Datacenter - Red Corporativa</option>
+                </select></div>
+                <div class="portal-field"><label for="gestionExtensiones">Extensiones</label><input type="text" id="gestionExtensiones" placeholder="Se selecciona con el área" readonly></div>
+              </div>
+            </div>
+            <div class="gestion-section">
+              <h4>Detalle de la falla</h4>
+              <div class="gestion-row">
+                <div class="portal-field"><label for="gestionCausa">Causa de la falla</label><textarea id="gestionCausa" rows="2" placeholder="Describa la causa de la falla"></textarea></div>
+                <div class="portal-field"><label for="gestionSolucion">Solución de la falla</label><textarea id="gestionSolucion" rows="2" placeholder="Describa la solución aplicada"></textarea></div>
+              </div>
+            </div>
+            <div class="gestion-section" id="gestionPruebasSection">
+              <h4>Pruebas de configuraciones</h4>
+              <div class="gestion-grid-config">
+                <div class="portal-field"><label for="gestionRed">Red de acceso</label><input type="text" id="gestionRed" placeholder="Ej. Ok"></div>
+                <div class="portal-field"><label for="gestionNodo">Nodo</label><input type="text" id="gestionNodo" placeholder="Ej. Ok"></div>
+                <div class="portal-field"><label for="gestionCpe">Acceso a CPE</label><input type="text" id="gestionCpe" placeholder="Ej. Ok"></div>
+              </div>
+            </div>
+            <button type="button" class="portal-btn portal-btn-primary" id="btnGestionAgregar">Agregar caso</button>
+          </div>
+        </div>
+        <div class="portal-card gestion-plantilla-card">
+          <div class="gestion-plantilla-header">
+            <h3 class="portal-card-title">Plantilla de gestión (concatenada)</h3>
+            <button type="button" class="portal-btn portal-btn-secondary" id="btnGestionCopiar">Copiar plantilla</button>
+          </div>
+          <p class="gestion-plantilla-desc">Se rellena con el nombre del agente y los datos del formulario o del caso seleccionado.</p>
+          <textarea id="gestionPlantilla" class="gestion-plantilla-output" rows="12" readonly></textarea>
+        </div>
+        <div class="portal-card">
+          <h3 class="portal-card-title">Mis casos</h3>
+          <div class="table-wrap">
+            <table class="data-table portal-table" id="tablaGestionCasos">
+              <thead><tr><th>Nombre técnico</th><th>Número</th><th>Enlace</th><th>Aliado</th><th>Función</th><th>Transferencia</th><th>Área</th><th>Extensiones</th><th>Cliente</th><th>Fecha/Hora</th><th>Duración</th><th>Acciones</th></tr></thead>
+              <tbody id="gestionCasosBody"></tbody>
+            </table>
+          </div>
+          <p class="portal-empty" id="gestionCasosEmpty">No has documentado casos aún. Agrega uno arriba.</p>
+        </div>
+      </section>
+
+      <section id="section-tablero-mensual" class="section">
+        <div class="agentes-header">
+          <h2>Tablero Mensual</h2>
+          <p>Gestión día a día del mes. Visualiza en qué días gestionaste más casos.</p>
+        </div>
+        <div class="tablero-mensual-card">
+          <div class="tablero-mensual-header">
+            <h3 class="portal-card-title" id="tableroMensualMes">Febrero 2025</h3>
+            <select id="tableroMensualSelector" aria-label="Mes y año">
+              <!-- Se rellena por JS -->
+            </select>
+          </div>
+          <div class="tablero-mensual-bars" id="tableroMensualBars">
+            <!-- Barras día a día -->
+          </div>
+          <div class="tablero-mensual-total">
+            <span class="tablero-mensual-total-label">Total del mes:</span>
+            <span class="tablero-mensual-total-val" id="tableroMensualTotal">0</span>
+            <span class="tablero-mensual-total-sub">casos</span>
+          </div>
+          <p class="portal-empty" id="tableroMensualEmpty">No hay casos registrados en este mes.</p>
+        </div>
+      </section>
+
+      <section id="section-calidad" class="section">
+        <div class="calidad-header">
+          <h2>Matriz de Calidad</h2>
+          <p>Auditorías de los agentes e ítems afectados</p>
+        </div>
+        <div class="auditorias-card">
+          <h3>Auditorías de los agentes</h3>
+          <div class="auditorias-form-wrap">
+            <div class="auditorias-form auditorias-form-cascada">
+              <input type="text" id="auditoriaAgente" placeholder="Agente" aria-label="Agente">
+              <input type="text" id="auditoriaNota" placeholder="Nota" aria-label="Nota">
+              <select id="auditoriaLetra" aria-label="Letra">
+                <option value="">Seleccione letra</option>
+                <option value="G">G</option>
+                <option value="A1">A1</option>
+                <option value="N">N</option>
+                <option value="A2">A2</option>
+              </select>
+              <select id="auditoriaItem" aria-label="Item">
+                <option value="">Seleccione item</option>
+              </select>
+              <select id="auditoriaItemCausales" aria-label="Item causales" style="display:none">
+                <option value="">Seleccione item causal</option>
+              </select>
+              <button type="button" class="btn-auditoria-add" id="btnAuditoriaAgregar">Agregar</button>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table class="data-table auditorias-table" id="tablaAuditorias">
+              <thead><tr><th>Agente</th><th>Nota</th><th>Letra</th><th>Macroproceso</th><th>Descripción del ítem</th><th></th></tr></thead>
+              <tbody id="auditoriasBody"></tbody>
+            </table>
+          </div>
+          <p class="auditorias-empty" id="auditoriasEmpty">No hay auditorías. Agrega una arriba.</p>
+        </div>
+      </section>
+
+      <section id="section-bolsa" class="section">
+        <div class="calidad-header">
+          <h2>Bolsa</h2>
+          <p>Gestión de bolsa de horas</p>
+        </div>
+        <div class="portal-card">
+          <h3 class="portal-card-title">Casos abiertos</h3>
+<p class="portal-card-desc">Pega la tabla con columnas: ID de incidente, Prioridad, Estado de alerta, Estado, Grupo de asignación. Estado de alerta (open→abiertos, 50%/75%→SLA, 100%→resueltos).</p>
+            <div class="bolsa-import">
+            <label for="bolsaPegar">Pegar datos de Excel</label>
+            <textarea id="bolsaPegar" rows="4" placeholder="Pega aquí la tabla (ID de incidente, Prioridad, Estado de alerta, Estado, Grupo de asignación)"></textarea>
+            <button type="button" class="portal-btn portal-btn-secondary" id="btnBolsaImportar">Importar y contar</button>
+          </div>
+          <div class="bolsa-form">
+            <div class="portal-field">
+              <label for="bolsaBackNegocios">EYN- Soporte Back Negocios</label>
+              <input type="number" id="bolsaBackNegocios" min="0" placeholder="0" aria-label="Casos Back Negocios">
+            </div>
+            <div class="portal-field">
+              <label for="bolsaNegociosGI">EYN- Soporte Negocios GI</label>
+              <input type="number" id="bolsaNegociosGI" min="0" placeholder="0" aria-label="Casos Negocios GI">
+            </div>
+            <div class="portal-field">
+              <label for="bolsaProactividad">EYN- PROACTIVIDAD VIP</label>
+              <input type="number" id="bolsaProactividad" min="0" placeholder="0" aria-label="Casos Proactividad VIP">
+            </div>
+          </div>
+          <p class="portal-card-desc">SLA fase de cierre (50%/75%) – se extrae del Excel o se puede corregir manualmente:</p>
+          <div class="bolsa-form bolsa-sla-fields">
+            <div class="portal-field">
+              <label for="bolsaSlaBackNegocios">SLA Back Negocios</label>
+              <input type="number" id="bolsaSlaBackNegocios" min="0" placeholder="0" aria-label="SLA Back Negocios">
+            </div>
+            <div class="portal-field">
+              <label for="bolsaSlaNegociosGI">SLA Negocios GI</label>
+              <input type="number" id="bolsaSlaNegociosGI" min="0" placeholder="0" aria-label="SLA Negocios GI">
+            </div>
+            <div class="portal-field">
+              <label for="bolsaSlaProactividad">SLA PROACTIVIDAD VIP</label>
+              <input type="number" id="bolsaSlaProactividad" min="0" placeholder="0" aria-label="SLA Proactividad VIP">
+            </div>
+          </div>
+          <button type="button" class="portal-btn" id="btnBolsaGuardar">Guardar</button>
+        </div>
+        <div class="portal-card">
+          <h3 class="portal-card-title">Reincidencia 3 meses</h3>
+          <p class="portal-card-desc">Pega la tabla de Excel. Se cuentan NITs con 2+ casos en los últimos 3 meses. Columnas esperadas: NIT, Fecha, CI/AFECTADO (código de enlace). Los NITs se agrupan por código CI/AFECTADO.</p>
+          <div class="bolsa-import">
+            <label for="reincidenciaPegar">Pegar datos de Excel</label>
+            <textarea id="reincidenciaPegar" rows="4" placeholder="Pega aquí la tabla (columnas: NIT, Fecha, CI/AFECTADO, ID, Categoría, etc.)"></textarea>
+            <button type="button" class="portal-btn portal-btn-secondary" id="btnReincidenciaImportar">Importar y contar</button>
+          </div>
+          <div class="reincidencia-result-wrap">
+            <div class="reincidencia-total">Total reincidencias: <span id="reincidenciaTotalVal">0</span></div>
+            <div class="reincidencia-table-wrap">
+              <table class="data-table portal-table" id="tablaReincidenciaBolsa">
+                <thead><tr><th>CI/AFECTADO</th><th>NIT</th><th>Reincidencia</th></tr></thead>
+                <tbody id="reincidenciaBodyBolsa"></tbody>
+              </table>
+            </div>
+            <p class="portal-empty" id="reincidenciaEmptyBolsa">Importa datos arriba para ver NITs repetidos.</p>
+          </div>
+        </div>
+        <div class="portal-card">
+          <h3 class="portal-card-title">Asignar casos</h3>
+          <p class="portal-card-desc">Pega la tabla con IMs. Se distribuyen al azar entre los agentes del portal.</p>
+          <div class="bolsa-import">
+            <label for="asignarCasosPegar">Pegar datos de Excel</label>
+            <textarea id="asignarCasosPegar" rows="4" placeholder="Pega aquí la columna de IMs (ej. IM3788260, IM3788261...). Solo se extraen IDs con formato IM + dígitos."></textarea>
+            <button type="button" class="portal-btn portal-btn-secondary" id="btnAsignarCasosImportar">Importar y asignar</button>
+          </div>
+          <div class="asignar-casos-table-wrap">
+            <table class="data-table portal-table" id="tablaAsignarCasos">
+              <thead>
+                <tr><th>Agente</th><th>Usuario</th><th>IMs asignados</th></tr>
+              </thead>
+              <tbody id="asignarCasosBody"></tbody>
+            </table>
+          </div>
+          <p class="portal-empty" id="asignarCasosEmpty">Importa IMs arriba para ver la asignación por agente.</p>
+        </div>
+      </section>
+
+      <section id="section-bolsa-hfc" class="section">
+        <div class="calidad-header">
+          <h2>Bolsa HFC</h2>
+          <p>Datos para Gestión Operación - HFC</p>
+        </div>
+        <div class="portal-card">
+          <h3 class="portal-card-title">Datos HFC</h3>
+          <p class="portal-card-desc">Cierres y reincidencias para la sección HFC en Inicio. Reincidencias: pega tabla con NIT y Fecha.</p>
+          <div class="bolsa-form">
+            <div class="portal-field">
+              <label for="bolsaHfcCierresContacto">Cierres con Contacto</label>
+              <input type="number" id="bolsaHfcCierresContacto" min="0" placeholder="0">
+            </div>
+            <div class="portal-field">
+              <label for="bolsaHfcCierresBuzon">Cierres con Buzón</label>
+              <input type="number" id="bolsaHfcCierresBuzon" min="0" placeholder="0">
+            </div>
+          </div>
+          <div class="bolsa-import">
+            <label for="hfcReincidenciaPegar">Reincidencias HFC</label>
+            <textarea id="hfcReincidenciaPegar" rows="3" placeholder="Pega tabla (NIT, Fecha)"></textarea>
+            <button type="button" class="portal-btn portal-btn-secondary" id="btnHfcReincidenciaImportar">Importar reincidencias HFC</button>
+          </div>
+          <div class="bolsa-form" style="margin-top:1rem">
+            <div class="portal-field">
+              <label for="bolsaHfcReincidenciasNum">Reincidencias</label>
+              <input type="number" id="bolsaHfcReincidenciasNum" min="0" placeholder="0 (ej. 25)">
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="section-formacion" class="section">
+        <div class="formacion-header">
+          <h2>Formación</h2>
+          <p>Planta, cobertura y resultados de formación</p>
+        </div>
+        <div class="formacion-tables">
+          <div class="formacion-table-card">
+            <h3>Alcance</h3>
+            <table class="formacion-table">
+              <tr><th>Planta Total</th><td class="editable" contenteditable="true" data-key="plantaTotal" id="formPlantaTotal">35</td></tr>
+              <tr><th>Público Objetivo</th><td class="editable" contenteditable="true" data-key="publicoObjetivo" id="formPublicoObjetivo">31</td></tr>
+            </table>
+          </div>
+          <div class="formacion-table-card">
+            <h3>Asistencia</h3>
+            <table class="formacion-table">
+              <tr><th>Presentó</th><td class="editable" contenteditable="true" data-key="presento" id="formPresento">20</td><td id="formPresentoPct">65 %</td></tr>
+              <tr><th>Pendiente</th><td class="editable" contenteditable="true" data-key="pendiente" id="formPendiente">11</td><td></td></tr>
+              <tr><th>Cobertura</th><td colspan="2" id="formCobertura">65 %</td></tr>
+            </table>
+          </div>
+          <div class="formacion-table-card">
+            <h3>Resultados</h3>
+            <table class="formacion-table">
+              <tr><th>Aprobó <span class="formacion-base-hint">(% s/ Presentó)</span></th><td class="editable" contenteditable="true" data-key="aprobo" id="formaprobo">18</td><td id="formaproboPct">90 %</td></tr>
+              <tr><th>Reprobó <span class="formacion-base-hint">(% s/ Presentó)</span></th><td class="editable" contenteditable="true" data-key="reprobo" id="formReprobo">2</td><td id="formReproboPct">10 %</td></tr>
+              <tr><th>Novedades <span class="formacion-base-hint">(% s/ Público Objetivo)</span></th><td class="editable" contenteditable="true" data-key="novedades" id="formNovedades">4</td><td id="formNovedadesPct">13 %</td></tr>
+            </table>
+          </div>
+        </div>
+        <div class="formacion-cobertura-panel">
+          <h3>Cobertura</h3>
+          <div class="cobertura-ring-wrap">
+            <div class="cobertura-ring" id="coberturaRing" style="--pct:65"></div>
+            <span class="cobertura-valor" id="coberturaValor">65 %</span>
+          </div>
+        </div>
+        <div class="formacion-staff-card">
+          <h3>Estatus de Staff</h3>
+          <div class="preturnos-table-wrap">
+            <table class="preturnos-table" id="tablaStaff">
+              <thead>
+                <tr>
+                  <th>Skill</th>
+                  <th>Programados</th>
+                  <th>Asistencia Virtual</th>
+                  <th>Promedio</th>
+                </tr>
+              </thead>
+              <tbody id="staffBody"></tbody>
+              <tfoot>
+                <tr class="preturnos-total">
+                  <th>Total</th>
+                  <td id="staffTotalProg" class="preturnos-total-prog">0</td>
+                  <td id="staffTotalAsist" class="asist-mid">0 %</td>
+                  <td id="staffTotalProm" class="preturnos-total-prom">0</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+        <div class="formacion-preturnos-card">
+          <h3>Preturnos</h3>
+          <div class="preturnos-table-wrap">
+            <table class="preturnos-table" id="tablaPreturnos">
+              <thead>
+                <tr>
+                  <th>Skill</th>
+                  <th>Programados</th>
+                  <th>Asistencia Virtual</th>
+                  <th>Promedio</th>
+                </tr>
+              </thead>
+              <tbody id="preturnosBody"></tbody>
+              <tfoot>
+                <tr class="preturnos-total">
+                  <th>Total</th>
+                  <td id="preturnosTotalProg" class="preturnos-total-prog">0</td>
+                  <td id="preturnosTotalAsist" class="asist-mid">0 %</td>
+                  <td id="preturnosTotalProm" class="preturnos-total-prom">0</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section id="section-agentes" class="section">
+        <div class="agentes-header">
+          <h2>Usuarios del portal</h2>
+          <p>Usuarios con clave temporal que deben cambiar contraseña al entrar</p>
+        </div>
+
+        <div class="portal-card">
+          <h3 class="portal-card-title">Agregar un usuario</h3>
+          <div class="portal-form-grid">
+            <div class="portal-field">
+              <label for="portalNombre">Nombre</label>
+              <input type="text" id="portalNombre" placeholder="Ej. María García" autocomplete="name">
+            </div>
+            <div class="portal-field">
+              <label for="portalUsuario">Usuario (login)</label>
+              <input type="text" id="portalUsuario" placeholder="Ej. mgarcia" autocomplete="username">
+            </div>
+            <div class="portal-field portal-field-row">
+              <label for="portalClave">Clave temporal</label>
+              <div class="portal-input-group">
+                <input type="text" id="portalClave" placeholder="Generar aleatoria" readonly>
+                <button type="button" class="portal-btn portal-btn-secondary" id="btnGenerarClave">Generar</button>
+              </div>
+            </div>
+          </div>
+          <button type="button" class="portal-btn portal-btn-primary" id="btnAgregarUsuario">Agregar usuario</button>
+        </div>
+
+        <div class="portal-card">
+          <h3 class="portal-card-title">Cargar por nombres</h3>
+          <p class="portal-card-desc">Pega un nombre por línea. Se generará usuario y clave temporal para cada uno.</p>
+          <textarea id="portalNombres" class="portal-textarea" rows="5" placeholder="María García&#10;Juan Pérez&#10;Ana López"></textarea>
+          <button type="button" class="portal-btn portal-btn-cyan" id="btnGenerarUsuarios">Generar usuarios con clave temporal</button>
+        </div>
+
+        <div class="portal-card">
+          <h3 class="portal-card-title">Listado de usuarios</h3>
+          <div class="table-wrap">
+            <table class="data-table portal-table" id="tablaUsuarios">
+              <thead>
+                <tr>
+                  <th>Nombre</th>
+                  <th>Usuario</th>
+                  <th>Estado</th>
+                  <th>Rol</th>
+                  <th>Clave temporal</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="usuariosBody"></tbody>
+            </table>
+          </div>
+          <p class="portal-empty" id="portalEmpty">No hay usuarios. Agrega uno o carga por nombres.</p>
+        </div>
+      </section>
+
+      <section id="section-perfil" class="section">
+        <div class="agentes-header">
+          <h2>Perfil</h2>
+          <p>Administra tu cuenta y cambia tu contraseña</p>
+        </div>
+        <div class="portal-card">
+          <h3 class="portal-card-title">Cambiar contraseña</h3>
+          <form id="perfilFormCambiarClave" class="portal-form-grid perfil-form">
+            <div class="portal-field">
+              <label for="perfilClaveActual">Contraseña actual</label>
+              <input type="password" id="perfilClaveActual" placeholder="••••••••" autocomplete="current-password">
+            </div>
+            <div class="portal-field">
+              <label for="perfilClaveNueva">Nueva contraseña</label>
+              <input type="password" id="perfilClaveNueva" placeholder="••••••••" autocomplete="new-password">
+            </div>
+            <div class="portal-field">
+              <label for="perfilClaveConfirmar">Confirmar nueva contraseña</label>
+              <input type="password" id="perfilClaveConfirmar" placeholder="••••••••" autocomplete="new-password">
+            </div>
+            <div class="portal-field portal-field-row">
+              <button type="submit" class="portal-btn portal-btn-primary">Cambiar contraseña</button>
+              <span class="perfil-msg" id="perfilMsg"></span>
+            </div>
+          </form>
+        </div>
+        <div class="portal-card">
+          <h3 class="portal-card-title">Backup y restauración</h3>
+          <p class="portal-card-desc">Descarga un archivo HTML con proyecto y datos. Al abrirlo en el navegador verás todo integrado. También puedes restaurar desde HTML o JSON.</p>
+          <div class="perfil-backup-actions">
+            <button type="button" class="portal-btn portal-btn-primary" id="btnBackupDescargar">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Descargar backup HTML
+            </button>
+            <button type="button" class="portal-btn portal-btn-secondary" id="btnBackupCopiar" title="Copia el backup al portapapeles para pegarlo donde quieras">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              Copiar backup
+            </button>
+            <button type="button" class="portal-btn portal-btn-secondary" id="btnBackupPegar" title="Pega desde el portapapeles y restaura">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>
+              Pegar y restaurar
+            </button>
+            <label class="portal-btn portal-btn-secondary" for="perfilBackupFile">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              Restaurar desde backup
+            </label>
+            <input type="file" id="perfilBackupFile" accept=".json,.integra-backup,.html" style="display:none">
+          </div>
+          <p class="perfil-backup-hint" id="perfilBackupMsg"></p>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="https://unpkg.com/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
+  <script src="js/integra.js"></script>
+</body>
+</html>

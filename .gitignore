@@ -1,0 +1,5 @@
+# Dependencias del servidor
+server/node_modules/
+
+# Datos de la aplicación (información sensible)
+server/data/integra.json
