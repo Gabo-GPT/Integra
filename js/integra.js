@@ -196,6 +196,7 @@
     if (sectionId === 'formacion') { updateAsistencia(); updateResultados(); }
     if (sectionId === 'intermitencia') refreshIntermitenciaList();
     if (sectionId === 'bolsa') refreshBolsaCasosSolucionados();
+    if (sectionId === 'agentes') refreshUsuariosPortal(getData());
     if (sectionId === 'bolsa-hfc') {
       var hfcContactoSpan = $('bolsaHfcCierresContacto');
       if (hfcContactoSpan) hfcContactoSpan.textContent = getCasosConSolucionCount();
@@ -3167,6 +3168,7 @@
     } else {
       hideLogin();
     }
+    loadData();
     handleHashChange();
     window.addEventListener('beforeunload', flushSave);
     var _visibilityTimer;
@@ -3245,6 +3247,7 @@
       refreshUserDisplay();
       hideLogin();
       window.dispatchEvent(new CustomEvent('integra:userChange'));
+      loadData();
       handleHashChange();
     });
     var perfilForm = $('perfilFormCambiarClave');
@@ -3386,7 +3389,6 @@
       r.readAsText(f, 'UTF-8');
       inputBackup.value = '';
     });
-    loadData();
     bindEditable();
     bindPortalUsuarios();
     bindGestion();
