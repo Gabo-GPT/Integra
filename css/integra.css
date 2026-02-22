@@ -2378,6 +2378,20 @@ body {
   border-radius: 8px;
   box-shadow: 0 0 12px rgba(239, 68, 68, 0.2);
 }
+.gestion-counter-icon-green {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: rgba(52, 211, 153, 0.2);
+  border-radius: 8px;
+  color: var(--integra-success);
+  box-shadow: 0 0 12px rgba(52, 211, 153, 0.2);
+}
+.tablero-download-card {
+  max-width: 420px;
+}
 .gestion-counter-download {
   margin-left: auto;
   display: flex;

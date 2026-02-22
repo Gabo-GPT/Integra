@@ -39,11 +39,11 @@
   var SECTION_TITLES = { dashboard: 'Inicio', gestion: 'Mi Gestión', 'tablero-mensual': 'Tablero Mensual', formacion: 'Formación', calidad: 'Matriz de Calidad', bolsa: 'Bolsa', 'bolsa-hfc': 'Bolsa HFC', agentes: 'Agentes', perfil: 'Perfil', intermitencia: 'Intermitencia' };
   var VALID_HASH_ADMIN = ['dashboard', 'formacion', 'calidad', 'bolsa', 'bolsa-hfc', 'agentes', 'perfil', 'gestion', 'tablero-mensual', 'intermitencia'];
   var VALID_HASH_USER = ['dashboard', 'gestion', 'tablero-mensual', 'formacion', 'intermitencia'];
-  var GESTION_FORM_IDS = ['gestionNombre','gestionNumero','gestionNit','gestionAliado','gestionFuncion','gestionImot','gestionTransferencia','gestionCliente','gestionPqr','gestionCausa','gestionSolucion','gestionRed','gestionNodo','gestionCpe','gestionAreaTransferir','gestionExtensiones'];
+  var GESTION_FORM_IDS = ['gestionNombre','gestionNumero','gestionNit','gestionAliado','gestionFuncion','gestionImot','gestionTransferencia','gestionCliente','gestionPqr','gestionCausa','gestionSolucion','gestionRed','gestionNodo','gestionCpe','gestionHuboSolucion','gestionAreaTransferir','gestionExtensiones'];
   var PRETURNOS_DEFAULT = [{ skill: 'EMP GESTION INMEDIATA', programados: 7, asistencia: 86, promedio: 100 },{ skill: 'EMP GESTION INCIDENTES CSI', programados: 19, asistencia: 93, promedio: 99 },{ skill: 'EMP GESTION INCIDENTES IRE', programados: 6, asistencia: 100, promedio: 100 }];
   var STAFF_DEFAULT = [{ skill: 'Analista de entrenamiento 2', programados: 1, asistencia: 100, promedio: 100 },{ skill: 'Supervisor', programados: 3, asistencia: 78, promedio: 100 }];
-  var EXCEL_COLS = ['Nombre t\u00e9cnico','N\u00famero','Enlace','Aliado','Funci\u00f3n','IM/OT','Transferencia','\u00c1rea transferir','Extensiones','Cliente','PQR','Causa falla','Soluci\u00f3n','Red acceso','Nodo','CPE','Fecha/Hora','Duraci\u00f3n'];
-  var EXCEL_KEYS = ['nombre','numero','nit','aliado','funcion','imot','transferencia','areaTransferir','extensiones','cliente','pqr','causa','solucion','redAcceso','nodo','cpe','fechaHora','duracion'];
+  var EXCEL_COLS = ['Nombre t\u00e9cnico','N\u00famero','Enlace','Aliado','Funci\u00f3n','IM/OT','Transferencia','\u00c1rea transferir','Extensiones','Cliente','PQR','Causa falla','Soluci\u00f3n','Red acceso','Nodo','CPE','\u00bfHubo soluci\u00f3n?','Fecha/Hora','Duraci\u00f3n'];
+  var EXCEL_KEYS = ['nombre','numero','nit','aliado','funcion','imot','transferencia','areaTransferir','extensiones','cliente','pqr','causa','solucion','redAcceso','nodo','cpe','huboSolucion','fechaHora','duracion'];
 
   var _el = {};
   function $(id) {
@@ -108,15 +108,15 @@
   }
   function invalidateAdminCache() { _adminCache = null; }
 
-  var ROLE_LABELS = { administrador: 'Administrador', 'fibra-optica': 'Fibra Óptica', qoe: 'QoE', supervisor: 'Supervisor', agente: 'Usuario' };
+  var ROLE_LABELS = { administrador: 'Administrador', 'fibra-optica': 'Fibra Óptica', qoe: 'QoE', supervisor: 'Supervisor' };
   function refreshUserDisplay(data) {
     if (!data) data = getData();
     var nameEl = $('userName');
     var roleEl = $('userRole');
     var name = data.currentUserName || 'Usuario';
     var admin = data.currentUserAdmin === true;
-    var role = data.currentUserRole || 'agente';
-    var roleLabel = ROLE_LABELS[role] || (admin ? 'Administrador' : 'Usuario');
+    var role = data.currentUserRole || 'fibra-optica';
+    var roleLabel = ROLE_LABELS[role] || (admin ? 'Administrador' : 'Fibra Óptica');
     if (nameEl) nameEl.textContent = name;
     if (roleEl) {
       roleEl.textContent = admin ? 'Administrador' : roleLabel;
@@ -128,7 +128,7 @@
   function refreshNavByRole(data) {
     if (!data) data = getData();
     var admin = data.currentUserAdmin === true;
-    var role = data.currentUserRole || 'agente';
+    var role = data.currentUserRole || 'fibra-optica';
     var navAdmin = qsAll('.nav-item[data-admin-only]');
     var navUser = qsAll('.nav-item[data-user-only]');
     var navQoe = qsAll('.nav-item[data-qoe-only]');
@@ -173,7 +173,7 @@
     navItems.forEach(function (n) { n.classList.toggle('active', n.getAttribute('data-section') === sectionId); });
     var titleEl = $('topbarTitle');
     if (titleEl) {
-      var role = (getData().currentUserRole || 'agente');
+      var role = (getData().currentUserRole || 'fibra-optica');
       var t = SECTION_TITLES[sectionId] || 'Inicio';
       if (role === 'qoe' && (sectionId === 'dashboard' || sectionId === 'intermitencia')) t = 'NOC HFC';
       titleEl.textContent = t;
@@ -188,10 +188,12 @@
         refreshGestionOperacion();
       } else refreshProductividadAgente();
     }
+    if (sectionId === 'gestion') refreshGestionCasos();
     if (sectionId === 'calidad') { refreshAuditoriasTable(); refreshAuditoriaAgenteSelect(); }
     if (sectionId === 'tablero-mensual') refreshTableroMensual();
     if (sectionId === 'formacion') { updateAsistencia(); updateResultados(); }
     if (sectionId === 'intermitencia') refreshIntermitenciaList();
+    if (sectionId === 'bolsa') refreshBolsaCasosSolucionados();
     if (sectionId === 'bolsa-hfc') {
       var hfcContactoSpan = $('bolsaHfcCierresContacto');
       if (hfcContactoSpan) hfcContactoSpan.textContent = getCasosConSolucionCount();
@@ -213,7 +215,7 @@
   function handleHashChange() {
     var hash = (location.hash || '#dashboard').slice(1);
     var valid = isAdmin() ? VALID_HASH_ADMIN : VALID_HASH_USER;
-    var role = (getData().currentUserRole || 'agente');
+    var role = (getData().currentUserRole || 'fibra-optica');
     var bloqueadoParaQoe = (hash === 'gestion' && role === 'qoe');
     if (valid.indexOf(hash) < 0 || (_adminOnly[hash] && !isAdmin()) || bloqueadoParaQoe) hash = 'dashboard';
     setActiveSection(hash);
@@ -492,10 +494,9 @@
     var emptyEl = $('portalEmpty');
     if (emptyEl) emptyEl.style.display = items.length ? 'none' : 'block';
     tbody.innerHTML = items.map(function (u, i) {
-      var r = (u.role || 'agente');
-      if (ROLES.indexOf(r) < 0) r = 'agente';
+      var r = (u.role || 'fibra-optica');
+      if (ROLES.indexOf(r) < 0) r = 'fibra-optica';
       var sel = '<select class="portal-rol-select" data-i="' + i + '" title="Cambiar rol">' +
-        '<option value="agente"' + (r === 'agente' ? ' selected' : '') + '>Agente</option>' +
         '<option value="supervisor"' + (r === 'supervisor' ? ' selected' : '') + '>Supervisor</option>' +
         '<option value="fibra-optica"' + (r === 'fibra-optica' ? ' selected' : '') + '>Fibra Óptica</option>' +
         '<option value="qoe"' + (r === 'qoe' ? ' selected' : '') + '>QoE</option>' +
@@ -550,6 +551,51 @@
     var k = 'gestionCasos_' + (d.currentUserUsuario || d.currentUserName || 'default');
     var arr = d[k];
     return Array.isArray(arr) ? arr : [];
+  }
+  function getAllCasosGestionConUsuario() {
+    var d = getData();
+    var out = [];
+    for (var key in d) {
+      if (key.indexOf('gestionCasos_') !== 0) continue;
+      var usuario = key.replace('gestionCasos_', '');
+      var arr = d[key];
+      if (!Array.isArray(arr)) continue;
+      for (var i = 0; i < arr.length; i++) {
+        out.push({ caso: arr[i], usuario: usuario });
+      }
+    }
+    return out;
+  }
+  function getCasosNoSolucionadosRastreo() {
+    var todos = getAllCasosGestionConUsuario();
+    var sdConSolucion = {};
+    var porSd = {};
+    for (var i = 0; i < todos.length; i++) {
+      var c = todos[i].caso;
+      var sd = String(c.pqr || c.numero || '').trim();
+      if (!sd) continue;
+      var sdKey = sd.toUpperCase();
+      var h = String(c.huboSolucion || '').trim();
+      if (h === 'Sí' || h === 'SI') {
+        sdConSolucion[sdKey] = true;
+        continue;
+      }
+      if (!porSd[sdKey]) porSd[sdKey] = { sd: sd, agentes: [], validaciones: 0, fechas: [] };
+      var ag = (c.nombre || todos[i].usuario || '—').trim();
+      if (porSd[sdKey].agentes.indexOf(ag) < 0) porSd[sdKey].agentes.push(ag);
+      porSd[sdKey].validaciones++;
+      porSd[sdKey].fechas.push(c.fechaHora || '');
+    }
+    var out = [];
+    for (var k in porSd) {
+      if (sdConSolucion[k]) continue;
+      if (porSd[k].validaciones >= 2) {
+        porSd[k].fechas.sort();
+        out.push(porSd[k]);
+      }
+    }
+    out.sort(function (a, b) { return b.validaciones - a.validaciones; });
+    return out;
   }
 
   var META_DIA = 23;
@@ -639,8 +685,8 @@
     var alertMsg = productivo
       ? 'Cumpliste la productividad de hoy.'
       : 'No cumpliste la productividad de hoy. Mínimo ' + min + ' casos (llamadas y gestión). Llevas ' + hoy + '.';
-    var role = (getData().currentUserRole || 'agente');
-    var panelLabel = role === 'fibra-optica' ? 'Panel Fibra Óptica' : (role === 'qoe' ? 'NOC · Diagnóstico HFC' : 'Panel de agente');
+    var role = (getData().currentUserRole || 'fibra-optica');
+    var panelLabel = role === 'fibra-optica' ? 'Panel Fibra Óptica' : (role === 'qoe' ? 'NOC · Diagnóstico HFC' : (role === 'supervisor' ? 'Panel Supervisor' : 'Panel'));
     if (role === 'qoe') {
       if (typeof NocAnalyzerQoE === 'undefined' && !window._qoeLoading) {
         window._qoeLoading = true;
@@ -862,19 +908,37 @@
     var s = sla || getBolsaData().sla;
     var wrap = $('slaFaseCierreList');
     if (!wrap) return;
-    var items = [{ label: 'EYN- Soporte Back Negocios', val: s.backNegocios }, { label: 'EYN- Soporte Negocios GI', val: s.negociosGI }, { label: 'EYN- PROACTIVIDAD VIP', val: s.proactividadVIP }];
-    var total = s.backNegocios + s.negociosGI + s.proactividadVIP;
+    var solucionados = getCasosSolucionadosCountFO();
+    var items = [{ label: 'Casos Solucionados', val: solucionados }, { label: 'Casos no solucionados', val: s.negociosGI }, { label: 'EYN- PROACTIVIDAD VIP', val: s.proactividadVIP }];
+    var total = solucionados + s.negociosGI + s.proactividadVIP;
     if (total === 0) {
       wrap.innerHTML = '<div class="letra-mas-afectada-empty">Importa la bolsa en Bolsa para ver datos SLA.</div>';
       return;
     }
     wrap.innerHTML = items.map(function (it) { return '<div class="reincidencia-item"><span class="reinc-tipo">' + escapeHtml(it.label) + '</span><span class="reinc-count">' + it.val + '</span></div>'; }).join('');
   }
+  function refreshRastreoSd() {
+    var tbody = $('rastreoSdBody');
+    var emptyEl = $('rastreoSdEmpty');
+    var tabla = $('tablaRastreoSd');
+    if (!tbody) return;
+    var items = getCasosNoSolucionadosRastreo();
+    if (emptyEl) emptyEl.style.display = items.length ? 'none' : 'block';
+    if (tabla) tabla.style.display = items.length ? 'table' : 'none';
+    tbody.innerHTML = items.map(function (r) {
+      var agentesStr = (r.agentes || []).join(', ');
+      var ultima = (r.fechas && r.fechas.length) ? r.fechas[r.fechas.length - 1] : '—';
+      return '<tr><td>' + escapeHtml(r.sd) + '</td><td>' + escapeHtml(agentesStr) + '</td><td>' + r.validaciones + '</td><td>' + escapeHtml(ultima) + '</td></tr>';
+    }).join('');
+  }
   function refreshGestionOperacion() {
     var bolsa = getBolsaData();
     refreshEynCajitas(bolsa);
     refreshSlaFaseCierre(bolsa.sla);
     refreshGestionOperacionHfc();
+    refreshBolsaCasosSolucionados();
+    refreshRastreoSd();
+    if (isAdmin()) refreshRankings(getData(), getGestionDataFromStorage());
   }
   function refreshGestionOperacionHfc() {
     var d = getData();
@@ -928,7 +992,9 @@
     var data = bolsa || getBolsaData();
     var a = data.abiertos || _bolsaDef;
     var s = data.sla || _bolsaDef;
-    var map = { eynBackNegocios: 'backNegocios', eynNegociosGI: 'negociosGI', eynProactividad: 'proactividadVIP' };
+    var e1 = $('eynBackNegocios');
+    if (e1) e1.innerHTML = '<span class="eyn-caja-num">' + getCasosSolucionadosCountFO() + '</span><span class="eyn-caja-label">Cerrados</span>';
+    var map = { eynNegociosGI: 'negociosGI', eynProactividad: 'proactividadVIP' };
     for (var id in map) {
       var k = map[id];
       var ab = a[k] || 0;
@@ -1005,7 +1071,7 @@
     ],
     A2: []
   };
-  var ROLES = ['agente', 'supervisor', 'fibra-optica', 'qoe', 'administrador'];
+  var ROLES = ['supervisor', 'fibra-optica', 'qoe', 'administrador'];
   var TRES_MESES_MS = 90 * 24 * 60 * 60 * 1000;
 
   function getAuditoriasAgentes() {
@@ -1130,7 +1196,8 @@
       solucion: g('gestionSolucion'),
       redAcceso: g('gestionRed'),
       nodo: g('gestionNodo'),
-      cpe: g('gestionCpe')
+      cpe: g('gestionCpe'),
+      huboSolucion: g('gestionHuboSolucion')
     };
   }
 
@@ -1214,6 +1281,11 @@
       }
       selEl.addEventListener('change', function () { refreshTableroMensual(); });
     }
+    var btnExcel = $('btnTableroDescargarExcel');
+    if (btnExcel && !btnExcel._tableroExcelBound) {
+      btnExcel._tableroExcelBound = true;
+      btnExcel.addEventListener('click', descargarExcelTableroMensual);
+    }
     var total = 0;
     var html = '<div class="tablero-mensual-grid" style="grid-template-columns:repeat(' + dias + ',1fr)">';
     for (var k = 0; k < porDia.length; k++) {
@@ -1230,9 +1302,47 @@
     wrap.innerHTML = html;
     var intermitenciaTotal = getIntermitenciaCountForMonth(selYear, selMonth);
     if (totalEl) totalEl.textContent = total;
+    var downloadCardCount = $('tableroDownloadCardCount');
+    if (downloadCardCount) downloadCardCount.textContent = total;
     var intermitenciaEl = $('tableroMensualIntermitencia');
     if (intermitenciaEl) intermitenciaEl.textContent = intermitenciaTotal;
     if (emptyEl) emptyEl.style.display = (total > 0 || intermitenciaTotal > 0) ? 'none' : 'block';
+  }
+
+  function descargarExcelTableroMensual() {
+    var selEl = $('tableroMensualSelector');
+    var hoy = new Date();
+    var selYear = hoy.getFullYear(), selMonth = hoy.getMonth();
+    if (selEl && selEl.value) {
+      var p = selEl.value.split('-');
+      selYear = parseInt(p[0], 10);
+      selMonth = parseInt(p[1], 10);
+    }
+    var mesInicio = new Date(selYear, selMonth, 1).getTime();
+    var mesFin = new Date(selYear, selMonth + 1, 0, 23, 59, 59).getTime();
+    var items = getCasosGestion().filter(function (c) {
+      var ts = c.fechaHoraTs;
+      return ts && ts >= mesInicio && ts <= mesFin;
+    });
+    function esc(v) { return '"' + String(v || '').replace(/"/g, '""') + '"'; }
+    var csv = EXCEL_COLS.join(';') + '\n';
+    for (var i = 0; i < items.length; i++) {
+      var row = items[i];
+      var huboSol = row.huboSolucion || '';
+      if (huboSol === 'Sí') huboSol = 'SI';
+      var r = [];
+      for (var k = 0; k < EXCEL_KEYS.length; k++) {
+        var key = EXCEL_KEYS[k];
+        r.push(esc(key === 'huboSolucion' ? huboSol : row[key]));
+      }
+      csv += r.join(';') + '\n';
+    }
+    var blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'casos_gestion_' + selYear + '-' + String(selMonth + 1).padStart(2, '0') + '.csv';
+    a.click();
+    URL.revokeObjectURL(a.href);
   }
 
   function refreshGestionCasos() {
@@ -1244,7 +1354,9 @@
     if (emptyEl) emptyEl.style.display = items.length ? 'none' : 'block';
     if (!tbody) return;
     tbody.innerHTML = items.map(function (c, i) {
-      return '<tr><td>' + (c.nombre || '') + '</td><td>' + (c.numero || '') + '</td><td>' + (c.nit || '') + '</td><td>' + (c.aliado || '') + '</td><td>' + (c.funcion || '') + '</td><td>' + (c.transferencia || '') + '</td><td>' + (c.areaTransferir || '') + '</td><td>' + (c.extensiones || '') + '</td><td>' + (c.cliente || '') + '</td><td>' + (c.fechaHora || '') + '</td><td>' + (c.duracion || '') + '</td><td><button type="button" class="btn-copy gestion-ver" data-i="' + i + '">Ver</button><button type="button" class="btn-remove gestion-borrar" data-i="' + i + '">Quitar</button></td></tr>';
+      var huboSol = c.huboSolucion || '';
+      if (huboSol === 'Sí') huboSol = 'SI';
+      return '<tr><td>' + escapeHtml(c.nombre || '') + '</td><td>' + escapeHtml(c.numero || '') + '</td><td>' + escapeHtml(c.pqr || '') + '</td><td>' + escapeHtml(c.nit || '') + '</td><td>' + escapeHtml(c.aliado || '') + '</td><td>' + escapeHtml(c.funcion || '') + '</td><td>' + escapeHtml(c.transferencia || '') + '</td><td>' + escapeHtml(c.areaTransferir || '') + '</td><td>' + escapeHtml(c.extensiones || '') + '</td><td>' + escapeHtml(c.cliente || '') + '</td><td>' + escapeHtml(c.fechaHora || '') + '</td><td>' + escapeHtml(c.duracion || '') + '</td><td>' + escapeHtml(huboSol) + '</td><td><button type="button" class="btn-copy gestion-ver" data-i="' + i + '">Ver</button><button type="button" class="btn-remove gestion-borrar" data-i="' + i + '">Quitar</button></td></tr>';
     }).join('');
     refreshGestionPlantilla();
   }
@@ -1360,7 +1472,7 @@
     doc.setFont(undefined, 'normal');
     doc.setFontSize(10);
     doc.setTextColor.apply(doc, c.white);
-    doc.text(fmt(hfcC) + ' Casos con Solución', 28, 128);
+    doc.text(fmt(hfcC) + ' Casos Solucionados', 28, 128);
     doc.text(fmt(hfcB) + ' Afectaciones masivas', 28, 142);
     doc.text(fmt(hfcR) + ' Visitas técnicas', 28, 156);
     doc.setTextColor.apply(doc, c.gray);
@@ -1376,7 +1488,7 @@
     doc.text('Gestión HFC – Detalle', 20, 25);
     doc.line(20, 28, 75, 28);
     var hfcMax = Math.max(hfcC, hfcB, hfcR, 1);
-    var hv = [hfcC, hfcB, hfcR], hl = ['Casos con Solución', 'Afectaciones masivas', 'Visitas técnicas'], hc = [c.accent, c.green, c.fuchsia];
+    var hv = [hfcC, hfcB, hfcR], hl = ['Casos Solucionados', 'Afectaciones masivas', 'Visitas técnicas'], hc = [c.accent, c.green, c.fuchsia];
     card(20, 38, 170, 85);
     for (var j = 0; j < 3; j++) {
       var bw = Math.max(15, 130 * (hv[j] / hfcMax)), by = 52 + j * 22;
@@ -1424,6 +1536,7 @@
       flushSave();
       refreshGestionCasos();
       refreshTableroMensual();
+      if (isAdmin()) refreshGestionOperacion();
     }
   }
 
@@ -1454,6 +1567,7 @@
       clearFormGestion();
       refreshGestionCasos();
       refreshTableroMensual();
+      if (isAdmin()) refreshGestionOperacion();
     });
     var nombreTecnicoEl = $('gestionNombre');
     if (nombreTecnicoEl && !nombreTecnicoEl._gestionTimerBound) {
@@ -1480,6 +1594,7 @@
     var trEl = $('gestionTransferencia');
     var extrasEl = $('gestionTransferenciaExtras');
     var pruebasEl = $('gestionPruebasSection');
+    var huboSolWrap = $('gestionHuboSolucionWrap');
     var areaEl = $('gestionAreaTransferir');
     var extEl = $('gestionExtensiones');
     var redEl = $('gestionRed'), nodoEl = $('gestionNodo'), cpeEl = $('gestionCpe');
@@ -1487,6 +1602,9 @@
       var v = (trEl && trEl.value) || '';
       if (extrasEl) extrasEl.style.display = v === 'SI' ? '' : 'none';
       if (pruebasEl) pruebasEl.style.display = v === 'SI' ? 'none' : '';
+      if (huboSolWrap) {
+        huboSolWrap.style.display = (v !== 'SI') ? '' : 'none';
+      }
       if (v === 'SI') {
         if (redEl) redEl.value = '';
         if (nodoEl) nodoEl.value = '';
@@ -1503,6 +1621,7 @@
       if (extEl) extEl.value = opt && opt.getAttribute('data-ext') ? opt.getAttribute('data-ext') : '';
       refreshGestionPlantilla();
     });
+    window.addEventListener('integra:userChange', toggleTransferenciaExtras);
     toggleTransferenciaExtras();
   }
 
@@ -1522,7 +1641,7 @@
       var clave = ($('portalClave') || {}).value || genClaveTemp();
       if (!nombre.trim()) return;
       var items = (getData().portalUsuarios || []).slice();
-      items.push({ nombre: nombre.trim(), usuario: usuario.trim() || nombreToLogin(nombre), clave: clave, estado: 'Temporal', role: 'agente' });
+      items.push({ nombre: nombre.trim(), usuario: usuario.trim() || nombreToLogin(nombre), clave: clave, estado: 'Temporal', role: 'fibra-optica' });
       saveData('portalUsuarios', trimArrayNewestLast(items, MAX_PORTAL_USUARIOS));
       refreshUsuariosPortal();
       if ($('portalNombre')) $('portalNombre').value = '';
@@ -1536,7 +1655,7 @@
       if (!lines.length) return;
       var items = (getData().portalUsuarios || []).slice();
       lines.forEach(function (nombre) {
-        items.push({ nombre: nombre, usuario: nombreToLogin(nombre), clave: genClaveTemp(), estado: 'Temporal', role: 'agente' });
+        items.push({ nombre: nombre, usuario: nombreToLogin(nombre), clave: genClaveTemp(), estado: 'Temporal', role: 'fibra-optica' });
       });
       saveData('portalUsuarios', trimArrayNewestLast(items, MAX_PORTAL_USUARIOS));
       refreshUsuariosPortal();
@@ -2226,12 +2345,16 @@
     }
     return { abiertos: abiertos, sla: sla, resueltos: resueltos };
   }
+  function refreshBolsaCasosSolucionados() {
+    var el = $('bolsaBackNegocios');
+    if (el) el.textContent = getCasosSolucionadosCountFO();
+  }
   function bindBolsa() {
     var b = getBolsaCasosAbiertos();
     var s = getBolsaSlaFaseCierre();
     var e1 = $('bolsaBackNegocios'), e2 = $('bolsaNegociosGI'), e3 = $('bolsaProactividad');
     var se1 = $('bolsaSlaBackNegocios'), se2 = $('bolsaSlaNegociosGI'), se3 = $('bolsaSlaProactividad');
-    if (e1) e1.value = b.backNegocios;
+    refreshBolsaCasosSolucionados();
     if (e2) e2.value = b.negociosGI;
     if (e3) e3.value = b.proactividadVIP;
     if (se1) se1.value = s.backNegocios || 0;
@@ -2244,13 +2367,13 @@
       if (txt.length > 50000) { btnImp.disabled = true; btnImp.textContent = 'Procesando…'; }
       setTimeout(function () {
         var res = parseBolsaExcel(txt);
-        if (e1) e1.value = res.abiertos.backNegocios;
+        refreshBolsaCasosSolucionados();
       if (e2) e2.value = res.abiertos.negociosGI;
       if (e3) e3.value = res.abiertos.proactividadVIP;
       if (se1) se1.value = res.sla.backNegocios || 0;
       if (se2) se2.value = res.sla.negociosGI || 0;
       if (se3) se3.value = res.sla.proactividadVIP || 0;
-      saveBolsaCasosAbiertos(res.abiertos);
+      saveBolsaCasosAbiertos({ backNegocios: getCasosSolucionadosCountFO(), negociosGI: res.abiertos.negociosGI, proactividadVIP: res.abiertos.proactividadVIP });
       saveData('bolsaSlaFaseCierre', res.sla);
       saveData('bolsaResueltos', res.resueltos);
       flushSave();
@@ -2260,13 +2383,12 @@
     });
     var btn = $('btnBolsaGuardar');
     if (btn) btn.addEventListener('click', function () {
-      var n1 = parseInt((e1 && e1.value) || '0', 10) || 0;
       var n2 = parseInt((e2 && e2.value) || '0', 10) || 0;
       var n3 = parseInt((e3 && e3.value) || '0', 10) || 0;
       var sn1 = parseInt((se1 && se1.value) || '0', 10) || 0;
       var sn2 = parseInt((se2 && se2.value) || '0', 10) || 0;
       var sn3 = parseInt((se3 && se3.value) || '0', 10) || 0;
-      saveBolsaCasosAbiertos({ backNegocios: n1, negociosGI: n2, proactividadVIP: n3 });
+      saveBolsaCasosAbiertos({ backNegocios: getCasosSolucionadosCountFO(), negociosGI: n2, proactividadVIP: n3 });
       saveData('bolsaSlaFaseCierre', { backNegocios: sn1, negociosGI: sn2, proactividadVIP: sn3 });
       flushSave();
       refreshGestionOperacion();
@@ -2648,6 +2770,20 @@
       if (a === 'sí' || a === 'si') n++;
     }
     return n;
+  }
+  function getCasosSolucionadosCountFO() {
+    var d = getData();
+    var count = 0;
+    for (var key in d) {
+      if (key.indexOf('gestionCasos_') !== 0) continue;
+      var arr = d[key];
+      if (!Array.isArray(arr)) continue;
+      for (var i = 0; i < arr.length; i++) {
+        var h = String(arr[i].huboSolucion || '').trim();
+        if (h === 'Sí' || h === 'SI') count++;
+      }
+    }
+    return count;
   }
   function getDeclaracionesMasivasCount() {
     var d = getData();
@@ -3091,7 +3227,7 @@
         saveData('currentUserName', portal.nombre || portal.usuario || user);
         saveData('currentUserUsuario', portal.usuario || user);
         saveData('currentUserAdmin', portal.role === 'administrador');
-        saveData('currentUserRole', portal.role || 'agente');
+        saveData('currentUserRole', portal.role || 'fibra-optica');
         invalidateAdminCache();
       } else {
         saveData('currentUserName', user);
@@ -3103,6 +3239,7 @@
       localStorage.setItem(SESSION_KEY, '1');
       refreshUserDisplay();
       hideLogin();
+      window.dispatchEvent(new CustomEvent('integra:userChange'));
       handleHashChange();
     });
     var perfilForm = $('perfilFormCambiarClave');
@@ -3255,11 +3392,43 @@
     refreshCalidadAll();
   }
 
+  function refreshFromServerData() {
+    refreshGestionCasos();
+    refreshTableroMensual();
+    if (isAdmin()) {
+      refreshGestionOperacion();
+      refreshReincidencias(getData(), getGestionDataFromStorage());
+      refreshUsuariosPortal(getData());
+    } else {
+      refreshProductividadAgente();
+    }
+  }
+
+  function setupRealtimeSync() {
+    if (!API_URL) return;
+    var POLL_MS = 10000;
+    function poll() {
+      if (document.visibilityState === 'hidden' || _saveTimer) return;
+      fetch(API_URL + '/api/data').then(function (r) { return r.json(); }).then(function (d) {
+        var incoming = JSON.stringify(d && typeof d === 'object' ? d : {});
+        if (incoming !== _lastSavedJson) {
+          setDataFromApi(d);
+          refreshFromServerData();
+        }
+      }).catch(function () {});
+    }
+    setInterval(poll, POLL_MS);
+    document.addEventListener('visibilitychange', function () {
+      if (document.visibilityState === 'visible') poll();
+    });
+  }
+
   function start() {
     if (API_URL) {
       fetch(API_URL + '/api/data').then(function (r) { return r.json(); }).then(function (d) {
         setDataFromApi(d);
         init();
+        setupRealtimeSync();
       }).catch(function () {
         setDataFromApi({});
         init();

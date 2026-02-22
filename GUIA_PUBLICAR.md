@@ -1,147 +1,126 @@
-# Guía para publicar Integra con base de datos
+# Guía para publicar Integra (gratis, con persistencia)
 
-Esta guía te lleva paso a paso para que la aplicación Integra guarde todo en el servidor (en archivos/BD) y puedas publicarla.
-
----
-
-## ¿Qué vamos a crear?
-
-1. **Backend** (servidor Node.js) que guarda los datos en `server/data/integra.json`
-2. El mismo servidor **sirve el frontend** (index.html, CSS, JS) — todo en uno
-3. **Publicación** en Render.com u otro hosting
+Publica tu aplicación para que todos los agentes la usen sin perder datos. Usaremos **Render** (hosting) + **Supabase** (base de datos gratuita).
 
 ---
 
-## Paso 1: Instalar Node.js
+## Resumen
 
-Si no tienes Node.js:
+| Componente | Servicio   | Costo  |
+|------------|------------|--------|
+| Backend + Frontend | Render.com | Gratis |
+| Base de datos      | Supabase   | Gratis |
 
-1. Ve a https://nodejs.org
-2. Descarga la versión LTS
-3. Instálalo (siguiente, siguiente…)
-4. Abre una terminal y escribe: `node -v` — debe mostrar algo como `v20.x.x`
-
----
-
-## Paso 2: Crear la base de datos (backend)
-
-### 2.1 Instalar dependencias del servidor
-
-Abre una terminal en la carpeta del proyecto y ejecuta:
-
-```bash
-cd server
-npm install
-```
-
-### 2.2 Probar el servidor
-
-```bash
-npm start
-```
-
-Deberías ver:
-```
-  Integra - Backend API
-  ====================
-  Servidor corriendo en: http://localhost:3000
-```
-
-Los datos se guardan en `server/data/integra.json`. Esa carpeta se crea sola la primera vez que guardes algo.
+**Importante:** En el plan gratuito de Render, el disco es efímero (se borra al reiniciar). Por eso usamos Supabase para guardar los datos de forma permanente.
 
 ---
 
-## Paso 3: Conectar el frontend al backend
+## Paso 1: Crear base de datos en Supabase
 
-### 3.1 Editar la configuración
+1. Ve a https://supabase.com y crea una cuenta (gratis).
+2. Clic en **New Project**:
+   - **Name:** `integra`
+   - **Database Password:** guarda esta contraseña (la necesitas para conexiones directas).
+   - **Region:** elige la más cercana (ej. South America).
+3. Espera a que se cree el proyecto (~2 min).
 
-Abre `index.html` y busca esta línea:
+### Crear la tabla
 
-```html
-<!-- <script>window.INTEGRA_API_URL = 'http://localhost:3000';</script> -->
-```
-
-Quita los `<!--` y `-->` para activarla:
-
-```html
-<script>window.INTEGRA_API_URL = 'http://localhost:3000';</script>
-```
-
-### 3.2 Probar en local
-
-1. Deja el servidor corriendo (`npm start` en `server/`)
-2. Abre `index.html` en el navegador (o usa “Live Server” en VS Code)
-3. Regístrate, crea datos… y verifica que en `server/data/` aparezca el archivo `integra.json`
-
----
-
-## Paso 4: Publicar (desplegar)
-
-El servidor **incluye ya el frontend** (HTML, CSS, JS). Solo necesitas publicar **un servicio**.
-
-### Opción A: Render.com (gratis, recomendado)
-
-1. Crea cuenta en https://render.com
-2. Sube tu proyecto a **GitHub** (crea un repositorio y sube la carpeta `integra`)
-3. En Render: **New → Web Service**
-4. Conecta tu repositorio de GitHub
-5. Configura:
-   - **Name**: `integra` (o el que prefieras)
-   - **Root Directory**: `server`
-   - **Build Command**: `npm install`
-   - **Start Command**: `npm start`
-6. Clic en **Create Web Service**
-7. Espera el deploy. Tu app quedará en una URL como: `https://integra-xxxx.onrender.com`
-
-**Nota**: En el plan gratuito, Render "duerme" el servicio tras 15 min sin uso. Los datos se guardan en disco; al despertar pueden tardar unos segundos en cargar.
-
-### Opción B: Con render.yaml (Blueprint)
-
-Si ya subiste el proyecto a GitHub, en Render puedes usar **New → Blueprint** y seleccionar el repo. El archivo `render.yaml` en la raíz del proyecto ya está configurado.
-
-### Opción C: Servidor propio (VPS, tu empresa)
-
-1. Sube toda la carpeta del proyecto al servidor
-2. Instala Node.js
-3. Ejecuta:
-   ```bash
-   cd server
-   npm install
-   npm start
+1. En el proyecto, ve a **SQL Editor**.
+2. Clic en **New query**.
+3. Copia y pega el contenido de `server/supabase-setup.sql`:
+   ```sql
+   CREATE TABLE IF NOT EXISTS integra_data (
+     id TEXT PRIMARY KEY DEFAULT 'main',
+     value JSONB NOT NULL DEFAULT '{}'::jsonb,
+     updated_at TIMESTAMPTZ DEFAULT NOW()
+   );
    ```
-4. Configura Nginx/IIS para hacer proxy hacia el puerto 3000 (o el que uses)
+4. Clic en **Run**.
 
-### Opción D: Railway
+### Obtener credenciales
 
-1. Conecta tu repo en https://railway.app
-2. New Project → Deploy from GitHub
-3. Root: `server`, Start: `npm start`
+1. Ve a **Project Settings** (icono engranaje) → **API**.
+2. Anota:
+   - **Project URL** (ej. `https://xxxxx.supabase.co`)
+   - **service_role key** (en "Project API keys", la clave `service_role`, no la `anon`)
 
 ---
 
-## Paso 5: Resumen de archivos
+## Paso 2: Subir el proyecto a GitHub
 
+1. Crea una cuenta en https://github.com si no tienes.
+2. Crea un repositorio nuevo (ej. `integra`).
+3. En la carpeta del proyecto, abre terminal y ejecuta:
+
+```bash
+cd c:\Users\Sistemas\integra
+git init
+git add .
+git commit -m "Integra - publicación inicial"
+git branch -M main
+git remote add origin https://github.com/TU_USUARIO/integra.git
+git push -u origin main
 ```
-integra/
-├── index.html          ← Web principal
-├── css/
-├── js/
-├── server/             ← Backend
-│   ├── index.js        ← Código del servidor
-│   ├── package.json
-│   └── data/           ← Aquí se crea integra.json (los datos)
-│       └── integra.json
-└── GUIA_PUBLICAR.md    ← Esta guía
-```
+
+(Reemplaza `TU_USUARIO` por tu usuario de GitHub.)
+
+---
+
+## Paso 3: Desplegar en Render
+
+1. Ve a https://render.com y crea una cuenta.
+2. **New** → **Web Service**.
+3. Conecta tu repositorio de GitHub (autoriza si te lo pide).
+4. Configuración:
+   - **Name:** `integra` (o el que prefieras)
+   - **Region:** elige la más cercana.
+   - **Root Directory:** `server`
+   - **Runtime:** Node
+   - **Build Command:** `npm install`
+   - **Start Command:** `npm start`
+5. En **Environment Variables** (Variables de entorno), agrega:
+   - `SUPABASE_URL` → la Project URL de Supabase
+   - `SUPABASE_SERVICE_KEY` → la clave service_role de Supabase
+6. Clic en **Create Web Service**.
+7. Espera el despliegue (~2–3 min).
+
+Tu app quedará en una URL como: `https://integra-xxxx.onrender.com`
+
+---
+
+## Paso 4: Probar
+
+1. Abre la URL de tu servicio (ej. `https://integra-xxxx.onrender.com`).
+2. Regístrate, crea usuarios, agrega casos.
+3. Cierra el navegador, abre de nuevo y entra con otro agente: los datos deben seguir ahí.
+
+---
+
+## Comportamiento del frontend
+
+El frontend detecta automáticamente si está en HTTPS y usa esa misma URL como API. **No necesitas configurar nada** en `index.html` para producción.
+
+---
+
+## Plan gratuito de Render: “sueño” del servicio
+
+En el plan gratuito, si nadie entra a la app durante **15 minutos**, Render “duerme” el servicio. La primera visita después de eso puede tardar **30–60 segundos** en cargar. Es normal. Los datos no se pierden porque están en Supabase.
+
+---
+
+## Usar solo en local (sin publicar)
+
+1. En `server/`, ejecuta `npm install` y `npm start`.
+2. Abre `http://localhost:3000`.
+3. Sin variables de Supabase, los datos se guardan en `server/data/integra.json`.
 
 ---
 
 ## Respaldo de datos
 
-Para hacer copia de seguridad:
-
-- Copia el archivo `server/data/integra.json` a otro sitio
-- Para restaurar, sustituye ese archivo y reinicia el servidor
+- **Con Supabase:** En el dashboard de Supabase, puedes exportar la base de datos o hacer backups.
+- **Con archivo local:** Copia `server/data/integra.json` a otro lugar.
 
 ---
 
@@ -149,13 +128,7 @@ Para hacer copia de seguridad:
 
 | Problema | Solución |
 |----------|----------|
-| "Cannot GET /api/data" | El backend no está corriendo. Ejecuta `npm start` en `server/` |
-| CORS / bloqueos en el navegador | El backend usa CORS; asegúrate de que la URL en `INTEGRA_API_URL` sea la correcta |
-| No se guardan datos | Revisa que `INTEGRA_API_URL` esté definida y sin comentarios en `index.html` |
-| Puerto en uso | Cambia el puerto: `set PORT=4000` (Windows) o `PORT=4000 npm start` (Linux/Mac) |
-
----
-
-## Usar solo en local (sin base de datos)
-
-Si no activas `INTEGRA_API_URL`, la app sigue usando **localStorage** como antes: todo se guarda en el navegador, sin servidor.
+| "Cannot GET /api/data" | El backend no está corriendo o la URL es incorrecta. |
+| Los datos no se guardan | Revisa que `SUPABASE_URL` y `SUPABASE_SERVICE_KEY` estén bien en Render. |
+| La app tarda mucho en cargar | Normal si el servicio estaba dormido. Espera 30–60 s. |
+| Error al crear tabla en Supabase | Asegúrate de ejecutar el SQL en el proyecto correcto. |

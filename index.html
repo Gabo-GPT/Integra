@@ -148,7 +148,7 @@
           <h3 class="eyn-titulo">Cierres y Visitas técnicas</h3>
           <div class="eyn-cajitas" id="eynCajitasHfc">
             <article class="card eyn-caja">
-              <h3>Casos con Solución</h3>
+              <h3>Casos Solucionados</h3>
               <div class="eyn-caja-body" id="hfcCierresContacto"></div>
             </article>
             <article class="card eyn-caja">
@@ -162,10 +162,10 @@
           </div>
           <div class="dashboard-bottom" style="margin-top:1.5rem">
             <div class="card hfc-comparativo-card" style="width:100%">
-              <h3>Comparativo: Casos con Solución vs Afectaciones masivas vs Visitas técnicas</h3>
+              <h3>Comparativo: Casos Solucionados vs Afectaciones masivas vs Visitas técnicas</h3>
               <div class="hfc-comparativo-chart" id="hfcComparativoChart">
                 <div class="hfc-comparativo-row">
-                  <span class="hfc-comparativo-label">Casos con Solución</span>
+                  <span class="hfc-comparativo-label">Casos Solucionados</span>
                   <div class="hfc-comparativo-track"><div class="hfc-comparativo-fill hfc-fill-contacto" id="hfcBarContacto" style="width:0%"></div></div>
                   <span class="hfc-comparativo-val" id="hfcValContacto">0</span>
                   <span class="hfc-comparativo-pct" id="hfcPctContacto">0%</span>
@@ -219,11 +219,11 @@
           <h3 class="eyn-titulo">Casos Abiertos</h3>
           <div class="eyn-cajitas" id="eynCajitas">
             <article class="card eyn-caja">
-              <h3>EYN- Soporte Back Negocios</h3>
+              <h3>Casos Solucionados</h3>
               <div class="eyn-caja-body" id="eynBackNegocios"></div>
             </article>
             <article class="card eyn-caja">
-              <h3>EYN- Soporte Negocios GI</h3>
+              <h3>Casos no solucionados</h3>
               <div class="eyn-caja-body" id="eynNegociosGI"></div>
             </article>
             <article class="card eyn-caja">
@@ -240,6 +240,17 @@
             <article class="card">
               <h3>Estado Resuelto</h3>
               <div class="ranking-list" id="rankingMasCierran"></div>
+            </article>
+            <article class="card">
+              <h3>Rastreo de casos no solucionados (revalidados)</h3>
+              <p class="calidad-section-sub">SDs tocados por 2+ agentes sin solución</p>
+              <div class="table-wrap">
+                <table class="data-table portal-table" id="tablaRastreoSd">
+                  <thead><tr><th>SD</th><th>Agentes</th><th>Validaciones</th><th>Última fecha</th></tr></thead>
+                  <tbody id="rastreoSdBody"></tbody>
+                </table>
+              </div>
+              <p class="portal-empty" id="rastreoSdEmpty">No hay casos revalidados sin solución.</p>
             </article>
           </div>
         </div>
@@ -536,7 +547,7 @@
                   <option value="NO">NO</option>
                 </select></div>
                 <div class="portal-field"><label for="gestionCliente">Cliente recibe servicio</label><input type="text" id="gestionCliente" placeholder="Nombre del cliente"></div>
-                <div class="portal-field"><label for="gestionPqr">Confirmación de PQR</label><input type="text" id="gestionPqr" placeholder="Confirma SD"></div>
+                <div class="portal-field"><label for="gestionPqr">SD / PQR (ej. SD12345)</label><input type="text" id="gestionPqr" placeholder="SD12345" title="Ingrese el número SD para rastreo de revalidaciones"></div>
               </div>
               <div class="gestion-row gestion-transferencia-extras" id="gestionTransferenciaExtras" style="display:none">
                 <div class="portal-field"><label for="gestionAreaTransferir">Área a transferir</label><select id="gestionAreaTransferir" aria-label="Seleccione área">
@@ -567,6 +578,14 @@
                 <div class="portal-field"><label for="gestionNodo">Nodo</label><input type="text" id="gestionNodo" placeholder="Ej. Ok"></div>
                 <div class="portal-field"><label for="gestionCpe">Acceso a CPE</label><input type="text" id="gestionCpe" placeholder="Ej. Ok"></div>
               </div>
+              <div class="portal-field gestion-hubo-solucion-wrap" id="gestionHuboSolucionWrap" style="display:none; margin-top:0.75rem">
+                <label for="gestionHuboSolucion">¿Hubo solución?</label>
+                <select id="gestionHuboSolucion">
+                  <option value="">—</option>
+                  <option value="Sí">Sí</option>
+                  <option value="Reagendado">Reagendado</option>
+                </select>
+              </div>
             </div>
             <button type="button" class="portal-btn portal-btn-primary" id="btnGestionAgregar">Agregar caso</button>
           </div>
@@ -583,7 +602,7 @@
           <h3 class="portal-card-title">Mis casos</h3>
           <div class="table-wrap">
             <table class="data-table portal-table" id="tablaGestionCasos">
-              <thead><tr><th>Nombre técnico</th><th>Número</th><th>Enlace</th><th>Aliado</th><th>Función</th><th>Transferencia</th><th>Área</th><th>Extensiones</th><th>Cliente</th><th>Fecha/Hora</th><th>Duración</th><th>Acciones</th></tr></thead>
+              <thead><tr><th>Nombre técnico</th><th>Número</th><th>SD</th><th>Enlace</th><th>Aliado</th><th>Función</th><th>Transferencia</th><th>Área</th><th>Extensiones</th><th>Cliente</th><th>Fecha/Hora</th><th>Duración</th><th>Solución</th><th>Acciones</th></tr></thead>
               <tbody id="gestionCasosBody"></tbody>
             </table>
           </div>
@@ -595,6 +614,16 @@
         <div class="agentes-header">
           <h2>Tablero Mensual</h2>
           <p>Gestión día a día del mes. Visualiza en qué días gestionaste más casos.</p>
+        </div>
+        <div class="tablero-download-card gestion-counter-card">
+          <span class="gestion-counter-icon gestion-counter-icon-green">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M12 18v-6"/><path d="M9 15l3 3 3-3"/></svg>
+          </span>
+          <span class="gestion-counter-val" id="tableroDownloadCardCount">0</span>
+          <span class="gestion-counter-label">Casos del mes · Descargar Excel</span>
+          <button type="button" class="gestion-counter-download" id="btnTableroDescargarExcel" title="Descargar casos del mes en Excel (CSV)" aria-label="Descargar Excel">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          </button>
         </div>
         <div class="tablero-mensual-card">
           <div class="tablero-mensual-header">
@@ -678,12 +707,13 @@
           </div>
           <div class="bolsa-form">
             <div class="portal-field">
-              <label for="bolsaBackNegocios">EYN- Soporte Back Negocios</label>
-              <input type="number" id="bolsaBackNegocios" min="0" placeholder="0" aria-label="Casos Back Negocios">
+              <label for="bolsaBackNegocios">Casos Solucionados</label>
+              <span id="bolsaBackNegocios" class="bolsa-hfc-gestion-readonly">0</span>
+              <span class="portal-field-hint">(¿Hubo solución? = Sí en Mi Gestión, agentes Fibra Óptica)</span>
             </div>
             <div class="portal-field">
-              <label for="bolsaNegociosGI">EYN- Soporte Negocios GI</label>
-              <input type="number" id="bolsaNegociosGI" min="0" placeholder="0" aria-label="Casos Negocios GI">
+              <label for="bolsaNegociosGI">Casos no solucionados</label>
+              <input type="number" id="bolsaNegociosGI" min="0" placeholder="0" aria-label="Casos no solucionados">
             </div>
             <div class="portal-field">
               <label for="bolsaProactividad">EYN- PROACTIVIDAD VIP</label>
@@ -753,10 +783,10 @@
         </div>
         <div class="portal-card">
           <h3 class="portal-card-title">Datos HFC</h3>
-          <p class="portal-card-desc">Datos para la sección QoE en Inicio. Casos con Solución = ¿Hubo solución? Sí en Intermitencia. Visitas técnicas: pega tabla con NIT y Fecha.</p>
+          <p class="portal-card-desc">Datos para la sección QoE en Inicio. Casos Solucionados = ¿Hubo solución? Sí en Intermitencia. Visitas técnicas: pega tabla con NIT y Fecha.</p>
           <div class="bolsa-form">
             <div class="portal-field">
-              <label for="bolsaHfcCierresContacto">Casos con Solución</label>
+              <label for="bolsaHfcCierresContacto">Casos Solucionados</label>
               <span id="bolsaHfcCierresContacto" class="bolsa-hfc-gestion-readonly">0</span>
               <span class="portal-field-hint">(¿Hubo solución? = Sí en Intermitencia)</span>
             </div>
