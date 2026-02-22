@@ -732,7 +732,7 @@
                 '<input type="text" id="qoeMarcacion" placeholder="Marcaci\u00f3n">' +
               '</div>' +
               '<div class="qoe-form-row">' +
-                '<label for="qoeHuboSolucion">Resoluci\u00f3n</label>' +
+                '<label for="qoeHuboSolucion">¿Hubo solución?</label>' +
                 '<select id="qoeHuboSolucion">' +
                   '<option value="">—</option>' +
                   '<option value="si">S\u00ed</option>' +
