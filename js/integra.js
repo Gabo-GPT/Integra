@@ -8,6 +8,22 @@
       ? 'http://localhost:3000'
       : 'https://integra-e23d.onrender.com';
   }
+  function showSaveStatus(msg, isError) {
+    var el = document.getElementById('integraSaveStatus');
+    if (!el) return;
+    el.textContent = msg;
+    el.className = 'integra-save-status ' + (isError ? 'error' : 'ok');
+    el.style.display = '';
+    clearTimeout(showSaveStatus._t);
+    showSaveStatus._t = setTimeout(function () { el.style.display = 'none'; }, 3500);
+  }
+  function getApiBase() {
+    if (!API_URL) return '';
+    if (typeof window !== 'undefined' && window.location && window.location.origin === API_URL.replace(/\/$/, '')) {
+      return '';
+    }
+    return API_URL;
+  }
 
   function debounce(fn, ms) {
     var t;
@@ -87,9 +103,20 @@
       var json = JSON.stringify(getData());
       if (json !== _lastSavedJson && json.length <= MAX_STORAGE_BYTES) {
         if (API_URL) {
-          fetch(API_URL + '/api/data', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: json, keepalive: true })
-            .then(function (r) { if (r.ok) _lastSavedJson = json; })
-            .catch(function () {});
+          var url = getApiBase() + '/api/data';
+          fetch(url, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: json, keepalive: true })
+            .then(function (r) {
+              if (r.ok) {
+                _lastSavedJson = json;
+              } else {
+                localStorage.setItem(STORAGE, json);
+                showSaveStatus('Error al guardar en servidor. Datos guardados localmente.', true);
+              }
+            })
+            .catch(function () {
+              localStorage.setItem(STORAGE, json);
+              showSaveStatus('Sin conexión. Datos guardados localmente.');
+            });
         } else {
           localStorage.setItem(STORAGE, json);
           _lastSavedJson = json;
@@ -3418,7 +3445,7 @@
     var POLL_MS = 10000;
     function poll() {
       if (document.visibilityState === 'hidden' || _saveTimer) return;
-      fetch(API_URL + '/api/data').then(function (r) { return r.json(); }).then(function (d) {
+      fetch(getApiBase() + '/api/data').then(function (r) { return r.json(); }).then(function (d) {
         var incoming = JSON.stringify(d && typeof d === 'object' ? d : {});
         if (incoming !== _lastSavedJson) {
           setDataFromApi(d);
@@ -3434,12 +3461,21 @@
 
   function start() {
     if (API_URL) {
-      fetch(API_URL + '/api/data').then(function (r) { return r.json(); }).then(function (d) {
-        setDataFromApi(d);
+      var url = getApiBase() + '/api/data';
+      fetch(url).then(function (r) { return r.json(); }).then(function (d) {
+        setDataFromApi(d && typeof d === 'object' ? d : {});
         init();
         setupRealtimeSync();
       }).catch(function () {
-        setDataFromApi({});
+        try {
+          var raw = localStorage.getItem(STORAGE);
+          if (raw) {
+            var parsed = JSON.parse(raw);
+            setDataFromApi(parsed && typeof parsed === 'object' ? parsed : {});
+          } else {
+            setDataFromApi({});
+          }
+        } catch (e) { setDataFromApi({}); }
         init();
       });
     } else {

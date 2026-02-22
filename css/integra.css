@@ -45,6 +45,22 @@ body {
 
 .integra-dashboard { display: flex; min-height: 100vh; }
 
+.integra-save-status {
+  position: fixed;
+  bottom: 1rem;
+  right: 1rem;
+  padding: 0.6rem 1rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  z-index: 9999;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  animation: integra-status-fade 0.3s ease;
+}
+.integra-save-status.ok { background: var(--integra-success); color: #0f172a; }
+.integra-save-status.error { background: var(--integra-rose); color: #0f172a; }
+@keyframes integra-status-fade { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
 .login-overlay {
   position: fixed;
   inset: 0;
