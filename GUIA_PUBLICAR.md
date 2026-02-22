@@ -1,6 +1,6 @@
 # Guía para publicar Integra (gratis, con persistencia)
 
-Publica tu aplicación para que todos los agentes la usen sin perder datos. Usaremos **Render** (hosting) + **Supabase** (base de datos gratuita).
+Publica tu aplicación para que todos los agentes la usen sin perder datos. Usaremos **Railway** (hosting) + **Supabase** (base de datos gratuita).
 
 ---
 
@@ -8,10 +8,10 @@ Publica tu aplicación para que todos los agentes la usen sin perder datos. Usar
 
 | Componente | Servicio   | Costo  |
 |------------|------------|--------|
-| Backend + Frontend | Render.com | Gratis |
-| Base de datos      | Supabase   | Gratis |
+| Backend + Frontend | Railway   | Gratis (con límites) |
+| Base de datos      | Supabase  | Gratis |
 
-**Importante:** En el plan gratuito de Render, el disco es efímero (se borra al reiniciar). Por eso usamos Supabase para guardar los datos de forma permanente.
+**Importante:** El disco en la mayoría de hosts gratuitos es efímero. Por eso usamos Supabase para guardar los datos de forma permanente.
 
 ---
 
@@ -67,31 +67,29 @@ git push -u origin main
 
 ---
 
-## Paso 3: Desplegar en Render
+## Paso 3: Desplegar en Railway
 
-1. Ve a https://render.com y crea una cuenta.
-2. **New** → **Web Service**.
-3. Conecta tu repositorio de GitHub (autoriza si te lo pide).
-4. Configuración:
-   - **Name:** `integra` (o el que prefieras)
-   - **Region:** elige la más cercana.
-   - **Root Directory:** `server`
-   - **Runtime:** Node
-   - **Build Command:** `npm install`
-   - **Start Command:** `npm start`
-5. En **Environment Variables** (Variables de entorno), agrega:
+1. Ve a https://railway.app y crea una cuenta (con GitHub es más fácil).
+2. **New Project** → **Deploy from GitHub repo**.
+3. Selecciona tu repositorio `integra` (conecta GitHub si aún no lo has hecho).
+4. Railway creará el servicio. Luego ajusta la configuración:
+   - Entra al servicio desplegado → **Settings**.
+   - En **Root Directory** escribe: `server` (así Railway usa la carpeta del backend).
+   - En **Build Command** deja `npm install` (o vacío; Railway lo detecta).
+   - En **Start Command** deja `npm start`.
+5. En **Variables** (o **Environment**), agrega:
    - `SUPABASE_URL` → la Project URL de Supabase
    - `SUPABASE_SERVICE_KEY` → la clave service_role de Supabase
-6. Clic en **Create Web Service**.
-7. Espera el despliegue (~2–3 min).
+6. Para generar una URL pública: **Settings** → **Networking** → **Generate Domain**.
+7. Guarda los cambios. El despliegue se ejecutará de nuevo.
 
-Tu app quedará en una URL como: `https://integra-xxxx.onrender.com`
+Tu app quedará en una URL como: `https://integra-production-xxxx.up.railway.app`
 
 ---
 
 ## Paso 4: Probar
 
-1. Abre la URL de tu servicio (ej. `https://integra-xxxx.onrender.com`).
+1. Abre la URL de tu servicio (ej. `https://integra-production-xxxx.up.railway.app`).
 2. Regístrate, crea usuarios, agrega casos.
 3. Cierra el navegador, abre de nuevo y entra con otro agente: los datos deben seguir ahí.
 
@@ -103,9 +101,9 @@ El frontend detecta automáticamente si está en HTTPS y usa esa misma URL como 
 
 ---
 
-## Plan gratuito de Render: “sueño” del servicio
+## Plan gratuito de Railway
 
-En el plan gratuito, si nadie entra a la app durante **15 minutos**, Render “duerme” el servicio. La primera visita después de eso puede tardar **30–60 segundos** en cargar. Es normal. Los datos no se pierden porque están en Supabase.
+Railway ofrece créditos gratuitos mensuales. El servicio permanece activo mientras haya créditos. Los datos no se pierden porque están en Supabase. Si necesitas más tiempo de ejecución, considera el plan de pago o migra a Render (que “duerme” el servicio tras 15 min de inactividad pero no cobra).
 
 ---
 
@@ -129,6 +127,6 @@ En el plan gratuito, si nadie entra a la app durante **15 minutos**, Render “d
 | Problema | Solución |
 |----------|----------|
 | "Cannot GET /api/data" | El backend no está corriendo o la URL es incorrecta. |
-| Los datos no se guardan | Revisa que `SUPABASE_URL` y `SUPABASE_SERVICE_KEY` estén bien en Render. |
+| Los datos no se guardan | Revisa que `SUPABASE_URL` y `SUPABASE_SERVICE_KEY` estén bien en las variables de Railway. |
 | La app tarda mucho en cargar | Normal si el servicio estaba dormido. Espera 30–60 s. |
 | Error al crear tabla en Supabase | Asegúrate de ejecutar el SQL en el proyecto correcto. |
