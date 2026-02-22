@@ -74,6 +74,50 @@ body {
     radial-gradient(ellipse 60% 40% at 20% 90%, rgba(34, 211, 238, 0.08), transparent);
 }
 .login-overlay.hidden { display: none; }
+
+.server-waking-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1005;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(22, 26, 32, 0.95);
+  backdrop-filter: blur(6px);
+}
+.server-waking-overlay.hidden { display: none; }
+.server-waking-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding: 2.5rem;
+  background: var(--integra-card);
+  border: 1px solid var(--integra-border);
+  border-radius: 12px;
+  box-shadow: var(--integra-shadow-3d);
+}
+.server-waking-spinner {
+  width: 48px;
+  height: 48px;
+  border: 3px solid var(--integra-border);
+  border-top-color: var(--integra-cyan);
+  border-radius: 50%;
+  animation: server-waking-spin 0.9s linear infinite;
+}
+@keyframes server-waking-spin { to { transform: rotate(360deg); } }
+.server-waking-text {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--integra-text);
+}
+.server-waking-hint {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--integra-text-muted);
+}
+
 .login-card {
   width: 100%;
   max-width: 460px;

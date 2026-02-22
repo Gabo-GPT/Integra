@@ -3446,11 +3446,15 @@
     function poll() {
       if (document.visibilityState === 'hidden' || _saveTimer) return;
       fetch(getApiBase() + '/api/data').then(function (r) { return r.json(); }).then(function (d) {
-        var incoming = JSON.stringify(d && typeof d === 'object' ? d : {});
-        if (incoming !== _lastSavedJson) {
-          setDataFromApi(d);
-          refreshFromServerData();
-        }
+        var parsed = d && typeof d === 'object' ? d : {};
+        var incoming = JSON.stringify(parsed);
+        if (incoming === _lastSavedJson) return;
+        var current = getData();
+        var hasLocalData = Object.keys(current).length > 0;
+        var serverReturnedEmpty = Object.keys(parsed).length === 0;
+        if (hasLocalData && serverReturnedEmpty) return;
+        setDataFromApi(parsed);
+        refreshFromServerData();
       }).catch(function () {});
     }
     setInterval(poll, POLL_MS);
@@ -3461,23 +3465,42 @@
 
   function start() {
     if (API_URL) {
-      var url = getApiBase() + '/api/data';
-      fetch(url).then(function (r) { return r.json(); }).then(function (d) {
-        setDataFromApi(d && typeof d === 'object' ? d : {});
-        init();
-        setupRealtimeSync();
-      }).catch(function () {
-        try {
-          var raw = localStorage.getItem(STORAGE);
-          if (raw) {
-            var parsed = JSON.parse(raw);
-            setDataFromApi(parsed && typeof parsed === 'object' ? parsed : {});
-          } else {
-            setDataFromApi({});
-          }
-        } catch (e) { setDataFromApi({}); }
-        init();
-      });
+      var overlay = document.getElementById('serverWakingOverlay');
+      var RETRY_DELAY_MS = 4000;
+      var FETCH_TIMEOUT_MS = 45000;
+      function showOverlay() { if (overlay) overlay.classList.remove('hidden'); }
+      function hideOverlay() { if (overlay) overlay.classList.add('hidden'); }
+      function tryFetch() {
+        showOverlay();
+        var ctrl = new AbortController();
+        var tid = setTimeout(function () { ctrl.abort(); }, FETCH_TIMEOUT_MS);
+        fetch(getApiBase() + '/api/data', { signal: ctrl.signal })
+          .then(function (r) { clearTimeout(tid); return r.json(); })
+          .then(function (d) {
+            hideOverlay();
+            var parsed = d && typeof d === 'object' ? d : {};
+            var serverEmpty = Object.keys(parsed).length === 0;
+            if (serverEmpty) {
+              try {
+                var raw = localStorage.getItem(STORAGE);
+                if (raw) {
+                  var local = JSON.parse(raw);
+                  if (local && typeof local === 'object' && Object.keys(local).length > 0) {
+                    parsed = local;
+                  }
+                }
+              } catch (e) {}
+            }
+            setDataFromApi(parsed);
+            init();
+            setupRealtimeSync();
+          })
+          .catch(function () {
+            clearTimeout(tid);
+            setTimeout(tryFetch, RETRY_DELAY_MS);
+          });
+      }
+      tryFetch();
     } else {
       init();
     }
