@@ -717,7 +717,7 @@
         '<div class="qoe-intermitencia-content" id="qoeIntermitenciaContent">' +
         '<section class="qoe-zona-principal">' +
           '<div class="qoe-diagnostico-card">' +
-            '<h2 class="qoe-diagnostico-titulo">Ingesta CMTS</h2>' +
+            '<h2 class="qoe-diagnostico-titulo">Ingesta CMTS <span class="qoe-casos-badge" id="qoeCasosValidadosBadge">0 Casos validados</span></h2>' +
             '<div class="qoe-intermitencia-form">' +
               '<div class="qoe-form-row">' +
                 '<label for="qoeNumeroCuenta">Cuenta</label>' +
@@ -2587,9 +2587,12 @@
       var inc = inpInc ? (inpInc.value || '').trim() : '';
       if (!cuenta) return;
       addIntermitenciaRegistro(cuenta, pqr, marcacion, solucion, agendo, llamada, maiva, inc);
+      flushSave();
       refreshIntermitenciaList();
       refreshTableroMensual();
       refreshGestionOperacionHfc();
+      var badge = $('qoeCasosValidadosBadge');
+      if (badge) badge.textContent = getIntermitenciaRegistros().length + ' Casos validados';
       inpCuenta.value = '';
       if (inpPqr) inpPqr.value = '';
       if (inpMarcacion) inpMarcacion.value = '';
@@ -2600,7 +2603,6 @@
       if (selMaiva) selMaiva.value = '';
       if (inpInc) inpInc.value = '';
       if (incWrap) incWrap.style.display = 'none';
-      flushSave();
     });
   }
   function bindQoEIntermitenciaToggle() {
