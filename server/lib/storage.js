@@ -38,6 +38,10 @@ async function readSupabase() {
 
 async function writeSupabase(data) {
   const { url, serviceKey, table, rowId } = config.supabase;
+  if (!url || !serviceKey) {
+    console.error('Supabase no configurado: faltan SUPABASE_URL o SUPABASE_SERVICE_KEY');
+    return false;
+  }
   try {
     const res = await fetch(`${url}/rest/v1/${table}`, {
       method: 'POST',
@@ -49,6 +53,10 @@ async function writeSupabase(data) {
       },
       body: JSON.stringify({ id: rowId, value: data }),
     });
+    if (!res.ok) {
+      const errText = await res.text();
+      console.error('Supabase PUT error:', res.status, errText);
+    }
     return res.ok;
   } catch (e) {
     console.error('Error guardando en Supabase:', e.message);

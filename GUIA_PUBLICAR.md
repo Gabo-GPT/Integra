@@ -37,7 +37,7 @@ git push -u origin main
 
 ### Paso 3: Usa la app
 
-En unos minutos tendrás una URL como: `https://integra-xxxx.onrender.com`
+En unos minutos tendrás una URL como: `https://integra-e23d.onrender.com`
 
 ---
 

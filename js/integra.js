@@ -3,8 +3,10 @@
   'use strict';
 
   var API_URL = (typeof window !== 'undefined' && window.INTEGRA_API_URL) || '';
-  if (!API_URL && typeof window !== 'undefined' && window.location && (window.location.protocol === 'https:' || window.location.port === '3000')) {
-    API_URL = window.location.origin;
+  if (!API_URL && typeof window !== 'undefined' && window.location) {
+    API_URL = window.location.hostname === 'localhost'
+      ? 'http://localhost:3000'
+      : 'https://integra-e23d.onrender.com';
   }
 
   function debounce(fn, ms) {
@@ -85,8 +87,8 @@
       var json = JSON.stringify(getData());
       if (json !== _lastSavedJson && json.length <= MAX_STORAGE_BYTES) {
         if (API_URL) {
-          fetch(API_URL + '/api/data', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: json })
-            .then(function () { _lastSavedJson = json; })
+          fetch(API_URL + '/api/data', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: json, keepalive: true })
+            .then(function (r) { if (r.ok) _lastSavedJson = json; })
             .catch(function () {});
         } else {
           localStorage.setItem(STORAGE, json);
@@ -520,6 +522,7 @@
       var arr = list.slice();
       arr.splice(i, 1);
       saveData('portalUsuarios', trimArrayNewestLast(arr, MAX_PORTAL_USUARIOS));
+      flushSave();
       refreshUsuariosPortal();
     }
   }
@@ -1643,6 +1646,7 @@
       var items = (getData().portalUsuarios || []).slice();
       items.push({ nombre: nombre.trim(), usuario: usuario.trim() || nombreToLogin(nombre), clave: clave, estado: 'Temporal', role: 'fibra-optica' });
       saveData('portalUsuarios', trimArrayNewestLast(items, MAX_PORTAL_USUARIOS));
+      flushSave();
       refreshUsuariosPortal();
       if ($('portalNombre')) $('portalNombre').value = '';
       if ($('portalUsuario')) $('portalUsuario').value = '';
@@ -1658,6 +1662,7 @@
         items.push({ nombre: nombre, usuario: nombreToLogin(nombre), clave: genClaveTemp(), estado: 'Temporal', role: 'fibra-optica' });
       });
       saveData('portalUsuarios', trimArrayNewestLast(items, MAX_PORTAL_USUARIOS));
+      flushSave();
       refreshUsuariosPortal();
       if (ta) ta.value = '';
     });

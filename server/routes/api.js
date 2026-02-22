@@ -26,10 +26,12 @@ router.put('/data', async (req, res) => {
     if (ok) {
       res.json({ ok: true, message: 'Datos guardados' });
     } else {
-      res.status(500).json({ error: 'No se pudieron guardar los datos' });
+      const config = require('../config');
+      const hint = config.useSupabase ? ' Revisa SUPABASE_URL y SUPABASE_SERVICE_KEY en Render.' : '';
+      res.status(500).json({ error: 'No se pudieron guardar los datos.' + hint });
     }
   } catch (e) {
-    res.status(500).json({ error: 'Error al guardar' });
+    res.status(500).json({ error: 'Error al guardar: ' + (e.message || 'desconocido') });
   }
 });
 

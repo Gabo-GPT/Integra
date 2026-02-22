@@ -1009,8 +1009,12 @@
     </main>
   </div>
 
-  <!-- API: se usa automáticamente en producción (HTTPS) y cuando abres localhost:3000 -->
-  <!-- Para Live Server en otro puerto: <script>window.INTEGRA_API_URL = 'http://localhost:3000';</script> -->
+  <!-- API: producción en Render. Para desarrollo local: window.INTEGRA_API_URL = 'http://localhost:3000'; -->
+  <script>
+    window.INTEGRA_API_URL = window.location.hostname === 'localhost'
+      ? 'http://localhost:3000'
+      : 'https://integra-e23d.onrender.com';
+  </script>
   <script src="js/integra.js" defer></script>
 </body>
 </html>

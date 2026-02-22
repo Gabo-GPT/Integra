@@ -32,7 +32,7 @@ app.listen(config.port, () => {
   console.log('');
   console.log('  Integra - Backend API');
   console.log('  ====================');
-  console.log('  Servidor: http://localhost:' + config.port);
+  console.log('  Servidor: puerto ' + config.port);
   console.log('  Almacenamiento: ' + (config.useSupabase ? 'Supabase' : 'Archivo local'));
   console.log('');
 });
