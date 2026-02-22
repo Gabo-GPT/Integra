@@ -717,7 +717,7 @@
         '<div class="qoe-intermitencia-content" id="qoeIntermitenciaContent">' +
         '<section class="qoe-zona-principal">' +
           '<div class="qoe-diagnostico-card">' +
-            '<h2 class="qoe-diagnostico-titulo">Ingesta CMTS <span class="qoe-casos-badge" id="qoeCasosValidadosBadge">0 Casos validados</span></h2>' +
+            '<h2 class="qoe-diagnostico-titulo">Ingesta CMTS <span class="qoe-casos-badge" id="qoeCasosValidadosBadge">' + getIntermitenciaRegistros().length + ' Casos validados</span></h2>' +
             '<div class="qoe-intermitencia-form">' +
               '<div class="qoe-form-row">' +
                 '<label for="qoeNumeroCuenta">Cuenta</label>' +
