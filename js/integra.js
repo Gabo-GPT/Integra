@@ -603,6 +603,7 @@
     if (!data) data = getData();
     var items = (data.portalUsuarios && Array.isArray(data.portalUsuarios)) ? data.portalUsuarios : [];
     var tbody = $('usuariosBody');
+    var tabla = $('tablaUsuarios');
     if (!tbody) return;
     var emptyEl = $('portalEmpty');
     if (emptyEl) {
@@ -613,6 +614,7 @@
         emptyEl.style.display = 'block';
       }
     }
+    if (tabla) tabla.style.display = items.length ? 'table' : 'none';
     tbody.innerHTML = items.map(function (u, i) {
       var r = (u.role || 'fibra-optica');
       if (ROLES.indexOf(r) < 0) r = 'fibra-optica';
