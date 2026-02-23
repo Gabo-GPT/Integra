@@ -2313,6 +2313,9 @@ body {
   transition: box-shadow 0.2s;
 }
 .portal-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+.portal-card-title-row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap; }
+.portal-card-title-row .portal-card-title { margin: 0; }
+.portal-btn-sm { padding: 0.35rem 0.75rem; font-size: 0.8rem; }
 .portal-card-title {
   margin: 0 0 1rem;
   font-size: 0.8rem;

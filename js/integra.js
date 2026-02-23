@@ -257,8 +257,21 @@
     if (sectionId === 'agentes') {
       var d = getData();
       var items = (d.portalUsuarios && Array.isArray(d.portalUsuarios)) ? d.portalUsuarios : [];
-      if (API_URL && items.length === 0) {
-        loadUsuariosConReintentos();
+      if (API_URL) {
+        if (items.length === 0) {
+          loadUsuariosConReintentos();
+        } else {
+          refreshUsuariosPortal(d);
+          fetch(getApiBase() + '/api/data', { cache: 'no-store' })
+            .then(function (r) { return r.ok ? r.json() : null; })
+            .then(function (d) {
+              if (!d || typeof d !== 'object') return;
+              var parsed = d.data && typeof d.data === 'object' ? d.data : d;
+              var serverItems = (parsed.portalUsuarios && Array.isArray(parsed.portalUsuarios)) ? parsed.portalUsuarios : [];
+              if (serverItems.length > 0) { setDataFromApi(parsed); refreshUsuariosPortal(); }
+            })
+            .catch(function () {});
+        }
       } else {
         refreshUsuariosPortal(d);
       }
@@ -575,6 +588,7 @@
         })
         .then(function (d) {
           var parsed = d && typeof d === 'object' ? d : {};
+          if (parsed.data && typeof parsed.data === 'object') parsed = parsed.data;
           var serverEmpty = Object.keys(parsed).length === 0;
           if (serverEmpty) {
             try {
@@ -1755,6 +1769,21 @@
   function bindPortalUsuarios() {
     var tbl = $('tablaUsuarios');
     if (tbl && !tbl._portalBound) { tbl._portalBound = true; tbl.addEventListener('click', onPortalTableClick); tbl.addEventListener('change', onPortalTableChange); }
+    var btnRecargar = $('btnRecargarUsuarios');
+    if (btnRecargar && API_URL) btnRecargar.addEventListener('click', function () {
+      btnRecargar.disabled = true;
+      btnRecargar.textContent = 'Cargando…';
+      fetch(getApiBase() + '/api/data', { cache: 'no-store' })
+        .then(function (r) { return r.ok ? r.json() : Promise.reject(new Error('HTTP ' + r.status)); })
+        .then(function (d) {
+          var parsed = d && typeof d === 'object' ? d : {};
+          if (parsed.data && typeof parsed.data === 'object') parsed = parsed.data;
+          setDataFromApi(parsed);
+          refreshUsuariosPortal();
+        })
+        .catch(function () { refreshUsuariosPortal(); })
+        .finally(function () { btnRecargar.disabled = false; btnRecargar.textContent = 'Recargar'; });
+    });
     var btnGen = $('btnGenerarClave');
     var btnAdd = $('btnAgregarUsuario');
     var btnBulk = $('btnGenerarUsuarios');
@@ -3610,6 +3639,7 @@
         .then(function (d) {
           if (!d) return;
         var parsed = d && typeof d === 'object' ? d : {};
+        if (parsed.data && typeof parsed.data === 'object') parsed = parsed.data;
         var incoming = JSON.stringify(parsed);
         if (incoming === _lastSavedJson) return;
         var current = getData();
@@ -3646,6 +3676,7 @@
           .then(function (d) {
             hideOverlay();
             var parsed = d && typeof d === 'object' ? d : {};
+            if (parsed.data && typeof parsed.data === 'object') parsed = parsed.data;
             var serverEmpty = Object.keys(parsed).length === 0;
             if (serverEmpty) {
               try {
