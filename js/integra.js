@@ -43,7 +43,7 @@
   }
 
   var STORAGE = 'integra_data';
-  var _nav, _sections, _dataCache, _saveTimer, _lastSavedJson;
+  var _nav, _sections, _dataCache, _saveTimer, _lastSavedJson, _pendingApiPut = false;
   var MAX_EL_CACHE = 24;
   var MAX_GESTION_CASOS = 500;
   var MAX_PORTAL_USUARIOS = 200;
@@ -103,8 +103,9 @@
       var json = JSON.stringify(getData());
       if (json !== _lastSavedJson && json.length <= MAX_STORAGE_BYTES) {
         if (API_URL) {
+          _pendingApiPut = true;
           var url = getApiBase() + '/api/data';
-          fetch(url, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: json, keepalive: true })
+          fetch(url, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: json, keepalive: true, cache: 'no-store' })
             .then(function (r) {
               if (r.ok) {
                 _lastSavedJson = json;
@@ -116,7 +117,8 @@
             .catch(function () {
               localStorage.setItem(STORAGE, json);
               showSaveStatus('Sin conexión. Datos guardados localmente.');
-            });
+            })
+            .finally(function () { _pendingApiPut = false; });
         } else {
           localStorage.setItem(STORAGE, json);
           _lastSavedJson = json;
@@ -127,6 +129,35 @@
   function flushSave() {
     if (_saveTimer) { clearTimeout(_saveTimer); _saveTimer = 0; }
     _persistToStorage();
+  }
+
+  function flushSaveAsync() {
+    if (_saveTimer) { clearTimeout(_saveTimer); _saveTimer = 0; }
+    try {
+      var json = JSON.stringify(getData());
+      if (json.length > MAX_STORAGE_BYTES) return Promise.reject(new Error('Datos demasiado grandes'));
+      if (!API_URL) {
+        localStorage.setItem(STORAGE, json);
+        _lastSavedJson = json;
+        return Promise.resolve();
+      }
+      _pendingApiPut = true;
+      var url = getApiBase() + '/api/data';
+      return fetch(url, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: json, cache: 'no-store' })
+        .then(function (r) {
+          if (r.ok) {
+            _lastSavedJson = json;
+            return;
+          }
+          throw new Error('HTTP ' + r.status);
+        })
+        .catch(function (err) {
+          localStorage.setItem(STORAGE, json);
+          showSaveStatus(err.message && err.message.indexOf('HTTP') === 0 ? 'Error al guardar en servidor. Datos guardados localmente.' : 'Sin conexión. Datos guardados localmente.', true);
+          return Promise.reject(err);
+        })
+        .finally(function () { _pendingApiPut = false; });
+    } catch (e) { return Promise.reject(e); }
   }
 
   var _adminCache = null;
@@ -1733,11 +1764,14 @@
       var items = (getData().portalUsuarios || []).slice();
       items.push({ nombre: nombre.trim(), usuario: usuario.trim() || nombreToLogin(nombre), clave: clave, estado: 'Temporal', role: 'fibra-optica' });
       saveData('portalUsuarios', trimArrayNewestLast(items, MAX_PORTAL_USUARIOS));
-      flushSave();
-      refreshUsuariosPortal();
-      if ($('portalNombre')) $('portalNombre').value = '';
-      if ($('portalUsuario')) $('portalUsuario').value = '';
-      if ($('portalClave')) $('portalClave').value = '';
+      flushSaveAsync()
+        .then(function () {
+          refreshUsuariosPortal();
+          if ($('portalNombre')) $('portalNombre').value = '';
+          if ($('portalUsuario')) $('portalUsuario').value = '';
+          if ($('portalClave')) $('portalClave').value = '';
+        })
+        .catch(function () { refreshUsuariosPortal(); });
     });
     if (btnBulk) btnBulk.addEventListener('click', function () {
       var ta = $('portalNombres');
@@ -1749,9 +1783,12 @@
         items.push({ nombre: nombre, usuario: nombreToLogin(nombre), clave: genClaveTemp(), estado: 'Temporal', role: 'fibra-optica' });
       });
       saveData('portalUsuarios', trimArrayNewestLast(items, MAX_PORTAL_USUARIOS));
-      flushSave();
-      refreshUsuariosPortal();
-      if (ta) ta.value = '';
+      flushSaveAsync()
+        .then(function () {
+          refreshUsuariosPortal();
+          if (ta) ta.value = '';
+        })
+        .catch(function () { refreshUsuariosPortal(); });
     });
   }
 
@@ -3503,7 +3540,7 @@
     if (!API_URL) return;
     var POLL_MS = 10000;
     function poll() {
-      if (document.visibilityState === 'hidden' || _saveTimer) return;
+      if (document.visibilityState === 'hidden' || _saveTimer || _pendingApiPut) return;
       fetch(getApiBase() + '/api/data', { cache: 'no-store' })
         .then(function (r) {
           if (!r.ok) return;
