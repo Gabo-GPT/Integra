@@ -88,6 +88,7 @@
   function setDataFromApi(data) {
     _dataCache = data && typeof data === 'object' ? data : {};
     _lastSavedJson = JSON.stringify(_dataCache);
+    try { localStorage.setItem(STORAGE, _lastSavedJson); } catch (e) {}
   }
 
   function saveData(key, val) {
@@ -109,6 +110,7 @@
             .then(function (r) {
               if (r.ok) {
                 _lastSavedJson = json;
+                try { localStorage.setItem(STORAGE, json); } catch (e) {}
               } else {
                 localStorage.setItem(STORAGE, json);
                 showSaveStatus('Error al guardar en servidor. Datos guardados localmente.', true);
@@ -147,6 +149,7 @@
         .then(function (r) {
           if (r.ok) {
             _lastSavedJson = json;
+            try { localStorage.setItem(STORAGE, json); } catch (e) {}
             return;
           }
           throw new Error('HTTP ' + r.status);
@@ -246,6 +249,21 @@
         refreshReincidencias(d, gData);
         refreshRankings(d, gData);
         refreshGestionOperacion();
+        if (API_URL) {
+          fetch(getApiBase() + '/api/data', { cache: 'no-store' })
+            .then(function (r) { return r.ok ? r.json() : null; })
+            .then(function (d) {
+              if (!d || typeof d !== 'object') return;
+              var parsed = d.data && typeof d.data === 'object' ? d.data : d;
+              if (Object.keys(parsed).length > 0) {
+                setDataFromApi(parsed);
+                refreshReincidencias(getData(), getGestionDataFromStorage());
+                refreshRankings(getData(), getGestionDataFromStorage());
+                refreshGestionOperacion();
+              }
+            })
+            .catch(function () {});
+        }
       } else refreshProductividadAgente();
     }
     if (sectionId === 'gestion') refreshGestionCasos();
@@ -3628,7 +3646,7 @@
 
   function setupRealtimeSync() {
     if (!API_URL) return;
-    var POLL_MS = 10000;
+    var POLL_MS = 5000;
     function poll() {
       if (document.visibilityState === 'hidden' || _saveTimer || _pendingApiPut) return;
       fetch(getApiBase() + '/api/data', { cache: 'no-store' })
@@ -3646,6 +3664,9 @@
         var hasLocalData = Object.keys(current).length > 0;
         var serverReturnedEmpty = Object.keys(parsed).length === 0;
         if (hasLocalData && serverReturnedEmpty) return;
+        var serverUsers = (parsed.portalUsuarios && Array.isArray(parsed.portalUsuarios)) ? parsed.portalUsuarios : [];
+        var localUsers = (current.portalUsuarios && Array.isArray(current.portalUsuarios)) ? current.portalUsuarios : [];
+        if (serverUsers.length === 0 && localUsers.length > 0) parsed.portalUsuarios = localUsers;
         setDataFromApi(parsed);
         refreshFromServerData();
       }).catch(function () {});
