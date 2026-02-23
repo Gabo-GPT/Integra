@@ -1785,9 +1785,29 @@
     var cliInput = $('gestionCliInput');
     var cliBoxes = $('gestionCliBoxes');
     if (cliInput && cliBoxes) {
+      function normalizeCliLineBreaks(text) {
+        var s = (text || '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+        var newlineCount = (s.match(/\n/g) || []).length;
+        var avgLineLen = newlineCount > 0 ? s.length / newlineCount : s.length;
+        if (avgLineLen < 100) return s;
+        s = s.replace(/(\d{5,}@[^\s]+'s password:)/g, '\n$1');
+        s = s.replace(/(\*{6,})/g, '\n$1\n');
+        s = s.replace(/(Welcome to [^*]+)/g, '\n$1');
+        s = s.replace(/(Login at [^\s]+)/g, '\n$1');
+        s = s.replace(/(ZAC-BAR\.[A-Z0-9.-]+#|RP\/[0-9]\/RSP[0-9]\/CPU[0-9]:[A-Z0-9]+#)/g, '\n$1');
+        s = s.replace(/\$\s+(interface\s)/g, '$\n$1');
+        s = s.replace(/(!<[a-z-]+>)/g, '\n$1');
+        s = s.replace(/(\s)\s+(interface\s+(?:gpon_onu-|vport-))/g, '\n$2');
+        s = s.replace(/([:\d])\s{2,}(name\s|description\s|tcont\s|gemport\s|vport\s|vport-map\s|service\s|vlan port\s|interface eth\s|pon-onu-mng\s|service-port\s|security\s)/g, '$1\n  $2');
+        s = s.replace(/(--+)\s*(1\/1\/1:)/g, '$1\n$2');
+        s = s.replace(/(GPON|N\/A|working|OffLine|LOS|DyingGasp)\s+(1\/1\/1:\d+)/g, '$1\n$2');
+        s = s.replace(/(ONU Number:[\s\d/]+)(ZAC-BAR|RP\/)/g, '$1\n$2');
+        return s.replace(/^\n+/, '').replace(/\n{3,}/g, '\n\n');
+      }
       function parseCliBlocks(text) {
+        var normalized = normalizeCliLineBreaks(text);
         var blocks = [];
-        var lines = (text || '').split('\n');
+        var lines = normalized.split('\n');
         var i = 0;
         var promptRe = /[A-Za-z0-9._\/:-]+#\s*/;
         while (i < lines.length) {
@@ -1827,17 +1847,26 @@
         }
         return blocks;
       }
+      var lastFormattedText = '';
       function renderCliBoxes() {
-        var txt = cliInput.value || '';
-        if (!txt.trim()) { cliBoxes.innerHTML = ''; return; }
-        var blocks = parseCliBlocks(txt);
+        var txt = (cliInput.value || '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+        if (!txt.trim()) { cliBoxes.innerHTML = ''; lastFormattedText = ''; return; }
+        var normalized = normalizeCliLineBreaks(txt);
+        var blocks = parseCliBlocks(normalized);
+        lastFormattedText = blocks.map(function (b) {
+          return (b.header ? b.header + '\n' : '') + (b.content ? b.content : '');
+        }).join('\n\n');
         cliBoxes.innerHTML = blocks.map(function (b) {
-          var isSection = b.header && !b.content && /^[\/=A-Z]/.test(b.header.trim());
+          var isSection = b.header && !b.content && /^[\/=A-Z]/.test((b.header || '').trim());
           var h = b.header ? '<div class="gestion-cli-box-header' + (isSection ? ' gestion-cli-box-section' : '') + '">' + escapeHtml(b.header) + '</div>' : '';
           var c = b.content ? '<div class="gestion-cli-box-body">' + escapeHtml(b.content) + '</div>' : '';
           return '<div class="gestion-cli-box">' + h + c + '</div>';
         }).join('');
       }
+      var btnCopyCli = $('btnCliCopiarFormateado');
+      if (btnCopyCli) btnCopyCli.addEventListener('click', function () {
+        if (lastFormattedText) { try { navigator.clipboard.writeText(lastFormattedText); btnCopyCli.textContent = '¡Copiado!'; setTimeout(function () { btnCopyCli.textContent = 'Copiar formateado'; }, 1500); } catch (e) {} }
+      });
       cliInput.addEventListener('input', debounce(renderCliBoxes, 150));
       cliInput.addEventListener('paste', function () { setTimeout(renderCliBoxes, 50); });
     }

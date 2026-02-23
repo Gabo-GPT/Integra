@@ -611,9 +611,12 @@
           <textarea id="gestionPlantilla" class="gestion-plantilla-output" rows="12" readonly></textarea>
         </div>
         <div class="portal-card gestion-cli-formatter-card">
-          <h3 class="portal-card-title">Formatear salida CLI</h3>
-          <p class="gestion-cli-formatter-desc">Pega el output de terminal (ZTE, Cisco, etc.) para verlo organizado en cajitas por comando.</p>
-          <textarea id="gestionCliInput" class="gestion-cli-input" rows="6" placeholder="Pega aquí el output completo de la terminal..."></textarea>
+          <div class="gestion-cli-formatter-header">
+            <h3 class="portal-card-title">Formatear salida CLI</h3>
+            <button type="button" class="portal-btn portal-btn-secondary" id="btnCliCopiarFormateado" title="Copiar texto formateado">Copiar formateado</button>
+          </div>
+          <p class="gestion-cli-formatter-desc">Pega el output de terminal (ZTE, Cisco, etc.). Si viene sin saltos de línea, se restauran automáticamente.</p>
+          <textarea id="gestionCliInput" class="gestion-cli-input" rows="6" placeholder="Pega aquí el output de la terminal (con o sin saltos de línea)..."></textarea>
           <div id="gestionCliBoxes" class="gestion-cli-boxes"></div>
         </div>
         <div class="portal-card">
