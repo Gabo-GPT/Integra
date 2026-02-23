@@ -537,8 +537,11 @@
     tbody.innerHTML = '';
     function intentar() {
       reintento++;
-      fetch(getApiBase() + '/api/data')
-        .then(function (r) { return r.json(); })
+      fetch(getApiBase() + '/api/data', { cache: 'no-store' })
+        .then(function (r) {
+          if (!r.ok) throw new Error('HTTP ' + r.status);
+          return r.json();
+        })
         .then(function (d) {
           var parsed = d && typeof d === 'object' ? d : {};
           var serverEmpty = Object.keys(parsed).length === 0;
@@ -3501,7 +3504,13 @@
     var POLL_MS = 10000;
     function poll() {
       if (document.visibilityState === 'hidden' || _saveTimer) return;
-      fetch(getApiBase() + '/api/data').then(function (r) { return r.json(); }).then(function (d) {
+      fetch(getApiBase() + '/api/data', { cache: 'no-store' })
+        .then(function (r) {
+          if (!r.ok) return;
+          return r.json();
+        })
+        .then(function (d) {
+          if (!d) return;
         var parsed = d && typeof d === 'object' ? d : {};
         var incoming = JSON.stringify(parsed);
         if (incoming === _lastSavedJson) return;
@@ -3530,8 +3539,12 @@
         showOverlay();
         var ctrl = new AbortController();
         var tid = setTimeout(function () { ctrl.abort(); }, FETCH_TIMEOUT_MS);
-        fetch(getApiBase() + '/api/data', { signal: ctrl.signal })
-          .then(function (r) { clearTimeout(tid); return r.json(); })
+        fetch(getApiBase() + '/api/data', { signal: ctrl.signal, cache: 'no-store' })
+          .then(function (r) {
+            clearTimeout(tid);
+            if (!r.ok) throw new Error('HTTP ' + r.status);
+            return r.json();
+          })
           .then(function (d) {
             hideOverlay();
             var parsed = d && typeof d === 'object' ? d : {};
