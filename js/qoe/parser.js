@@ -47,12 +47,24 @@
       snrM = raw.match(/([\d.,\-]+)\s*dB\s*(?:SNR|upstream)/i);
       if (snrM) snr = parseNumber(snrM[1]);
     }
+    if (snr === null) {
+      snrM = raw.match(/USSNR\s*\(dB\)[\s\S]*?(\d+[\/\-]\d+[\/\-]\d+[\/\-]?\d*)[\s\-]+[\d.,\-]+\s+([\d.,\-]+)/i);
+      if (snrM) snr = parseNumber(snrM[2]);
+    }
     if (snr === null) addError(errors, 'modem', 'snr', 'Campo SNR no encontrado o no numérico', true);
 
     var peakTransmitPower = null;
     var pwrM = raw.match(/Peak\s+Transmit\s+Power\s*\(dBmV\)\s*:\s*([\d.,\-]+)/i);
     if (!pwrM) pwrM = raw.match(/(?:Peak\s+)?(?:Transmit|Tx)\s*Power\s*(?:\(dBmV\))?\s*:?\s*([\d.,\-]+)|Peak\s+Power\s*(?:\(dBmV\))?\s*:?\s*([\d.,\-]+)/i);
     if (pwrM) peakTransmitPower = parseNumber(pwrM[1] || pwrM[2]);
+    if (peakTransmitPower === null) {
+      pwrM = raw.match(/Rec\s+Power\s*=\s*([\d.,\-]+)\s*dBmV/i);
+      if (pwrM) peakTransmitPower = parseNumber(pwrM[1]);
+    }
+    if (peakTransmitPower === null) {
+      pwrM = raw.match(/----- CMTS Measurements -----[\s\S]*?(\d+[\/\-]\d+[\/\-]\d+[\/\-]?\d*)[\s\-]+([\d.,\-]+)\s+[\d.,\-]+/i);
+      if (pwrM) peakTransmitPower = parseNumber(pwrM[2]);
+    }
     if (peakTransmitPower === null) addError(errors, 'modem', 'peakTransmitPower', 'Campo Peak Transmit Power no encontrado o no numérico', true);
 
     var unerroreds = null;
@@ -80,11 +92,19 @@
       uncorrM = raw.match(/(?:Uncorrectables?|Uncorrectable\s+codewords)[\s:]+([\d\s,]+)/i);
       if (uncorrM) uncorrectables = parseInteger(uncorrM[1]);
     }
+    if (uncorrectables === null) {
+      uncorrM = raw.match(/CRC\s+HCS[\s\S]*?(\d+)\s+(\d+)\s+[a-fA-F0-9\.\-]+/i);
+      if (uncorrM) { var crc = parseInteger(uncorrM[1]), hcs = parseInteger(uncorrM[2]); uncorrectables = (crc || 0) + (hcs || 0); }
+    }
     if (uncorrectables === null) addError(errors, 'modem', 'uncorrectables', 'Campo Uncorrectables no encontrado o no numérico', true);
 
     var status = null;
     var statM = raw.match(/Status[\s:]+(\w+)/i);
     if (statM) status = statM[1].trim();
+    if (!status) {
+      statM = raw.match(/\bState\s*=\s*(\w+)/i);
+      if (statM) status = statM[1].trim();
+    }
 
     var modem = {
       mac: mac,
@@ -110,6 +130,14 @@
     if (!interfaceId) {
       ifM = raw.match(/(Upstream\s+\d+\/\d+)/i);
       if (ifM) interfaceId = ifM[1];
+    }
+    if (!interfaceId) {
+      ifM = raw.match(/cable-upstream\s+(\d+\/\d+\/\d+)/i);
+      if (ifM) interfaceId = 'cable-upstream ' + ifM[1];
+    }
+    if (!interfaceId) {
+      ifM = raw.match(/US\s+(\d+\/\d+\/\d+)/i);
+      if (ifM) interfaceId = 'Upstream ' + ifM[1];
     }
     if (!interfaceId) interfaceId = '';
 

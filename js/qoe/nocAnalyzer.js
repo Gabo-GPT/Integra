@@ -11,9 +11,10 @@
   function detectCmtsType(raw) {
     if (!raw || typeof raw !== 'string') return CMTS_TYPES.DESCONOCIDO;
     var t = raw.toUpperCase();
-    if (/ARRIS|CISCO\s*E600|E6000|CBR-8|CHORUS/i.test(t)) return CMTS_TYPES.ARRIS;
+    if (/ARRIS|ARRIE6|CISCO\s*E600|E6000|CBR-8|CHORUS|BOGO-[A-Z]+-H-\d+-ARRIE6/i.test(t)) return CMTS_TYPES.ARRIS;
     if (/vCMTS|VCMTS|CISCO\s*RPHY|R-PHY|CCAP/i.test(t)) return CMTS_TYPES.vCMTS;
     if (/CASA|C4|C10|SYSTEM\s*3200|CMTS\s*CASA/i.test(t)) return CMTS_TYPES.CASA;
+    if (/BOGO-[A-Z]+-H-\d+-CS100G|show\s+interface\s+upstream/i.test(t)) return CMTS_TYPES.ARRIS;
     return CMTS_TYPES.DESCONOCIDO;
   }
 
@@ -41,23 +42,50 @@
     };
     if (!combined.trim()) return out;
 
-    /* TX Upstream (Peak Transmit Power) */
+    /* TX Upstream (Peak Transmit Power, Rec Power, USPwr) */
     var m = combined.match(/(?:Peak\s+)?(?:Transmit|Tx)\s*Power\s*(?:\(dBmV\))?\s*:?\s*([\d.,\-]+)|Peak\s+Power\s*(?:\(dBmV\))?\s*:?\s*([\d.,\-]+)/i);
     if (m) out.tx = parseNum(m[1] || m[2]);
+    if (out.tx == null) {
+      m = combined.match(/Rec\s+Power\s*=\s*([\d.,\-]+)\s*dBmV/i);
+      if (m) out.tx = parseNum(m[1]);
+    }
+    if (out.tx == null) {
+      m = combined.match(/USPwr\s*\(dBmV\)[\s\S]*?(\d+\/\d+\/\d+[-]\d+\/\d+\/\d+)[\s\-]+([\d.,\-]+)\s+([\d.,\-]+)/i);
+      if (m) out.tx = parseNum(m[2]);
+    }
+    if (out.tx == null) {
+      m = combined.match(/----- CMTS Measurements -----[\s\S]*?(\d+[\/\-]\d+[\/\-]\d+[\/\-]?\d*)[\s\-]+([\d.,\-]+)\s+([\d.,\-]+)/i);
+      if (m) out.tx = parseNum(m[2]);
+    }
 
-    /* RX Downstream */
+    /* RX Downstream (DSPwr) */
     m = combined.match(/(?:Receive|Rx|Downstream)\s*(?:Power|Signal)\s*(?:\(dBmV\))?\s*:?\s*([\d.,\-]+)|Power\s+Level\s*(?:\(dBmV\))?\s*:?\s*([\d.,\-]+)|(?:Downstream\s+)?(?:Receive|Rx)\s*Power\s*:?\s*([\d.,\-]+)/i);
     if (!m) m = combined.match(/(?:RX|Down)\s*(?:Power)?\s*:?\s*([\d.,\-]+)/i);
     if (m) out.rx = parseNum(m[1] || m[2] || m[3]);
+    if (out.rx == null) {
+      m = combined.match(/(\d+\/\d+\/\d+-\d+\/\d+\/\d+)\s+[\d.,\-]+\s+[\d.,\-]+\s+[\d.,\-]+\s+[\d.,\-]+\s+[\d.,\-]+\s+([\d.,\-]+)/);
+      if (m) { var dspwr = parseNum(m[2]); if (dspwr != null && !isNaN(dspwr) && String(m[2]) !== '-') out.rx = dspwr; }
+    }
 
-    /* SNR Upstream */
     m = combined.match(/(?:Upstream\s+)?SNR[\s:]+([\d.,\-]+)|Signal[\s\/]Noise[\s:]+([\d.,\-]+)|SNR\s*\(dB\)[\s:]+([\d.,\-]+)/i);
     if (m) out.snrUp = parseNum(m[1] || m[2] || m[3]);
+    if (out.snrUp == null) {
+      m = combined.match(/USSNR\s*\(dB\)[\s\S]*?(\d+[\/\-]\d+[\/\-]\d+[\/\-]?\d*)[\s\-]+([\d.,\-]+)\s+([\d.,\-]+)/i);
+      if (m) out.snrUp = parseNum(m[2]);
+    }
+    if (out.snrUp == null) {
+      m = combined.match(/----- CMTS Measurements -----[\s\S]*?(\d+[\/\-]\d+[\/\-]\d+[\/\-]?\d*)[\s\-]+[\d.,\-]+\s+([\d.,\-]+)/i);
+      if (m) out.snrUp = parseNum(m[2]);
+    }
 
-    /* SNR Downstream */
+    /* SNR Downstream (DSSNR) */
     m = combined.match(/SNR\s*(?:Down|Downstream)?[\s:]+([\d.,\-]+)|Downstream\s+SNR[\s:]+([\d.,\-]+)/i);
     if (!m) m = combined.match(/(?:Rx|Down)\s*SNR[\s:]+([\d.,\-]+)/i);
     if (m) out.snrDown = parseNum(m[1] || m[2]);
+    if (out.snrDown == null) {
+      m = combined.match(/(\d+[\/\-]\d+[\/\-]\d+[\/\-]\d+[\/\-]\d+[\/\-]\d+)\s+[\d.,\-]+\s+[\d.,\-]+[\s\d.,\-]+\s+[\d.,\-]+\s+[\d.,\-]+\s+[\d.,\-]+\s+([\d.,\-]+)/);
+      if (m) { var dssnr = parseNum(m[2]); if (dssnr != null && !isNaN(dssnr)) out.snrDown = dssnr; }
+    }
 
     /* Flaps */
     m = combined.match(/Flaps?[\s:]+([\d\s,]+)|(?:US|DS)\s*Flaps?[\s:]+([\d\s,]+)/i);
@@ -70,14 +98,22 @@
       m = combined.match(/([\d\s,]+)\s+Uncorrectable\s+codewords/i);
       if (m) out.uncorrectables = parseIntSafe(m[1]);
     }
+    if (out.uncorrectables == null) {
+      m = combined.match(/CRC\s+HCS[\s\S]*?(\d+)\s+(\d+)\s+[a-fA-F0-9\.\-]+/i);
+      if (m) { var crc = parseIntSafe(m[1]), hcs = parseIntSafe(m[2]); out.uncorrectables = (crc != null ? crc : 0) + (hcs != null ? hcs : 0); }
+    }
 
     /* Ranging retries */
     m = combined.match(/Ranging\s+Retries?[\s:]+([\d\s,]+)|Retries?[\s:]+([\d\s,]+)/i);
     if (m) out.rangingRetries = parseIntSafe(m[1] || m[2]);
 
     /* Uptime */
-    m = combined.match(/Uptime[\s:]+([\d\w\s:\.\-]+?)(?:\n|$)/i);
+    m = combined.match(/Uptime[\s:]+([\d\w\s:\.\-]+?)(?:\n|IPv4|$)/i);
     if (m) out.uptime = m[1].trim();
+    if (!out.uptime) {
+      m = combined.match(/Uptime\s*=\s*([\d\w\s:\.\-]+?)(?:\s+IPv4|\n|$)/i);
+      if (m) out.uptime = m[1].trim();
+    }
     if (!out.uptime) {
       m = combined.match(/Total\s+Time\s+Online[\s:]+([\d\w\s:\.\-]+?)(?:\n|$)/i);
       if (m) out.uptime = m[1].trim();
@@ -94,6 +130,14 @@
     /* Interface / Nodo */
     m = combined.match(/(?:Interface|Upstream)\s+([\w\s\/\-\.]+?)(?:\s|$|:)|(Upstream\s+\d+\/\d+)/i);
     if (m) out.interfaceId = (m[1] || m[2] || '').trim();
+    if (!out.interfaceId) {
+      m = combined.match(/cable-upstream\s+([\d\/\-]+)/i);
+      if (m) out.interfaceId = (m[1] || '').trim();
+    }
+    if (!out.interfaceId) {
+      m = combined.match(/(\d+\/\d+\/\d+-\d+\/\d+\/\d+)/);
+      if (m) out.interfaceId = m[1];
+    }
     m = combined.match(/Nodo[\s:]+([\w\-\.]+)|Node[\s:]+([\w\-\.]+)/i);
     if (m) out.node = (m[1] || m[2] || '').trim();
 
