@@ -2666,7 +2666,8 @@ body {
   resize: vertical;
 }
 .gestion-output-red,
-.gestion-output-nodo {
+.gestion-output-nodo,
+.gestion-output-cpe {
   margin-bottom: 1.5rem;
 }
 .gestion-output-label {

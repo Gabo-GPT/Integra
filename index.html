@@ -542,10 +542,13 @@
                   <option value="CONECTAR">CONECTAR</option>
                   <option value="POSITIVO">POSITIVO</option>
                 </select></div>
-                <div class="portal-field"><label for="gestionFuncion">Función</label><select id="gestionFuncion" aria-label="Seleccione función">
+                <div class="portal-field"><label for="gestionFuncion">Area que se comunica y realiza</label><select id="gestionFuncion" aria-label="Seleccione área">
                   <option value="">Seleccione</option>
                   <option value="DATOS">DATOS</option>
                   <option value="PLANTA">PLANTA</option>
+                  <option value="FRON FIBRA">FRON FIBRA</option>
+                  <option value="CND">CND</option>
+                  <option value="OTROS">OTROS</option>
                 </select></div>
                 <div class="portal-field"><label for="gestionImot">IM/OT</label><input type="text" id="gestionImot" placeholder="IM/OT"></div>
               </div>
@@ -595,9 +598,10 @@
                 <p class="gestion-output-desc">Pega el output de comandos de nodo (Cisco IOS-XR: sh ip rou, sh run, ping, sh arp, etc.). Se inserta organizado en la plantilla.</p>
                 <textarea id="gestionNodo" class="gestion-cli-input" rows="5" placeholder="Pega aquí el output de nodo (RP/0/... # sh ip rou, ping, sh arp)..."></textarea>
               </div>
-              <div class="portal-field" style="margin-top:1rem">
-                <label for="gestionCpe">Acceso a CPE</label>
-                <input type="text" id="gestionCpe" placeholder="Ej. Ok">
+              <div class="gestion-output-cpe">
+                <label class="gestion-output-label">Acceso a CPE</label>
+                <p class="gestion-output-desc">Pega el output del acceso al CPE (telnet, show wlan, show arp, etc.). Se inserta organizado en la plantilla.</p>
+                <textarea id="gestionCpe" class="gestion-cli-input" rows="5" placeholder="Pega aquí el output del CPE (telnet, show wlan, show arp)..."></textarea>
               </div>
               <div class="portal-field gestion-hubo-solucion-wrap" id="gestionHuboSolucionWrap" style="display:none; margin-top:0.75rem">
                 <label for="gestionHuboSolucion">¿Hubo solución?</label>
@@ -623,7 +627,7 @@
           <h3 class="portal-card-title">Mis casos</h3>
           <div class="table-wrap">
             <table class="data-table portal-table" id="tablaGestionCasos">
-              <thead><tr><th>Nombre técnico</th><th>Número</th><th>SD</th><th>Enlace</th><th>Aliado</th><th>Función</th><th>Transferencia</th><th>Área</th><th>Extensiones</th><th>Cliente</th><th>Fecha/Hora</th><th>Duración</th><th>Solución</th><th>Acciones</th></tr></thead>
+              <thead><tr><th>Nombre técnico</th><th>Número</th><th>SD</th><th>Enlace</th><th>Aliado</th><th>Área</th><th>Transferencia</th><th>Área</th><th>Extensiones</th><th>Cliente</th><th>Fecha/Hora</th><th>Duración</th><th>Solución</th><th>Acciones</th></tr></thead>
               <tbody id="gestionCasosBody"></tbody>
             </table>
           </div>
