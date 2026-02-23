@@ -3403,7 +3403,7 @@
     }
     loadData();
     handleHashChange();
-    window.addEventListener('beforeunload', flushSave);
+    window.addEventListener('pagehide', function () { flushSave(); });
     var _visibilityTimer;
     document.addEventListener('visibilitychange', function () {
       if (document.hidden) {
