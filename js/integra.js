@@ -2816,8 +2816,24 @@
       var llamada = inpLlamada ? (inpLlamada.value || '').trim() : '';
       var maiva = selMaiva ? selMaiva.value : '';
       var inc = inpInc ? (inpInc.value || '').trim() : '';
-      if (!cuenta) return;
-      addIntermitenciaRegistro(cuenta, pqr, marcacion, solucion, agendo, llamada, maiva, inc);
+      var idPrincipal = cuenta || pqr || marcacion;
+      if (!idPrincipal) {
+        var msg = document.getElementById('qoeGuardarMsg') || (function () {
+          var m = document.createElement('p');
+          m.id = 'qoeGuardarMsg';
+          m.className = 'qoe-error-msg';
+          m.style.cssText = 'margin-top:0.5rem;color:var(--integra-rose,red);font-size:0.9rem';
+          var form = btn.closest('.qoe-intermitencia-form');
+          if (form) form.appendChild(m);
+          return m;
+        })();
+        msg.textContent = 'Completa al menos uno: Cuenta, PQR o Marcación.';
+        msg.style.display = '';
+        return;
+      }
+      var msgEl = document.getElementById('qoeGuardarMsg');
+      if (msgEl) msgEl.style.display = 'none';
+      addIntermitenciaRegistro(cuenta || pqr || marcacion, pqr, marcacion, solucion, agendo, llamada, maiva, inc);
       flushSave();
       refreshIntermitenciaList();
       refreshTableroMensual();
