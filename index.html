@@ -585,10 +585,21 @@
             </div>
             <div class="gestion-section" id="gestionPruebasSection">
               <h4>Pruebas de configuraciones</h4>
-              <div class="gestion-grid-config">
-                <div class="portal-field"><label for="gestionRed">Red de acceso</label><input type="text" id="gestionRed" placeholder="Ej. Ok"></div>
-                <div class="portal-field"><label for="gestionNodo">Nodo</label><input type="text" id="gestionNodo" placeholder="Ej. Ok"></div>
-                <div class="portal-field"><label for="gestionCpe">Acceso a CPE</label><input type="text" id="gestionCpe" placeholder="Ej. Ok"></div>
+              <div class="gestion-output-red">
+                <label class="gestion-output-label">Red de acceso · Formatear salida CLI</label>
+                <p class="gestion-output-desc">Pega el output de terminal (ZTE, Cisco, etc.). Se muestra organizado en cajitas.</p>
+                <textarea id="gestionRed" class="gestion-cli-input" rows="5" placeholder="Pega aquí el output de acceso (ZTE OLT, etc.)..."></textarea>
+                <div id="gestionRedBoxes" class="gestion-cli-boxes"></div>
+              </div>
+              <div class="gestion-output-nodo">
+                <label class="gestion-output-label">Nodo · Output de nodo</label>
+                <p class="gestion-output-desc">Pega el output de comandos de nodo (Cisco IOS-XR: sh ip rou, sh run, ping, sh arp, etc.).</p>
+                <textarea id="gestionNodo" class="gestion-cli-input" rows="5" placeholder="Pega aquí el output de nodo (RP/0/... # sh ip rou, ping, sh arp)..."></textarea>
+                <div id="gestionNodoBoxes" class="gestion-cli-boxes"></div>
+              </div>
+              <div class="portal-field" style="margin-top:1rem">
+                <label for="gestionCpe">Acceso a CPE</label>
+                <input type="text" id="gestionCpe" placeholder="Ej. Ok">
               </div>
               <div class="portal-field gestion-hubo-solucion-wrap" id="gestionHuboSolucionWrap" style="display:none; margin-top:0.75rem">
                 <label for="gestionHuboSolucion">¿Hubo solución?</label>
@@ -609,15 +620,6 @@
           </div>
           <p class="gestion-plantilla-desc">Se rellena con el nombre del agente y los datos del formulario o del caso seleccionado.</p>
           <textarea id="gestionPlantilla" class="gestion-plantilla-output" rows="12" readonly></textarea>
-        </div>
-        <div class="portal-card gestion-cli-formatter-card">
-          <div class="gestion-cli-formatter-header">
-            <h3 class="portal-card-title">Formatear salida CLI</h3>
-            <button type="button" class="portal-btn portal-btn-secondary" id="btnCliCopiarFormateado" title="Copiar texto formateado">Copiar formateado</button>
-          </div>
-          <p class="gestion-cli-formatter-desc">Pega el output de terminal (ZTE, Cisco, etc.). Si viene sin saltos de línea, se restauran automáticamente.</p>
-          <textarea id="gestionCliInput" class="gestion-cli-input" rows="6" placeholder="Pega aquí el output de la terminal (con o sin saltos de línea)..."></textarea>
-          <div id="gestionCliBoxes" class="gestion-cli-boxes"></div>
         </div>
         <div class="portal-card">
           <h3 class="portal-card-title">Mis casos</h3>
