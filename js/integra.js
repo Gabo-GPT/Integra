@@ -936,6 +936,46 @@
           '</div>' +
         '</section>' +
         '<section class="qoe-noc-seccion">' +
+          '<div class="qoe-noc-summary-card" id="qoeNocSummaryCard">' +
+            '<div class="qoe-noc-summary-bar">' +
+              '<span class="qoe-noc-summary-item" id="qoeSummaryEstado">Estado General: —</span>' +
+              '<span class="qoe-noc-summary-item" id="qoeSummarySaludModem">Salud Modem: —</span>' +
+              '<span class="qoe-noc-summary-item" id="qoeSummarySaludPortadora">Salud Portadora: —</span>' +
+              '<span class="qoe-noc-summary-item" id="qoeSummaryProbVisita">Prob. Visita: —</span>' +
+            '</div>' +
+            '<div class="qoe-noc-summary-diagnostico" id="qoeSummaryDiagnostico">' +
+              '<div class="qoe-noc-summary-dx"><strong>Diagnóstico:</strong> —</div>' +
+              '<div class="qoe-noc-summary-conf">Confianza: —</div>' +
+              '<div class="qoe-noc-summary-visita" id="qoeSummaryVisita">Prob. visita técnica: —</div>' +
+              '<div class="qoe-noc-summary-metr">Métricas en rango óptimo.</div>' +
+              '<div class="qoe-noc-summary-accion" id="qoeSummaryAccion">Acción sugerida: —</div>' +
+            '</div>' +
+            '<div class="qoe-noc-summary-visual">' +
+              '<h4>Visualización de salud</h4>' +
+              '<div class="qoe-noc-summary-gauges">' +
+                '<div id="qoeGaugeModemWrap"></div>' +
+                '<div id="qoeGaugePortadoraWrap"></div>' +
+              '</div>' +
+              '<a href="#" class="qoe-noc-summary-avanzado" id="qoeSummaryAvanzado">Explicación técnica (modo avanzado)</a>' +
+            '</div>' +
+            '<div class="qoe-noc-summary-interp" id="qoeSummaryInterp">' +
+              '<h4>Interpretación automática</h4>' +
+              '<div class="qoe-noc-summary-estado" id="qoeSummaryInterpEstado">—</div>' +
+              '<div class="qoe-noc-summary-impacto" id="qoeSummaryInterpImpacto">—</div>' +
+              '<div class="qoe-noc-summary-origen" id="qoeSummaryInterpOrigen">—</div>' +
+              '<div class="qoe-noc-summary-accion-interp" id="qoeSummaryInterpAccion">—</div>' +
+              '<div class="qoe-noc-summary-conf-interp" id="qoeSummaryInterpConf">—</div>' +
+            '</div>' +
+            '<div class="qoe-noc-summary-metricas" id="qoeSummaryMetricas">' +
+              '<h4>Métricas técnicas</h4>' +
+              '<table class="qoe-noc-summary-table"><thead><tr><th>Upstream</th><th>Total</th></tr></thead><tbody>' +
+                '<tr><td>Avg Channel Utilization (%)</td><td id="qoeMetricUtil">—</td></tr>' +
+                '<tr><td>Avg % Contention Slots</td><td id="qoeMetricContention">—</td></tr>' +
+                '<tr><td>Total Modems</td><td id="qoeMetricModems">—</td></tr>' +
+                '<tr><td>Channel ID</td><td id="qoeMetricChannel">—</td></tr>' +
+              '</tbody></table>' +
+            '</div>' +
+          '</div>' +
           '<div class="qoe-noc-card">' +
             '<h3 class="qoe-noc-titulo">Monitor RF · CMTS</h3>' +
             '<p class="qoe-noc-desc">Ingestar output en área superior. Auto-detección ARRIS / vCMTS / CASA.</p>' +
@@ -2954,8 +2994,8 @@
 
   function bindQoEDiagnostico() {
     var btn = $('qoeBtnAnalizar'), msgEl = $('qoeAnalisisMsg');
-    if (!btn) return;
-    btn.addEventListener('click', function () {
+    var modemTa = $('qoeModemOutput'), upstreamTa = $('qoeUpstreamOutput');
+    function runAnalisis() {
       var modemTa = $('qoeModemOutput'), upstreamTa = $('qoeUpstreamOutput');
       var modemOutput = (modemTa && modemTa.value) ? modemTa.value.trim() : '';
       var upstreamOutput = (upstreamTa && upstreamTa.value) ? upstreamTa.value.trim() : '';
@@ -2983,7 +3023,16 @@
       }
       if (msgEl) msgEl.style.display = 'none';
       updateQoeNocAnalyzer(modemOutput, upstreamOutput);
-    });
+    }
+    if (btn) btn.addEventListener('click', runAnalisis);
+    if (modemTa) {
+      modemTa.addEventListener('paste', function () { setTimeout(runAnalisis, 80); });
+      modemTa.addEventListener('input', debounce(runAnalisis, 400));
+    }
+    if (upstreamTa) {
+      upstreamTa.addEventListener('paste', function () { setTimeout(runAnalisis, 80); });
+      upstreamTa.addEventListener('input', debounce(runAnalisis, 400));
+    }
     updateQoeNocGraficaAfectacion();
   }
 
@@ -3082,6 +3131,58 @@
       if (esMasivo) refreshGestionOperacionHfc();
       updateQoeNocGraficaAfectacion();
     }
+    /* Actualizar resumen superior (Estado General, Salud, Diagnóstico, Gauges, Interpretación) */
+    var estEl = $('qoeSummaryEstado'), modEl = $('qoeSummarySaludModem'), portEl = $('qoeSummarySaludPortadora'), probEl = $('qoeSummaryProbVisita');
+    var estSym = (diag.globalEstado && diag.globalEstado.color === 'verde') ? '\uD83D\uDFE2' : (diag.globalEstado && diag.globalEstado.color === 'rojo') ? '\uD83D\uDD34' : (diag.globalEstado && diag.globalEstado.color === 'amarillo') ? '\uD83D\uDFE1' : '\uD83D\uDD35';
+    if (estEl) estEl.textContent = 'Estado General: ' + estSym + ' ' + (diag.globalEstado ? diag.globalEstado.texto : '—');
+    var parsed = (typeof ParserQoE !== 'undefined' && ParserQoE.parseCmtsOutput)
+      ? ParserQoE.parseCmtsOutput({ modemOutput: modemOutput || '', upstreamOutput: upstreamOutput || '' }) : null;
+    var scores = (parsed && typeof HealthScoresQoE !== 'undefined' && HealthScoresQoE.calculateHealthScores)
+      ? HealthScoresQoE.calculateHealthScores(parsed) : null;
+    var modemH = scores && scores.modemHealth != null ? scores.modemHealth : null;
+    var carrierH = scores && scores.carrierHealth != null ? scores.carrierHealth : null;
+    if (modEl) modEl.textContent = 'Salud Modem: ' + (modemH != null ? modemH + '%' : '—');
+    if (portEl) portEl.textContent = 'Salud Portadora: ' + (carrierH != null ? carrierH + '%' : '—');
+    var probVisita = (diag.protocolo && diag.protocolo.sugerirVisita) ? 75 : (diag.protocolo && diag.protocolo.visitabloqueada) ? 0 : 0;
+    if (probEl) probEl.textContent = 'Prob. Visita: ' + (probVisita != null ? probVisita + '%' : '0%');
+    var dxEl = $('qoeSummaryDiagnostico'), visEl = $('qoeSummaryVisita'), accEl = $('qoeSummaryAccion');
+    if (dxEl) {
+      var p = diag.protocolo || {};
+      var confVal = (p.confianza === 'Alta' ? 90 : p.confianza === 'Media' ? 70 : 50);
+      dxEl.innerHTML = '<div class="qoe-noc-summary-dx"><strong>Diagnóstico:</strong> ' + (diag.globalEstado ? diag.globalEstado.texto : 'OK') + '</div>' +
+        '<div class="qoe-noc-summary-conf">Confianza: ' + confVal + '%</div>' +
+        '<div class="qoe-noc-summary-visita" id="qoeSummaryVisita">Prob. visita técnica: ' + probVisita + '% \u2022 ' + (p.visitabloqueada ? 'Visita bloqueada' : probVisita > 0 ? 'Sugerir visita' : 'No visita') + '</div>' +
+        '<div class="qoe-noc-summary-metr">' + (diag.globalEstado && diag.globalEstado.estado === 'ok' ? 'Métricas en rango óptimo.' : (p.accionOperativa && p.accionOperativa[0] ? p.accionOperativa[0] : 'Revisar métricas.')) + '</div>' +
+        '<div class="qoe-noc-summary-accion" id="qoeSummaryAccion">Acción sugerida: ' + (diag.globalEstado && diag.globalEstado.texto === 'OK' ? 'Estado normal. Continuar monitoreo.' : (p.accionOperativa && p.accionOperativa[0] ? p.accionOperativa[0] : 'Revisar.')) + '</div>';
+    }
+    if (typeof GaugeQoE !== 'undefined' && GaugeQoE.render) {
+      var modWrap = $('qoeGaugeModemWrap'), portWrap = $('qoeGaugePortadoraWrap');
+      if (modWrap) modWrap.innerHTML = GaugeQoE.render({ id: 'gaugeModem', value: modemH, label: 'Salud Cable Modem' });
+      if (portWrap) portWrap.innerHTML = GaugeQoE.render({ id: 'gaugePortadora', value: carrierH, label: 'Salud Portadora' });
+    }
+    var p = diag.protocolo || {};
+    var diagForInterp = {
+      visitProbability: probVisita,
+      classification: '',
+      confidence: (p.confianza === 'Alta' ? 0.9 : p.confianza === 'Media' ? 0.7 : 0.5),
+      esMasivo: p.esMasivo === true,
+      visitabloqueada: p.visitabloqueada === true
+    };
+    var interp = (typeof InterpretacionQoE !== 'undefined' && InterpretacionQoE.generateInterpretacion)
+      ? InterpretacionQoE.generateInterpretacion(scores, diagForInterp) : null;
+    if (interp) {
+      var ie = $('qoeSummaryInterpEstado'), ii = $('qoeSummaryInterpImpacto'), io = $('qoeSummaryInterpOrigen'), ia = $('qoeSummaryInterpAccion'), ic = $('qoeSummaryInterpConf');
+      if (ie) ie.textContent = interp.estado || '—';
+      if (ii) ii.textContent = 'Impacto para el cliente: ' + (interp.impactoCliente || '—');
+      if (io) io.textContent = 'Origen probable: ' + (interp.origenProbable || '—');
+      if (ia) ia.textContent = 'Acción sugerida: ' + (interp.accionAgente || '—');
+      if (ic) ic.textContent = 'Confianza: ' + (interp.confianza != null ? interp.confianza + '%' : '—');
+    }
+    var mu = $('qoeMetricUtil'), mc = $('qoeMetricContention'), mm = $('qoeMetricModems'), mch = $('qoeMetricChannel');
+    if (mu) mu.textContent = (diag.masivoPanel && diag.masivoPanel.utilization != null) ? diag.masivoPanel.utilization + '%' : '—';
+    if (mc) mc.textContent = (diag.raw && diag.raw.avgPercentContentionSlots != null) ? diag.raw.avgPercentContentionSlots + '%' : (parsed && parsed.upstream && parsed.upstream.avgPercentContentionSlots != null) ? parsed.upstream.avgPercentContentionSlots + '%' : '—';
+    if (mm) mm.textContent = diag.totalModems != null ? diag.totalModems : '—';
+    if (mch) mch.textContent = (parsed && parsed.upstream && parsed.upstream.channelId) || (diag.raw && diag.raw.interfaceId) || '—';
   }
 
   var NOC_AFECTACION_HISTORY_KEY = 'integra_noc_afectacion';
@@ -3192,12 +3293,25 @@
         indEl.style.display = 'block';
         indEl.className = 'qoe-noc-impacto-indicator qoe-noc-impacto-' + (esMasivo ? 'masivo-activo' : 'individual');
         statusEl.innerHTML = (esMasivo ? '🔵 MASIVO' : '🟢 INDIVIDUAL') + ' · 1 medición';
-        detailEl.innerHTML = 'Impacto: ' + modems + ' modems en canal' + (util != null ? ' · Utilización: ' + util + '%' : '') + '<br>Actividad: — (se necesita otra medición para tasa)';
+        detailEl.innerHTML = 'Impacto: ' + modems + ' modems en canal' + (util != null ? ' · Utilización: ' + util + '%' : '') + '<br>Actividad: — (pega otra medición en 5 min para tasa)';
       }
-      emptyEl.innerHTML = 'Se necesitan al menos 2 análisis para calcular tasa (errores/min). Recomendado: cada 5 min.';
-      emptyEl.style.display = 'block';
-      chartEl.style.display = 'none';
-      chartEl.innerHTML = '';
+      emptyEl.style.display = 'none';
+      chartEl.style.display = 'block';
+      var uncVal = last.uncorr != null ? last.uncorr : 0;
+      var maxUnc = Math.max(uncVal, 100000);
+      var w = 400, h = 140, pad = { t: 10, r: 8, b: 28, l: 44 };
+      var gw = w - pad.l - pad.r, gh = h - pad.t - pad.b;
+      var barH = uncVal > 0 ? Math.max(4, (uncVal / maxUnc) * gh) : 0;
+      var barY = pad.t + gh - barH;
+      var fillColor = esMasivo ? 'rgba(59, 130, 246, 0.5)' : 'rgba(34, 197, 94, 0.4)';
+      var svg = '<rect x="' + pad.l + '" y="' + barY + '" width="' + gw + '" height="' + barH + '" fill="' + fillColor + '" rx="4"/>';
+      svg += '<line x1="' + pad.l + '" y1="' + (pad.t + gh) + '" x2="' + (w - pad.r) + '" y2="' + (pad.t + gh) + '" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>';
+      svg += '<line x1="' + pad.l + '" y1="' + pad.t + '" x2="' + pad.l + '" y2="' + (pad.t + gh) + '" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>';
+      svg += '<text x="' + (pad.l - 4) + '" y="' + (pad.t + 12) + '" fill="rgba(255,255,255,0.6)" font-size="9" text-anchor="end">' + (maxUnc >= 1000000 ? (maxUnc / 1000000).toFixed(1) + 'M' : maxUnc >= 1000 ? (maxUnc / 1000) + 'k' : maxUnc) + '</text>';
+      svg += '<text x="' + (pad.l - 4) + '" y="' + (pad.t + gh + 4) + '" fill="rgba(255,255,255,0.6)" font-size="9" text-anchor="end">0</text>';
+      svg += '<text x="' + (w / 2) + '" y="' + (h - 6) + '" fill="rgba(255,255,255,0.6)" font-size="8" text-anchor="middle">Uncorrectables: ' + uncVal.toLocaleString('es-ES') + ' · 1 medición (pega otra en 5 min para evolución)</text>';
+      chartEl.innerHTML = svg;
+      chartEl.setAttribute('viewBox', '0 0 ' + w + ' ' + h);
       updateQoeNocIntermitenciaMonitor();
       return;
     }

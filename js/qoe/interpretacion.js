@@ -21,10 +21,12 @@
     var visitP = diag && diag.visitProbability != null ? diag.visitProbability : null;
     var cls = diag && diag.classification ? diag.classification : '';
     var confianza = diag && diag.confidence != null ? Math.round(diag.confidence * 100) : null;
+    var esMasivo = diag && diag.esMasivo === true;
+    var visitabloqueada = diag && diag.visitabloqueada === true;
 
     var estado, severidad, impacto, causa, accion, resumenRapido, problemaIndividual;
 
-    if (modemH == null && carrierH == null && !cls) {
+    if (modemH == null && carrierH == null && !cls && !esMasivo) {
       return {
         estado: '—',
         severidad: 'neutral',
@@ -33,6 +35,19 @@
         accionAgente: '—',
         resumenRapido: '—',
         confianza: null,
+        problemaIndividual: false
+      };
+    }
+
+    if (esMasivo || visitabloqueada) {
+      return {
+        estado: 'Afectación masiva',
+        severidad: 'rojo',
+        impactoCliente: 'Problema en canal upstream compartido. Varios clientes afectados.',
+        origenProbable: 'Infraestructura compartida, NO cliente individual. Problema en canal upstream.',
+        accionAgente: 'Acciones individuales bloqueadas. Revisar health de portadora upstream en CMTS, migrar modems si hay redundancia, revisar niveles RF del nodo.',
+        resumenRapido: 'Afectación masiva. No programar visitas hasta descartar problema compartido.',
+        confianza: confianza,
         problemaIndividual: false
       };
     }

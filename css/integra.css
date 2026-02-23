@@ -1398,6 +1398,96 @@ body {
 
 /* === Analizador NOC DOCSIS Tier 1 === */
 .qoe-noc-seccion { margin-top: 28px; }
+.qoe-noc-summary-card {
+  background: linear-gradient(180deg, #0d1620 0%, #0a1118 100%);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1.25rem;
+}
+.qoe-noc-summary-bar {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  background: rgba(15, 23, 42, 0.6);
+  border-radius: 8px;
+  border: 1px solid rgba(59, 130, 246, 0.12);
+}
+.qoe-noc-summary-item {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: rgba(255,255,255,0.9);
+}
+.qoe-noc-summary-diagnostico,
+.qoe-noc-summary-visual,
+.qoe-noc-summary-interp,
+.qoe-noc-summary-metricas {
+  background: rgba(15, 23, 42, 0.5);
+  border: 1px solid rgba(59, 130, 246, 0.1);
+  border-radius: 8px;
+  padding: 1rem;
+}
+.qoe-noc-summary-diagnostico h4,
+.qoe-noc-summary-visual h4,
+.qoe-noc-summary-interp h4,
+.qoe-noc-summary-metricas h4 {
+  margin: 0 0 0.5rem;
+  font-size: 0.85rem;
+  color: rgba(255,255,255,0.8);
+}
+.qoe-noc-summary-dx,
+.qoe-noc-summary-conf,
+.qoe-noc-summary-visita,
+.qoe-noc-summary-metr,
+.qoe-noc-summary-accion {
+  font-size: 0.85rem;
+  margin-bottom: 0.35rem;
+  color: rgba(255,255,255,0.75);
+}
+.qoe-noc-summary-gauges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  margin: 0.5rem 0;
+}
+.qoe-noc-summary-avanzado {
+  font-size: 0.8rem;
+  color: #60a5fa;
+  text-decoration: none;
+}
+.qoe-noc-summary-avanzado:hover { text-decoration: underline; }
+.qoe-noc-summary-estado {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #4ade80;
+  margin-bottom: 0.5rem;
+}
+.qoe-noc-summary-impacto,
+.qoe-noc-summary-origen,
+.qoe-noc-summary-accion-interp,
+.qoe-noc-summary-conf-interp {
+  font-size: 0.85rem;
+  margin-bottom: 0.3rem;
+  color: rgba(255,255,255,0.75);
+}
+.qoe-noc-summary-table {
+  width: 100%;
+  font-size: 0.85rem;
+  border-collapse: collapse;
+}
+.qoe-noc-summary-table th,
+.qoe-noc-summary-table td {
+  padding: 0.35rem 0.5rem;
+  text-align: left;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.qoe-noc-summary-table th { color: rgba(255,255,255,0.6); font-weight: 600; }
+.qoe-noc-summary-table td { color: rgba(255,255,255,0.9); font-family: 'JetBrains Mono', monospace; }
 .qoe-noc-card {
   background: linear-gradient(180deg, #0d1620 0%, #0a1118 100%);
   border: 1px solid rgba(59, 130, 246, 0.2);

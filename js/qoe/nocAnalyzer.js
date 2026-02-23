@@ -78,6 +78,10 @@
     /* Uptime */
     m = combined.match(/Uptime[\s:]+([\d\w\s:\.\-]+?)(?:\n|$)/i);
     if (m) out.uptime = m[1].trim();
+    if (!out.uptime) {
+      m = combined.match(/Total\s+Time\s+Online[\s:]+([\d\w\s:\.\-]+?)(?:\n|$)/i);
+      if (m) out.uptime = m[1].trim();
+    }
 
     /* Utilización upstream */
     m = combined.match(/(?:Avg\.?\s*)?(?:upstream\s+)?(?:channel\s+)?utilization[\s:]+([\d.,]+)|Utilization[\s:]+([\d.,]+)\s*%?/i);
