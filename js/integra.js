@@ -2972,6 +2972,7 @@
       if (selMaiva) selMaiva.value = '';
       if (inpInc) inpInc.value = '';
       if (incWrap) incWrap.style.display = 'none';
+      if (typeof clearQoeCmtsDiagnostic === 'function') clearQoeCmtsDiagnostic();
     });
   }
   function bindQoEIntermitenciaToggle() {
@@ -3022,6 +3023,8 @@
         return;
       }
       if (msgEl) msgEl.style.display = 'none';
+      QOE_CMTS_PENDING.modemOutput = modemOutput;
+      QOE_CMTS_PENDING.upstreamOutput = upstreamOutput;
       updateQoeNocAnalyzer(modemOutput, upstreamOutput);
     }
     if (btn) btn.addEventListener('click', runAnalisis);
@@ -3032,6 +3035,11 @@
     if (upstreamTa) {
       upstreamTa.addEventListener('paste', function () { setTimeout(runAnalisis, 80); });
       upstreamTa.addEventListener('input', debounce(runAnalisis, 400));
+    }
+    if (QOE_CMTS_PENDING.modemOutput || QOE_CMTS_PENDING.upstreamOutput) {
+      if (modemTa) modemTa.value = QOE_CMTS_PENDING.modemOutput || '';
+      if (upstreamTa) upstreamTa.value = QOE_CMTS_PENDING.upstreamOutput || '';
+      updateQoeNocAnalyzer(QOE_CMTS_PENDING.modemOutput || '', QOE_CMTS_PENDING.upstreamOutput || '');
     }
     updateQoeNocGraficaAfectacion();
   }
@@ -3183,6 +3191,63 @@
     if (mc) mc.textContent = (diag.raw && diag.raw.avgPercentContentionSlots != null) ? diag.raw.avgPercentContentionSlots + '%' : (parsed && parsed.upstream && parsed.upstream.avgPercentContentionSlots != null) ? parsed.upstream.avgPercentContentionSlots + '%' : '—';
     if (mm) mm.textContent = diag.totalModems != null ? diag.totalModems : '—';
     if (mch) mch.textContent = (parsed && parsed.upstream && parsed.upstream.channelId) || (diag.raw && diag.raw.interfaceId) || '—';
+  }
+
+  var QOE_CMTS_PENDING = { modemOutput: '', upstreamOutput: '' };
+
+  function clearQoeCmtsDiagnostic() {
+    QOE_CMTS_PENDING.modemOutput = '';
+    QOE_CMTS_PENDING.upstreamOutput = '';
+    var modemTa = $('qoeModemOutput'), upstreamTa = $('qoeUpstreamOutput');
+    if (modemTa) modemTa.value = '';
+    if (upstreamTa) upstreamTa.value = '';
+    function setV(id, v) { var el = $(id); if (el) el.textContent = v != null ? v : '—'; }
+    function setMetric(id, v) { var p = $(id); if (p) { var s = p.querySelector('.qoe-noc-metric-val'); if (s) { s.textContent = v != null ? v : '—'; s.className = 'qoe-noc-metric-val qoe-semaforo-muted'; } } }
+    setV('qoeSummaryEstado', 'Estado General: —');
+    setV('qoeSummarySaludModem', 'Salud Modem: —');
+    setV('qoeSummarySaludPortadora', 'Salud Portadora: —');
+    setV('qoeSummaryProbVisita', 'Prob. Visita: —');
+    var dxEl = $('qoeSummaryDiagnostico');
+    if (dxEl) dxEl.innerHTML = '<div class="qoe-noc-summary-dx"><strong>Diagnóstico:</strong> —</div><div class="qoe-noc-summary-conf">Confianza: —</div><div class="qoe-noc-summary-visita">Prob. visita técnica: —</div><div class="qoe-noc-summary-metr">—</div><div class="qoe-noc-summary-accion">Acción sugerida: —</div>';
+    if (typeof GaugeQoE !== 'undefined' && GaugeQoE.render) {
+      var mw = $('qoeGaugeModemWrap'), pw = $('qoeGaugePortadoraWrap');
+      if (mw) mw.innerHTML = GaugeQoE.render({ id: 'gaugeModem', value: null, label: 'Salud Cable Modem' });
+      if (pw) pw.innerHTML = GaugeQoE.render({ id: 'gaugePortadora', value: null, label: 'Salud Portadora' });
+    }
+    setV('qoeSummaryInterpEstado', '—');
+    var ii = $('qoeSummaryInterpImpacto'), io = $('qoeSummaryInterpOrigen'), ia = $('qoeSummaryInterpAccion'), ic = $('qoeSummaryInterpConf');
+    if (ii) ii.textContent = 'Impacto para el cliente: —';
+    if (io) io.textContent = 'Origen probable: —';
+    if (ia) ia.textContent = 'Acción sugerida: —';
+    if (ic) ic.textContent = 'Confianza: —';
+    setV('qoeMetricUtil', '—');
+    setV('qoeMetricContention', '—');
+    setV('qoeMetricModems', '—');
+    setV('qoeMetricChannel', '—');
+    setV('qoeNocCmts', '—');
+    setV('qoeNocNodo', '—');
+    setV('qoeNocModems', '—');
+    var badge = $('qoeNocEstado');
+    if (badge) { badge.textContent = 'NO DATA'; badge.className = 'qoe-noc-badge qoe-noc-badge-muted'; }
+    setMetric('qoeNocTx', null);
+    setMetric('qoeNocRx', null);
+    setMetric('qoeNocSnrUp', null);
+    setMetric('qoeNocSnrDown', null);
+    setMetric('qoeNocFlaps', null);
+    setMetric('qoeNocCrc', null);
+    setMetric('qoeNocRanging', null);
+    setMetric('qoeNocUptime', null);
+    setMetric('qoeNocUtil', null);
+    setMetric('qoeNocModemsChan', null);
+    setMetric('qoeNocUncorrGlob', null);
+    setMetric('qoeNocMasivo', null);
+    var recList = $('qoeNocRecList');
+    if (recList) recList.innerHTML = '<p class="qoe-noc-rec-empty">—</p>';
+    var emptyEl = $('qoeNocChartEmpty'), chartEl = $('qoeNocChart'), indEl = $('qoeNocImpactoIndicator');
+    if (emptyEl) { emptyEl.textContent = 'Ejecuta análisis para ver evolución de afectación (Uncorrectables)'; emptyEl.style.display = 'block'; }
+    if (chartEl) { chartEl.style.display = 'none'; chartEl.innerHTML = ''; }
+    if (indEl) indEl.style.display = 'none';
+    updateQoeNocGraficaAfectacion();
   }
 
   var NOC_AFECTACION_HISTORY_KEY = 'integra_noc_afectacion';
