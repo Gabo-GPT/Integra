@@ -946,6 +946,14 @@
         </div>
 
         <div class="portal-card">
+          <h3 class="portal-card-title">Importar lista de agentes (número de usuario)</h3>
+          <p class="portal-card-desc">Pega una tabla con columnas <strong>Nombre | Usuario</strong> o <strong>Usuario | Nombre</strong> (separadas por tab o coma). Se detecta automáticamente. Cada agente quedará identificado por su número de usuario de forma permanente.</p>
+          <textarea id="portalImportarAgentes" class="portal-textarea" rows="6" placeholder="ANDRES FELIPE MOYANO CLAVIJO&#9;1000517817&#10;1007674793&#9;GABRIEL SANTIAGO OCAMPO SIERRA"></textarea>
+          <button type="button" class="portal-btn portal-btn-cyan" id="btnImportarAgentes">Importar agentes</button>
+          <p class="portal-field-hint" id="portalImportarMsg"></p>
+        </div>
+
+        <div class="portal-card">
           <h3 class="portal-card-title">Listado de usuarios</h3>
           <div class="table-wrap">
             <table class="data-table portal-table" id="tablaUsuarios">

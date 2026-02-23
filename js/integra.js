@@ -664,12 +664,16 @@
 
   function getGestionKey() {
     var d = getData();
-    return d.currentUserUsuario || d.currentUserName || 'default';
+    var usuario = d.currentUserUsuario;
+    var nombre = d.currentUserName;
+    if (usuario && String(usuario).trim()) return String(usuario).trim();
+    if (nombre && String(nombre).trim()) return String(nombre).trim();
+    return 'default';
   }
 
   function getCasosGestion() {
     var d = getData();
-    var k = 'gestionCasos_' + (d.currentUserUsuario || d.currentUserName || 'default');
+    var k = 'gestionCasos_' + getGestionKey();
     var arr = d[k];
     return Array.isArray(arr) ? arr : [];
   }
@@ -1789,6 +1793,61 @@
           if (ta) ta.value = '';
         })
         .catch(function () { refreshUsuariosPortal(); });
+    });
+    var btnImportar = $('btnImportarAgentes');
+    var taImportar = $('portalImportarAgentes');
+    var msgImportar = $('portalImportarMsg');
+    if (btnImportar && taImportar) btnImportar.addEventListener('click', function () {
+      var text = (taImportar.value || '').trim();
+      var lines = text.split(/\n/).map(function (s) { return s.trim(); }).filter(Boolean);
+      if (!lines.length) {
+        if (msgImportar) { msgImportar.textContent = 'Pega una tabla con Nombre y Usuario.'; msgImportar.style.color = 'var(--integra-rose)'; }
+        return;
+      }
+      var parsed = [];
+      for (var i = 0; i < lines.length; i++) {
+        var cols = lines[i].split(/[\t,;]+/).map(function (c) { return c.trim(); }).filter(Boolean);
+        if (cols.length < 2) continue;
+        var a = cols[0];
+        var b = cols[1];
+        var aEsNumero = /^\d{7,12}$/.test(a);
+        var bEsNumero = /^\d{7,12}$/.test(b);
+        var nombre, usuario;
+        if (aEsNumero && !bEsNumero) { usuario = a; nombre = b; }
+        else if (!aEsNumero && bEsNumero) { nombre = a; usuario = b; }
+        else if (aEsNumero && bEsNumero) { usuario = a; nombre = b; }
+        else { nombre = a; usuario = b; }
+        if (nombre && usuario) parsed.push({ nombre: nombre, usuario: String(usuario) });
+      }
+      if (!parsed.length) {
+        if (msgImportar) { msgImportar.textContent = 'No se detectaron pares Nombre|Usuario válidos. Usa tab o coma como separador.'; msgImportar.style.color = 'var(--integra-rose)'; }
+        return;
+      }
+      var existing = (getData().portalUsuarios || []).slice();
+      var byUsuario = {};
+      for (var j = 0; j < existing.length; j++) {
+        var u = existing[j].usuario;
+        if (u != null) byUsuario[String(u).toLowerCase()] = existing[j];
+      }
+      for (var k = 0; k < parsed.length; k++) {
+        var p = parsed[k];
+        var usrKey = String(p.usuario).toLowerCase();
+        var prev = byUsuario[usrKey];
+        byUsuario[usrKey] = { nombre: p.nombre, usuario: p.usuario, clave: (prev && prev.clave) || genClaveTemp(), estado: 'Permanente', role: (prev && prev.role) || 'fibra-optica' };
+      }
+      var merged = [];
+      for (var key in byUsuario) { if (byUsuario.hasOwnProperty(key) && byUsuario[key] && (byUsuario[key].nombre || byUsuario[key].usuario)) merged.push(byUsuario[key]); }
+      saveData('portalUsuarios', trimArrayNewestLast(merged, MAX_PORTAL_USUARIOS));
+      flushSaveAsync()
+        .then(function () {
+          refreshUsuariosPortal();
+          if (taImportar) taImportar.value = '';
+          if (msgImportar) { msgImportar.textContent = 'Importados ' + parsed.length + ' agentes. Cada uno identificado por su número de usuario.'; msgImportar.style.color = 'var(--integra-success)'; }
+        })
+        .catch(function () {
+          refreshUsuariosPortal();
+          if (msgImportar) { msgImportar.textContent = 'Error al guardar. Revisa la conexión.'; msgImportar.style.color = 'var(--integra-rose)'; }
+        });
     });
   }
 
