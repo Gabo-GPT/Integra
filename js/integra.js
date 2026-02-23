@@ -223,7 +223,15 @@
     if (sectionId === 'formacion') { updateAsistencia(); updateResultados(); }
     if (sectionId === 'intermitencia') refreshIntermitenciaList();
     if (sectionId === 'bolsa') refreshBolsaCasosSolucionados();
-    if (sectionId === 'agentes') refreshUsuariosPortal(getData());
+    if (sectionId === 'agentes') {
+      var d = getData();
+      var items = (d.portalUsuarios && Array.isArray(d.portalUsuarios)) ? d.portalUsuarios : [];
+      if (API_URL && items.length === 0) {
+        loadUsuariosConReintentos();
+      } else {
+        refreshUsuariosPortal(d);
+      }
+    }
     if (sectionId === 'bolsa-hfc') {
       var hfcContactoSpan = $('bolsaHfcCierresContacto');
       if (hfcContactoSpan) hfcContactoSpan.textContent = getCasosConSolucionCount();
@@ -516,13 +524,61 @@
     return nombre.trim().toLowerCase().replace(/\s+/g, '').replace(/[áàä]/g, 'a').replace(/[éèë]/g, 'e').replace(/[íìï]/g, 'i').replace(/[óòö]/g, 'o').replace(/[úùü]/g, 'u').replace(/ñ/g, 'n') || 'user';
   }
 
+  var PORTAL_EMPTY_DEFAULT = 'No hay usuarios. Agrega uno o carga por nombres.';
+
+  function loadUsuariosConReintentos() {
+    var tbody = $('usuariosBody');
+    var emptyEl = $('portalEmpty');
+    if (!tbody || !emptyEl) return;
+    var maxReintentos = 3;
+    var reintento = 0;
+    emptyEl.textContent = 'Cargando base de datos...';
+    emptyEl.style.display = 'block';
+    tbody.innerHTML = '';
+    function intentar() {
+      reintento++;
+      fetch(getApiBase() + '/api/data')
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+          var parsed = d && typeof d === 'object' ? d : {};
+          var serverEmpty = Object.keys(parsed).length === 0;
+          if (serverEmpty) {
+            try {
+              var raw = localStorage.getItem(STORAGE);
+              if (raw) {
+                var local = JSON.parse(raw);
+                if (local && typeof local === 'object' && Object.keys(local).length > 0) parsed = local;
+              }
+            } catch (e) {}
+          }
+          setDataFromApi(parsed);
+          refreshUsuariosPortal();
+        })
+        .catch(function () {
+          if (reintento < maxReintentos) {
+            setTimeout(intentar, 2500);
+          } else {
+            refreshUsuariosPortal();
+          }
+        });
+    }
+    intentar();
+  }
+
   function refreshUsuariosPortal(data) {
     if (!data) data = getData();
     var items = (data.portalUsuarios && Array.isArray(data.portalUsuarios)) ? data.portalUsuarios : [];
     var tbody = $('usuariosBody');
     if (!tbody) return;
     var emptyEl = $('portalEmpty');
-    if (emptyEl) emptyEl.style.display = items.length ? 'none' : 'block';
+    if (emptyEl) {
+      if (items.length) {
+        emptyEl.style.display = 'none';
+      } else {
+        emptyEl.textContent = PORTAL_EMPTY_DEFAULT;
+        emptyEl.style.display = 'block';
+      }
+    }
     tbody.innerHTML = items.map(function (u, i) {
       var r = (u.role || 'fibra-optica');
       if (ROLES.indexOf(r) < 0) r = 'fibra-optica';
