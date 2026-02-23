@@ -3667,6 +3667,9 @@
         var serverUsers = (parsed.portalUsuarios && Array.isArray(parsed.portalUsuarios)) ? parsed.portalUsuarios : [];
         var localUsers = (current.portalUsuarios && Array.isArray(current.portalUsuarios)) ? current.portalUsuarios : [];
         if (serverUsers.length === 0 && localUsers.length > 0) parsed.portalUsuarios = localUsers;
+        var serverInter = (parsed.intermitenciaRegistros && Array.isArray(parsed.intermitenciaRegistros)) ? parsed.intermitenciaRegistros : [];
+        var localInter = (current.intermitenciaRegistros && Array.isArray(current.intermitenciaRegistros)) ? current.intermitenciaRegistros : [];
+        if (serverInter.length === 0 && localInter.length > 0) parsed.intermitenciaRegistros = localInter;
         setDataFromApi(parsed);
         refreshFromServerData();
       }).catch(function () {});
