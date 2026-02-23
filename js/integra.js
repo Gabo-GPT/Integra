@@ -1362,8 +1362,8 @@
 
   function buildPlantilla(caso) {
     var d = getData();
-    var agente = d.currentUserName || 'Agente';
     if (!caso) caso = getFormGestion();
+    var agente = (caso && caso.nombre) ? caso.nombre : (d.currentUserName || 'Agente');
     var tpl = (caso.transferencia === 'SI') ? PLANTILLA_SI : PLANTILLA_BASE;
     return tpl
       .replace(/{agente}/g, agente)
@@ -1782,6 +1782,65 @@
     });
     window.addEventListener('integra:userChange', toggleTransferenciaExtras);
     toggleTransferenciaExtras();
+    var cliInput = $('gestionCliInput');
+    var cliBoxes = $('gestionCliBoxes');
+    if (cliInput && cliBoxes) {
+      function parseCliBlocks(text) {
+        var blocks = [];
+        var lines = (text || '').split('\n');
+        var i = 0;
+        var promptRe = /[A-Za-z0-9._\/:-]+#\s*/;
+        while (i < lines.length) {
+          var line = lines[i];
+          var trimmed = line.trim();
+          var isPromptLine = promptRe.test(line);
+          var isSectionHeader = /^\/{5,}/.test(trimmed) || (/^[A-Z][A-Z0-9\/\s_]+$/.test(trimmed) && trimmed.length > 3);
+          if (isPromptLine) {
+            var header = line;
+            var body = [];
+            i++;
+            while (i < lines.length) {
+              var next = lines[i];
+              if (promptRe.test(next)) break;
+              body.push(next);
+              i++;
+            }
+            var content = body.join('\n').replace(/\n+$/, '');
+            blocks.push({ header: header, content: content });
+          } else if (isSectionHeader && trimmed) {
+            blocks.push({ header: trimmed, content: '' });
+            i++;
+          } else if (trimmed) {
+            var acc = [line];
+            i++;
+            while (i < lines.length) {
+              var n = lines[i];
+              if (promptRe.test(n) || (/^[A-Z][A-Z0-9\/\s_]+$/.test(n.trim()) && n.trim().length > 3)) break;
+              acc.push(n);
+              i++;
+            }
+            var c = acc.join('\n').replace(/\n+$/, '');
+            if (c) blocks.push({ header: null, content: c });
+          } else {
+            i++;
+          }
+        }
+        return blocks;
+      }
+      function renderCliBoxes() {
+        var txt = cliInput.value || '';
+        if (!txt.trim()) { cliBoxes.innerHTML = ''; return; }
+        var blocks = parseCliBlocks(txt);
+        cliBoxes.innerHTML = blocks.map(function (b) {
+          var isSection = b.header && !b.content && /^[\/=A-Z]/.test(b.header.trim());
+          var h = b.header ? '<div class="gestion-cli-box-header' + (isSection ? ' gestion-cli-box-section' : '') + '">' + escapeHtml(b.header) + '</div>' : '';
+          var c = b.content ? '<div class="gestion-cli-box-body">' + escapeHtml(b.content) + '</div>' : '';
+          return '<div class="gestion-cli-box">' + h + c + '</div>';
+        }).join('');
+      }
+      cliInput.addEventListener('input', debounce(renderCliBoxes, 150));
+      cliInput.addEventListener('paste', function () { setTimeout(renderCliBoxes, 50); });
+    }
   }
 
   function bindPortalUsuarios() {
