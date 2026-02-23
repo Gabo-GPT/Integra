@@ -2341,11 +2341,15 @@ body {
 .perfil-backup-actions { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; margin-top: 0.5rem; }
 .perfil-backup-actions .portal-btn { display: inline-flex; align-items: center; gap: 0.5rem; }
 .perfil-backup-hint { font-size: 0.85rem; margin-top: 0.75rem; color: var(--integra-text-muted); min-height: 1.4em; }
-.content .portal-field label { color: var(--integra-main-text-muted); }
-.portal-field label {
+.content .portal-field label,
+.content .portal-field .portal-field-label { color: var(--integra-main-text-muted); }
+.portal-field label,
+.portal-field .portal-field-label {
+  display: block;
   font-size: 0.8rem;
   font-weight: 500;
   color: var(--integra-text-muted);
+  margin-bottom: 0.35rem;
 }
 .content .portal-field input,
 .content .portal-field select,
