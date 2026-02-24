@@ -1310,6 +1310,8 @@ body {
 }
 .qoe-diagnostico-card .qoe-form-row input::placeholder { color: rgba(255,255,255,0.45); }
 .qoe-diagnostico-card .qoe-form-row select option { background: #1a1f26; color: #fff; }
+.qoe-form-row.qoe-visita-bloqueada { opacity: 0.7; }
+.qoe-form-row.qoe-visita-bloqueada select { cursor: not-allowed; background: rgba(0,0,0,0.4); }
 .qoe-diagnostico-card .qoe-desc { color: rgba(255,255,255,0.6); }
 .qoe-diagnostico-card .qoe-field label { color: rgba(255,255,255,0.85); }
 .qoe-diagnostico-card .qoe-field textarea {
@@ -1660,6 +1662,32 @@ body {
 .qoe-noc-rec-porque em { color: rgba(255,255,255,0.95); font-style: normal; font-weight: 600; }
 .qoe-noc-rec-prioridad-alta { border-left-color: #fbbf24; }
 .qoe-noc-rec-prioridad-critica { border-left-color: #f87171; }
+
+.qoe-validacion-individual { padding: 0.5rem 0; }
+.qoe-validacion-estado { font-size: 1rem; margin-bottom: 0.75rem; }
+.qoe-validacion-semaforo { font-size: 1.1rem; }
+.qoe-validacion-conclusion { margin-bottom: 1rem; padding: 0.75rem 1rem; background: rgba(34, 197, 94, 0.12); border-left: 4px solid #22c55e; border-radius: 6px; color: rgba(255,255,255,0.9); line-height: 1.5; font-size: 0.9rem; }
+.qoe-validacion-matriz { margin: 1rem 0; }
+.qoe-validacion-matriz h5 { margin: 0 0 0.5rem; font-size: 0.85rem; color: rgba(255,255,255,0.7); text-transform: uppercase; letter-spacing: 0.05em; }
+.qoe-matriz-tabla { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+.qoe-matriz-tabla th, .qoe-matriz-tabla td { padding: 0.4rem 0.6rem; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.1); }
+.qoe-matriz-tabla th { color: rgba(255,255,255,0.6); font-weight: 600; }
+.qoe-matriz-tabla td { color: rgba(255,255,255,0.9); }
+.qoe-matriz-sema { white-space: nowrap; }
+.qoe-matriz-verde { color: #22c55e; }
+.qoe-matriz-amarillo { color: #fbbf24; }
+.qoe-matriz-rojo { color: #f87171; }
+.qoe-matriz-muted { color: rgba(255,255,255,0.5); }
+.qoe-hallazgos-ciudadano { margin: 1rem 0; }
+.qoe-hallazgos-ciudadano h5 { margin: 0 0 0.5rem; font-size: 0.85rem; color: rgba(255,255,255,0.7); text-transform: uppercase; letter-spacing: 0.05em; }
+.qoe-hallazgo-card { display: flex; gap: 0.5rem; align-items: flex-start; padding: 0.6rem 0.75rem; margin-bottom: 0.5rem; background: rgba(0,0,0,0.25); border-radius: 6px; font-size: 0.88rem; line-height: 1.45; }
+.qoe-hallazgo-card .qoe-hallazgo-sema { font-size: 1rem; flex-shrink: 0; }
+.qoe-hallazgo-verde { border-left: 4px solid #22c55e; }
+.qoe-hallazgo-amarillo { border-left: 4px solid #fbbf24; }
+.qoe-hallazgo-rojo { border-left: 4px solid #f87171; }
+.qoe-hallazgo-muted { border-left: 4px solid rgba(255,255,255,0.2); }
+.qoe-validacion-resumen { margin: 1rem 0; padding: 0.75rem 1rem; background: rgba(59, 130, 246, 0.1); border-left: 4px solid rgba(59, 130, 246, 0.5); border-radius: 6px; font-size: 0.9rem; color: rgba(255,255,255,0.95); line-height: 1.5; }
+.qoe-recomendacion-agente { margin: 1rem 0; padding: 0.75rem 1rem; background: rgba(251, 191, 36, 0.08); border-left: 4px solid #fbbf24; border-radius: 6px; font-size: 0.9rem; color: rgba(255,255,255,0.9); line-height: 1.5; }
 
 .qoe-noc-grafica-afectacion {
   margin-top: 1.5rem;

@@ -850,7 +850,7 @@
       if (typeof NocAnalyzerQoE === 'undefined' && !window._qoeLoading) {
         window._qoeLoading = true;
         wrap.innerHTML = '<div class="qoe-seccion-intermitencia" style="padding:2rem;text-align:center;color:rgba(255,255,255,0.8)">Cargando módulo NOC…</div>';
-        var qoeOrder = ['js/qoe/config.js?v=4','js/qoe/parser.js?v=4','js/qoe/rulesEngine.js?v=4','js/qoe/healthScores.js?v=4','js/qoe/gauge.js?v=5','js/qoe/interpretacion.js?v=1','js/qoe/nocAnalyzer.js?v=1'];
+        var qoeOrder = ['js/qoe/config.js?v=4','js/qoe/parser.js?v=4','js/qoe/vendorCommands.js?v=1','js/qoe/rulesEngine.js?v=4','js/qoe/healthScores.js?v=4','js/qoe/gauge.js?v=5','js/qoe/interpretacion.js?v=1','js/qoe/nocAnalyzer.js?v=2'];
         (function loadNext(i) {
           if (i >= qoeOrder.length) { window._qoeLoading = false; refreshProductividadAgente(); return; }
           loadScript(qoeOrder[i]).then(function () { loadNext(i + 1); }).catch(function () { loadNext(i + 1); });
@@ -978,7 +978,7 @@
           '</div>' +
           '<div class="qoe-noc-card">' +
             '<h3 class="qoe-noc-titulo">Monitor RF · CMTS</h3>' +
-            '<p class="qoe-noc-desc">Ingestar output en área superior. Auto-detección ARRIS / vCMTS / CASA.</p>' +
+            '<p class="qoe-noc-desc">Ingestar output en área superior. Auto-detección: Arista, Harmonic, Cisco, Arris, CASA.</p>' +
             '<div class="qoe-noc-header" id="qoeNocHeader">' +
               '<div class="qoe-noc-header-item"><span class="qoe-noc-label">CMTS</span><span class="qoe-noc-val" id="qoeNocCmts">—</span></div>' +
               '<div class="qoe-noc-header-item"><span class="qoe-noc-label">Nodo / Upstream</span><span class="qoe-noc-val" id="qoeNocNodo">—</span></div>' +
@@ -2935,6 +2935,20 @@
       var marcacion = inpMarcacion ? (inpMarcacion.value || '').trim() : '';
       var solucion = selSolucion.value || '';
       var agendo = selAgendo ? selAgendo.value : '';
+      if (QOE_CMTS_PENDING && QOE_CMTS_PENDING.visitabloqueada && agendo === 'si') {
+        var msg = document.getElementById('qoeGuardarMsg') || (function () {
+          var m = document.createElement('p');
+          m.id = 'qoeGuardarMsg';
+          m.className = 'qoe-error-msg';
+          m.style.cssText = 'margin-top:0.5rem;color:var(--integra-rose,red);font-size:0.9rem';
+          var form = btn.closest('.qoe-intermitencia-form');
+          if (form) form.appendChild(m);
+          return m;
+        })();
+        msg.textContent = 'Afectación masiva: Agendar visita bloqueado. Escalar a Planta Exterior - Problema de Nodo.';
+        msg.style.display = '';
+        return;
+      }
       var llamada = inpLlamada ? (inpLlamada.value || '').trim() : '';
       var maiva = selMaiva ? selMaiva.value : '';
       var inc = inpInc ? (inpInc.value || '').trim() : '';
@@ -3068,60 +3082,56 @@
     setVal('qoeNocRx', diag.rx && diag.rx.valor, diag.rx && diag.rx.color);
     setVal('qoeNocSnrUp', diag.snrUp && diag.snrUp.valor, diag.snrUp && diag.snrUp.color);
     setVal('qoeNocSnrDown', diag.snrDown && diag.snrDown.valor, diag.snrDown && diag.snrDown.color);
-    setVal('qoeNocFlaps', diag.estabilidad && diag.estabilidad.flaps, diag.intermitencia && diag.intermitencia.color);
+    setVal('qoeNocFlaps', (diag.intermitencia && diag.intermitencia.valor != null) ? diag.intermitencia.valor : (diag.estabilidad && diag.estabilidad.flaps != null ? diag.estabilidad.flaps : 'N/A'), diag.intermitencia && diag.intermitencia.color);
     var uncStr = (diag.estabilidad && diag.estabilidad.uncorrectables != null) ? diag.estabilidad.uncorrectables : (diag.raw && diag.raw.uncorrectables);
     setVal('qoeNocCrc', uncStr, null);
     setVal('qoeNocRanging', diag.estabilidad && diag.estabilidad.rangingRetries, null);
-    setVal('qoeNocUptime', diag.estabilidad && diag.estabilidad.uptime, null);
+    setVal('qoeNocUptime', (diag.estabilidad && diag.estabilidad.uptime) || 'N/A', null);
     setVal('qoeNocUtil', diag.masivoPanel && diag.masivoPanel.utilization != null ? diag.masivoPanel.utilization + '%' : null, null);
     setVal('qoeNocModemsChan', diag.masivoPanel && diag.masivoPanel.totalModems, null);
     setVal('qoeNocUncorrGlob', diag.masivoPanel && diag.masivoPanel.uncorrectablesGlobal, null);
     setVal('qoeNocMasivo', diag.masivo && diag.masivo.texto, diag.masivo && diag.masivo.color);
+    QOE_CMTS_PENDING.visitabloqueada = !!(diag.protocolo && diag.protocolo.visitabloqueada);
+    applyVisitaBloqueadaUI(QOE_CMTS_PENDING.visitabloqueada);
     var recList = $('qoeNocRecList');
     if (recList && diag.protocolo) {
       var p = diag.protocolo;
       var html = '';
-      /* Motor de decisión jerárquico: Diagnóstico explícito */
-      var nivelTexto = p.esMasivo ? 'Afectación compartida' : 'Individual';
-      html += '<div class="qoe-noc-protocolo-header">';
-      html += '<span class="qoe-noc-nivel">Nivel: ' + nivelTexto + '</span>';
-      if (p.severidad) html += '<span class="qoe-noc-severidad">Severidad: ' + escapeHtml(p.severidad) + '</span>';
-      html += '<span class="qoe-noc-confianza">Confianza: ' + (p.confianza || 'Baja') + '</span>';
-      if (p.visitabloqueada) {
-        html += '<span class="qoe-noc-visita-bloq">Visita técnica bloqueada (origen canal/nodo)</span>';
-      } else if (p.sugerirVisita) {
-        html += '<span class="qoe-noc-visita-sug">Se sugiere visita técnica</span>';
-      }
-      html += '</div>';
-      if (p.diagnosticoExplicito) {
-        html += '<div class="qoe-noc-diagnostico">' + escapeHtml(p.diagnosticoExplicito) + '</div>';
-      }
-      if (p.mensajeBloqueo) {
-        html += '<div class="qoe-noc-mensaje-bloqueo">' + escapeHtml(p.mensajeBloqueo) + '</div>';
-      }
-      /* Hallazgos técnicos */
-      if (p.hallazgos && p.hallazgos.length) {
-        html += '<div class="qoe-noc-evidencia"><strong>Hallazgos técnicos:</strong> ';
-        html += p.hallazgos.map(function (e) {
-          var v = e.valor != null ? e.valor : '—';
-          return escapeHtml(e.metrica) + '=' + v + (e.unidad ? ' ' + e.unidad : '') + ' (' + escapeHtml(e.umbral) + ')';
-        }).join(' · ');
-        html += '</div>';
-      }
-      /* Condición / Conclusión del motor */
-      if (p.recs && p.recs.length) {
-        p.recs.forEach(function (r) {
-          var pClass = r.prioridad === 'crítica' ? 'qoe-noc-rec-prioridad-critica' : (r.prioridad === 'alta' ? 'qoe-noc-rec-prioridad-alta' : '');
-          html += '<div class="qoe-noc-rec-item ' + pClass + '">' +
-            '<strong>' + escapeHtml(r.accion) + '</strong>' +
-            '<p class="qoe-noc-rec-condicion"><em>Condición:</em> ' + escapeHtml(r.condicion) + (r.conclusion ? ' → ' + escapeHtml(r.conclusion) : '') + '</p>' +
-            '</div>';
-        });
-      }
-      /* Acción operativa ejecutable */
-      if (p.accionOperativa && p.accionOperativa.length) {
-        html += '<div class="qoe-noc-accion-operativa"><strong>Acción operativa ejecutable:</strong>';
-        html += '<ol class="qoe-noc-rec-pasos">' + p.accionOperativa.map(function (x) { return '<li>' + escapeHtml(x) + '</li>'; }).join('') + '</ol>';
+      if (p.esMasivo) {
+        html += '<div class="qoe-noc-protocolo-header">';
+        html += '<span class="qoe-noc-nivel">Nivel: Afectación compartida</span>';
+        if (p.severidad) html += '<span class="qoe-noc-severidad">Severidad: ' + escapeHtml(p.severidad) + '</span>';
+        html += '<span class="qoe-noc-visita-bloq">Visita técnica bloqueada</span></div>';
+        if (p.diagnosticoExplicito) html += '<div class="qoe-noc-diagnostico">' + escapeHtml(p.diagnosticoExplicito) + '</div>';
+        if (p.mensajeBloqueo) html += '<div class="qoe-noc-mensaje-bloqueo">' + escapeHtml(p.mensajeBloqueo) + '</div>';
+        if (p.accionOperativa && p.accionOperativa.length) {
+          html += '<div class="qoe-noc-accion-operativa"><strong>Acción:</strong><ol class="qoe-noc-rec-pasos">' + p.accionOperativa.map(function (x) { return '<li>' + escapeHtml(x) + '</li>'; }).join('') + '</ol></div>';
+        }
+      } else {
+        var v = p.validacionIndividual || {};
+        var sem = function (s) { return s === 'verde' ? '\uD83D\uDFE2' : (s === 'amarillo' ? '\uD83D\uDFE1' : (s === 'rojo' ? '\uD83D\uDD34' : '\uD83D\uDD35')); };
+        html += '<div class="qoe-validacion-individual">';
+        html += '<div class="qoe-validacion-estado"><span class="qoe-validacion-semaforo">' + sem('verde') + '</span> <strong>Estado: INDIVIDUAL</strong></div>';
+        html += '<div class="qoe-validacion-conclusion">' + escapeHtml(v.conclusion || 'El problema se limita exclusivamente a este cable módem.') + '</div>';
+        if (v.matriz && v.matriz.length) {
+          html += '<div class="qoe-validacion-matriz"><h5>Por qué no es masiva</h5><table class="qoe-matriz-tabla"><thead><tr><th>Criterio de Red</th><th>Valor Actual</th><th>Umbral Masivo</th><th>Estado</th></tr></thead><tbody>';
+          v.matriz.forEach(function (f) {
+            html += '<tr><td>' + escapeHtml(f.criterio) + '</td><td>' + escapeHtml(String(f.valorActual)) + '</td><td>' + escapeHtml(f.umbralMasivo) + '</td><td><span class="qoe-matriz-sema qoe-matriz-' + (f.semaforo || 'muted') + '">' + sem(f.semaforo) + ' ' + escapeHtml(f.estado) + '</span></td></tr>';
+          });
+          html += '</tbody></table></div>';
+        }
+        if (v.hallazgos && v.hallazgos.length) {
+          html += '<div class="qoe-hallazgos-ciudadano"><h5>Hallazgos en lenguaje claro</h5>';
+          v.hallazgos.forEach(function (h) {
+            html += '<div class="qoe-hallazgo-card qoe-hallazgo-' + (h.semaforo || 'muted') + '"><span class="qoe-hallazgo-sema">' + sem(h.semaforo) + '</span><div><strong>' + escapeHtml(h.metrica) + ' (' + escapeHtml(String(h.valor)) + '):</strong> ' + escapeHtml(h.frase) + '</div></div>';
+          });
+          html += '</div>';
+        }
+        html += '<div class="qoe-validacion-resumen">' + escapeHtml(v.resumen || '') + '</div>';
+        html += '<div class="qoe-recomendacion-agente"><strong>Recomendación para el agente:</strong> ' + escapeHtml(v.recomendacion || '') + '</div>';
+        if (p.accionOperativa && p.accionOperativa.length) {
+          html += '<div class="qoe-noc-accion-operativa"><strong>Pasos:</strong><ol class="qoe-noc-rec-pasos">' + p.accionOperativa.map(function (x) { return '<li>' + escapeHtml(x) + '</li>'; }).join('') + '</ol></div>';
+        }
         html += '</div>';
       }
       recList.innerHTML = html || '<p class="qoe-noc-rec-empty">—</p>';
@@ -3193,11 +3203,25 @@
     if (mch) mch.textContent = (parsed && parsed.upstream && parsed.upstream.channelId) || (diag.raw && diag.raw.interfaceId) || '—';
   }
 
-  var QOE_CMTS_PENDING = { modemOutput: '', upstreamOutput: '' };
+  var QOE_CMTS_PENDING = { modemOutput: '', upstreamOutput: '', visitabloqueada: false };
+
+  function applyVisitaBloqueadaUI(visitabloqueada) {
+    var selAgendo = $('qoeAgendoVisita');
+    var rowAgendo = selAgendo ? selAgendo.closest('.qoe-form-row') : null;
+    if (visitabloqueada) {
+      if (selAgendo) { selAgendo.disabled = true; selAgendo.value = 'no'; selAgendo.title = 'Afectación masiva: Agendar visita bloqueada. Escalar a Planta Exterior.'; }
+      if (rowAgendo) rowAgendo.classList.add('qoe-visita-bloqueada');
+    } else {
+      if (selAgendo) { selAgendo.disabled = false; selAgendo.removeAttribute('title'); }
+      if (rowAgendo) rowAgendo.classList.remove('qoe-visita-bloqueada');
+    }
+  }
 
   function clearQoeCmtsDiagnostic() {
     QOE_CMTS_PENDING.modemOutput = '';
     QOE_CMTS_PENDING.upstreamOutput = '';
+    QOE_CMTS_PENDING.visitabloqueada = false;
+    applyVisitaBloqueadaUI(false);
     var modemTa = $('qoeModemOutput'), upstreamTa = $('qoeUpstreamOutput');
     if (modemTa) modemTa.value = '';
     if (upstreamTa) upstreamTa.value = '';

@@ -45,8 +45,8 @@
         severidad: 'rojo',
         impactoCliente: 'Problema en canal upstream compartido. Varios clientes afectados.',
         origenProbable: 'Infraestructura compartida, NO cliente individual. Problema en canal upstream.',
-        accionAgente: 'Acciones individuales bloqueadas. Revisar health de portadora upstream en CMTS, migrar modems si hay redundancia, revisar niveles RF del nodo.',
-        resumenRapido: 'Afectación masiva. No programar visitas hasta descartar problema compartido.',
+        accionAgente: 'Escalar a Planta Exterior - Problema de Nodo. Acciones individuales bloqueadas. Revisar health de portadora upstream en CMTS, migrar modems si hay redundancia.',
+        resumenRapido: 'Afectación masiva. Escalar a Planta Exterior. No programar visitas hasta descartar problema compartido.',
         confianza: confianza,
         problemaIndividual: false
       };
