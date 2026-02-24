@@ -3055,12 +3055,64 @@
       if (upstreamTa) upstreamTa.value = QOE_CMTS_PENDING.upstreamOutput || '';
       updateQoeNocAnalyzer(QOE_CMTS_PENDING.modemOutput || '', QOE_CMTS_PENDING.upstreamOutput || '');
     }
+    var recList = $('qoeNocRecList');
+    if (recList && !recList._reporteBound) {
+      recList._reporteBound = true;
+      recList.addEventListener('click', function (e) {
+        if (e.target && e.target.id === 'qoeBtnReporteTecnico') generarReporteParaTecnico();
+      });
+    }
     updateQoeNocGraficaAfectacion();
+  }
+
+  function generarReporteParaTecnico() {
+    var diag = QOE_CMTS_PENDING && QOE_CMTS_PENDING.lastDiag;
+    if (!diag || !diag.protocolo) return;
+    var txt;
+    if (diag.protocolo.esMasivo) {
+      var modems = diag.totalModems != null ? diag.totalModems : (diag.masivo && diag.masivo.modems) || (diag.masivoPanel && diag.masivoPanel.totalModems);
+      var uncorr = (diag.masivoPanel && diag.masivoPanel.uncorrectablesGlobal != null) ? diag.masivoPanel.uncorrectablesGlobal : (diag.masivo && diag.masivo.uncorr) || (diag.raw && diag.raw.uncorrectablesGlobal);
+      var modemsStr = modems != null ? String(modems) : 'N/A';
+      var errStr = uncorr != null ? (uncorr >= 1000 ? (Math.round(uncorr / 1000) + 'k') : String(uncorr)) : 'N/A';
+      txt = 'Afectación Masiva Confirmada: El canal presenta ' + modemsStr + ' módems con ' + errStr + ' errores globales. Se requiere revisión del nodo y portadora en sitio.';
+    } else {
+      var flaps = (diag.intermitencia && diag.intermitencia.valor != null) ? diag.intermitencia.valor : (diag.estabilidad && diag.estabilidad.flaps != null ? diag.estabilidad.flaps : null);
+      var uncorr = (diag.estabilidad && diag.estabilidad.uncorrectables != null) ? diag.estabilidad.uncorrectables : (diag.raw && diag.raw.uncorrectables != null ? diag.raw.uncorrectables : null);
+      var totalModems = diag.totalModems != null ? diag.totalModems : (diag.masivoPanel && diag.masivoPanel.totalModems);
+      var flapsStr = flaps != null ? String(flaps) : 'N/A';
+      var errStr = uncorr != null ? (uncorr >= 1000 ? (Math.round(uncorr / 1000) + 'k') : String(uncorr)) : 'N/A';
+      var restoFrase = totalModems != null && totalModems > 1 ? (totalModems - 1) + ' módems' : 'demás equipos';
+      txt = 'Falla Local Confirmada: El equipo presenta ' + flapsStr + ' Flaps y ' + errStr + ' errores, mientras que el resto del canal (' + restoFrase + ') está estable. Se requiere revisión de conectores y splitter en sitio.';
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(txt).then(function () {
+        showSaveStatus('Reporte copiado al portapapeles', false);
+      }).catch(function () { fallbackCopyReporte(txt); });
+    } else {
+      fallbackCopyReporte(txt);
+    }
+  }
+
+  function fallbackCopyReporte(txt) {
+    var ta = document.createElement('textarea');
+    ta.value = txt;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    try {
+      document.execCommand('copy');
+      showSaveStatus('Reporte copiado al portapapeles', false);
+    } catch (e) {
+      showSaveStatus('No se pudo copiar. Revisa permisos del navegador.', true);
+    }
+    document.body.removeChild(ta);
   }
 
   function updateQoeNocAnalyzer(modemOutput, upstreamOutput) {
     if (typeof NocAnalyzerQoE === 'undefined' || !NocAnalyzerQoE.analyze) return;
     var diag = NocAnalyzerQoE.analyze(modemOutput || '', upstreamOutput || '');
+    QOE_CMTS_PENDING.lastDiag = diag;
     function semaforoClass(c) { return 'qoe-semaforo-' + (c || 'muted'); }
     function setVal(parentId, val, color) {
       var parent = document.getElementById(parentId);
@@ -3107,6 +3159,7 @@
         if (p.accionOperativa && p.accionOperativa.length) {
           html += '<div class="qoe-noc-accion-operativa"><strong>Acción:</strong><ol class="qoe-noc-rec-pasos">' + p.accionOperativa.map(function (x) { return '<li>' + escapeHtml(x) + '</li>'; }).join('') + '</ol></div>';
         }
+        html += '<div class="qoe-reporte-tecnico-wrap"><button type="button" class="qoe-btn-reporte-tecnico" id="qoeBtnReporteTecnico" title="Genera un resumen para enviar al técnico de campo">Generar Reporte para Técnico</button></div>';
       } else {
         var v = p.validacionIndividual || {};
         var sem = function (s) { return s === 'verde' ? '\uD83D\uDFE2' : (s === 'amarillo' ? '\uD83D\uDFE1' : (s === 'rojo' ? '\uD83D\uDD34' : '\uD83D\uDD35')); };
@@ -3132,6 +3185,7 @@
         if (p.accionOperativa && p.accionOperativa.length) {
           html += '<div class="qoe-noc-accion-operativa"><strong>Pasos:</strong><ol class="qoe-noc-rec-pasos">' + p.accionOperativa.map(function (x) { return '<li>' + escapeHtml(x) + '</li>'; }).join('') + '</ol></div>';
         }
+        html += '<div class="qoe-reporte-tecnico-wrap"><button type="button" class="qoe-btn-reporte-tecnico" id="qoeBtnReporteTecnico" title="Genera un resumen para enviar al técnico de campo">Generar Reporte para Técnico</button></div>';
         html += '</div>';
       }
       recList.innerHTML = html || '<p class="qoe-noc-rec-empty">—</p>';

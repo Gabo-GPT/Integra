@@ -1643,6 +1643,27 @@ body {
 .qoe-noc-accion-operativa ol { margin: 0.5rem 0 0 1.25rem; padding: 0; }
 .qoe-noc-visita-bloq { color: #fb923c; font-weight: 600; }
 .qoe-noc-visita-sug { color: #4ade80; font-weight: 600; }
+.qoe-reporte-tecnico-wrap {
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid rgba(59, 130, 246, 0.2);
+}
+.qoe-btn-reporte-tecnico {
+  padding: 0.5rem 1rem;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.4), rgba(59, 130, 246, 0.2));
+  border: 1px solid rgba(59, 130, 246, 0.5);
+  border-radius: 6px;
+  color: #93c5fd;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.1s;
+}
+.qoe-btn-reporte-tecnico:hover {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.5), rgba(59, 130, 246, 0.3));
+  color: #fff;
+}
+.qoe-btn-reporte-tecnico:active { transform: scale(0.98); }
 .qoe-noc-evidencia {
   margin-bottom: 0.75rem;
   padding: 0.5rem 0.75rem;
