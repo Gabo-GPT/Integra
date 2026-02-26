@@ -2658,7 +2658,7 @@
     var html = [];
     jefesOrdenados.forEach(function (g) {
       var jefeLabel = g.jefe || 'Sin asignar';
-      html.push('<tr class="tabla-cal-jefe-row"><td class="tabla-cal-jefe" colspan="6">' + escapeHtml(jefeLabel) + '</td><td class="tabla-cal-jefe-accion"><button type="button" class="tabla-cal-jefe-toggle" aria-label="Expandir/Colapsar" title="Colapsar">−</button></td></tr>');
+      html.push('<tr class="tabla-cal-jefe-row tabla-cal-jefe-collapsed"><td class="tabla-cal-jefe" colspan="6">' + escapeHtml(jefeLabel) + '</td><td class="tabla-cal-jefe-accion"><button type="button" class="tabla-cal-jefe-toggle" aria-label="Expandir/Colapsar" title="Expandir">+</button></td></tr>');
       g.rows.forEach(function (r) {
         var ganaCls = r.ganaPct > 0 ? getGanaSTClass(r.ganaPct) : 'tabla-cal-gana-vacio';
         var fmt = fmtPct;
@@ -2666,7 +2666,7 @@
         var selA1 = '<select class="tabla-cal-pct-sel" data-agent="' + escapeHtml(r.nombre) + '" data-col="pctA1" title="Elegir porcentaje">' + buildPctSelectOptions(r.pctA1) + '</select>';
         var selN = '<select class="tabla-cal-pct-sel" data-agent="' + escapeHtml(r.nombre) + '" data-col="pctN" title="Elegir porcentaje">' + buildPctSelectOptions(r.pctN) + '</select>';
         var selA2 = '<select class="tabla-cal-pct-sel" data-agent="' + escapeHtml(r.nombre) + '" data-col="pctA2" title="Elegir porcentaje">' + buildPctSelectOptions(r.pctA2) + '</select>';
-        html.push('<tr class="tabla-cal-agente-row"><td class="tabla-cal-nombre tabla-cal-agente">' + escapeHtml(r.nombre) + '</td>' +
+        html.push('<tr class="tabla-cal-agente-row" style="display:none"><td class="tabla-cal-nombre tabla-cal-agente">' + escapeHtml(r.nombre) + '</td>' +
           '<td class="tabla-cal-qmont tabla-cal-editable" contenteditable="true" data-agent="' + escapeHtml(r.nombre) + '" data-col="qMont" title="Editar">' + displayQMont(r.qMont) + '</td>' +
           '<td class="tabla-cal-pct tabla-cal-pct-cell">' + selG + '</td><td class="tabla-cal-pct tabla-cal-pct-cell">' + selA1 + '</td>' +
           '<td class="tabla-cal-pct tabla-cal-pct-cell">' + selN + '</td><td class="tabla-cal-pct tabla-cal-pct-cell">' + selA2 + '</td>' +
@@ -2813,7 +2813,7 @@
       var jefeLabel = g.jefe || 'Sin asignar';
       var agg = agregarJefe(g);
       var aggGanaCls = getGanaSTClass(agg.ganaPct);
-      html.push('<tr class="tabla-pct-jefe-row"><td class="tabla-pct-equipo"><button type="button" class="tabla-pct-toggle" aria-label="Expandir/Colapsar">−</button><span class="tabla-pct-label">' + escapeHtml(jefeLabel) + '</span></td><td class="tabla-pct-qmont tabla-pct-bold">' + displayQMont(agg.qMont) + '</td><td class="tabla-pct-val tabla-pct-bold">' + fmtPct(agg.pctG) + '</td><td class="tabla-pct-val tabla-pct-bold">' + fmtPct(agg.pctA1) + '</td><td class="tabla-pct-val tabla-pct-bold">' + fmtPct(agg.pctN) + '</td><td class="tabla-pct-val tabla-pct-bold">' + fmtPct(agg.pctA2) + '</td><td class="tabla-pct-gana tabla-pct-bold ' + aggGanaCls + '">' + fmtPct(agg.ganaPct) + '</td></tr>');
+      html.push('<tr class="tabla-pct-jefe-row tabla-pct-jefe-collapsed"><td class="tabla-pct-equipo"><button type="button" class="tabla-pct-toggle" aria-label="Expandir/Colapsar">+</button><span class="tabla-pct-label">' + escapeHtml(jefeLabel) + '</span></td><td class="tabla-pct-qmont tabla-pct-bold">' + displayQMont(agg.qMont) + '</td><td class="tabla-pct-val tabla-pct-bold">' + fmtPct(agg.pctG) + '</td><td class="tabla-pct-val tabla-pct-bold">' + fmtPct(agg.pctA1) + '</td><td class="tabla-pct-val tabla-pct-bold">' + fmtPct(agg.pctN) + '</td><td class="tabla-pct-val tabla-pct-bold">' + fmtPct(agg.pctA2) + '</td><td class="tabla-pct-gana tabla-pct-bold ' + aggGanaCls + '">' + fmtPct(agg.ganaPct) + '</td></tr>');
       g.rows.forEach(function (r) {
         var ganaClsPct = getGanaSTClass(r.ganaPct);
         var fmt = fmtPct;
@@ -2821,7 +2821,7 @@
         var selA1 = '<select class="tabla-pct-pct-sel" data-agent="' + escapeHtml(r.nombre) + '" data-col="pctA1" title="Elegir porcentaje">' + buildPctSelectOptions(r.pctA1) + '</select>';
         var selN = '<select class="tabla-pct-pct-sel" data-agent="' + escapeHtml(r.nombre) + '" data-col="pctN" title="Elegir porcentaje">' + buildPctSelectOptions(r.pctN) + '</select>';
         var selA2 = '<select class="tabla-pct-pct-sel" data-agent="' + escapeHtml(r.nombre) + '" data-col="pctA2" title="Elegir porcentaje">' + buildPctSelectOptions(r.pctA2) + '</select>';
-        html.push('<tr class="tabla-pct-agente-row"><td class="tabla-pct-equipo tabla-pct-agente"><span class="tabla-pct-agente-icon"></span>' + escapeHtml(r.nombre) + '</td>' +
+        html.push('<tr class="tabla-pct-agente-row" style="display:none"><td class="tabla-pct-equipo tabla-pct-agente"><span class="tabla-pct-agente-icon"></span>' + escapeHtml(r.nombre) + '</td>' +
           '<td class="tabla-pct-qmont tabla-pct-editable" contenteditable="true" data-agent="' + escapeHtml(r.nombre) + '" data-col="qMont" title="Editar">' + displayQMont(r.qMont) + '</td>' +
           '<td class="tabla-pct-val tabla-pct-sel-cell">' + selG + '</td><td class="tabla-pct-val tabla-pct-sel-cell">' + selA1 + '</td>' +
           '<td class="tabla-pct-val tabla-pct-sel-cell">' + selN + '</td><td class="tabla-pct-val tabla-pct-sel-cell">' + selA2 + '</td>' +
