@@ -60,6 +60,7 @@
   var GESTION_FORM_IDS = ['gestionNombre','gestionNumero','gestionNit','gestionAliado','gestionFuncion','gestionImot','gestionTransferencia','gestionCliente','gestionPqr','gestionCausa','gestionSolucion','gestionRed','gestionNodo','gestionCpe','gestionHuboSolucion','gestionAreaTransferir','gestionExtensiones'];
   var PRETURNOS_DEFAULT = [{ skill: 'EMP GESTION INMEDIATA', programados: 7, asistencia: 86, promedio: 100 },{ skill: 'EMP GESTION INCIDENTES CSI', programados: 19, asistencia: 93, promedio: 99 },{ skill: 'EMP GESTION INCIDENTES IRE', programados: 6, asistencia: 100, promedio: 100 }];
   var STAFF_DEFAULT = [{ skill: 'Analista de entrenamiento 2', programados: 1, asistencia: 100, promedio: 100 },{ skill: 'Supervisor', programados: 3, asistencia: 78, promedio: 100 }];
+  var JEFES_INMEDIATOS = ['Javier Mauricio Cardenas', 'Yesid Enrique Lopez'];
   var EXCEL_COLS = ['Nombre t\u00e9cnico','N\u00famero','Enlace','Aliado','Funci\u00f3n','IM/OT','Transferencia','\u00c1rea transferir','Extensiones','Cliente','PQR','Causa falla','Soluci\u00f3n','Red acceso','Nodo','CPE','\u00bfHubo soluci\u00f3n?','Fecha/Hora','Duraci\u00f3n'];
   var EXCEL_KEYS = ['nombre','numero','nit','aliado','funcion','imot','transferencia','areaTransferir','extensiones','cliente','pqr','causa','solucion','redAcceso','nodo','cpe','huboSolucion','fechaHora','duracion'];
 
@@ -95,7 +96,7 @@
     var d = getData();
     d[key] = val;
     if (_saveTimer) clearTimeout(_saveTimer);
-    _saveTimer = setTimeout(function () { _saveTimer = 0; _persistToStorage(); }, 400);
+    _saveTimer = setTimeout(function () { _saveTimer = 0; _persistToStorage(); }, 150);
   }
 
   var MAX_STORAGE_BYTES = 4 * 1024 * 1024;
@@ -243,6 +244,7 @@
     }
     if (history.replaceState) history.replaceState(null, '', '#' + sectionId);
     if (sectionId === 'dashboard') {
+      refreshDashboardImagen();
       if (isAdmin()) {
         var gData = getGestionDataFromStorage();
         var d = getData();
@@ -656,8 +658,13 @@
         '<option value="qoe"' + (r === 'qoe' ? ' selected' : '') + '>QoE</option>' +
         '<option value="administrador"' + (r === 'administrador' ? ' selected' : '') + '>Administrador</option>' +
         '</select>';
+      var jefe = u.jefeInmediato || '';
+      var jefeSel = '<select class="portal-jefe-select" data-i="' + i + '" title="Jefe inmediato">' +
+        '<option value="">Sin asignar</option>' +
+        (JEFES_INMEDIATOS.map(function (j) { return '<option value="' + escapeHtml(j) + '"' + (jefe === j ? ' selected' : '') + '>' + escapeHtml(j) + '</option>'; }).join('')) +
+        '</select>';
       var notaCalidad = getNotaCalidadParaAgente(u.nombre, u.usuario);
-      return '<tr><td>' + (u.nombre || '') + '</td><td>' + (u.usuario || '') + '</td><td><span class="portal-estado">' + (u.estado || 'Temporal') + '</span></td><td>' + sel + '</td><td><span class="portal-nota-calidad" title="Desde Matriz de Calidad">' + escapeHtml(notaCalidad) + '</span></td><td><code>' + (u.clave || '') + '</code></td><td><button type="button" class="btn-copy" data-i="' + i + '">Copiar</button><button type="button" class="btn-remove" data-i="' + i + '">Quitar</button></td></tr>';
+      return '<tr><td>' + (u.nombre || '') + '</td><td>' + (u.usuario || '') + '</td><td><span class="portal-estado">' + (u.estado || 'Temporal') + '</span></td><td>' + sel + '</td><td>' + jefeSel + '</td><td><span class="portal-nota-calidad" title="Desde Matriz de Calidad">' + escapeHtml(notaCalidad) + '</span></td><td><code>' + (u.clave || '') + '</code></td><td><button type="button" class="btn-copy" data-i="' + i + '">Copiar</button><button type="button" class="btn-remove" data-i="' + i + '">Quitar</button></td></tr>';
     }).join('');
   }
 
@@ -680,7 +687,7 @@
   }
 
   function onPortalTableChange(e) {
-    var sel = e.target.closest('.portal-rol-select');
+    var sel = e.target.closest('.portal-rol-select, .portal-jefe-select');
     if (!sel) return;
     var i = parseInt(sel.getAttribute('data-i'), 10);
     var d = getData();
@@ -688,9 +695,12 @@
     if (!list || !Array.isArray(list) || i < 0 || i >= list.length) return;
     var arr = list.slice();
     var u = arr[i];
-    arr[i] = { nombre: u.nombre, usuario: u.usuario, clave: u.clave, estado: u.estado, role: sel.value };
+    var role = sel.classList.contains('portal-rol-select') ? sel.value : (u.role || 'fibra-optica');
+    var jefeInmediato = sel.classList.contains('portal-jefe-select') ? (sel.value || '') : (u.jefeInmediato || '');
+    arr[i] = { nombre: u.nombre, usuario: u.usuario, clave: u.clave, estado: u.estado, role: role, jefeInmediato: jefeInmediato };
     saveData('portalUsuarios', trimArrayNewestLast(arr, MAX_PORTAL_USUARIOS));
     flushSave();
+    if (sel.classList.contains('portal-jefe-select')) refreshTablaCalificaciones();
   }
 
   var PLANTILLA_BASE = '@GESTION INMEDIATA - {agente}\n==================================================================================================================\n==================================================================================================================\n///////////////////////////////////////////////OBSERVACIONES//////////////////////////////////////////////////////\n==================================================================================================================\n\nSe comunica PIM {nombre} al Numero {numero} del Aliado {aliado}, Área {funcion}, donde la causa de la falla fue {causa} y la solucion fue {solucion}. Se revisa pruebas en red de acceso con potencias optimas, pruebas de Nodo correctas y se obtiene acceso al CPE.\n\n==================================================================================================================\n\n==================================================================================================================\n==================================================================================================================\n///////////////////////////////////////////////RED DE ACCESO//////////////////////////////////////////////////////\n==================================================================================================================\n\n{redAcceso}\n\n==================================================================================================================\n********************************************\tNODO    **********************************************************\n==================================================================================================================\n\n{nodo}\n\n==================================================================================================================\n==================================================================================================================\n////////////////////////////////////////////////////////CPE/////////////////////////////////////////////////////\n==================================================================================================================\n\n{cpe}\n\n==================================================================================================================\n==================================================================================================================';
@@ -850,7 +860,7 @@
       if (typeof NocAnalyzerQoE === 'undefined' && !window._qoeLoading) {
         window._qoeLoading = true;
         wrap.innerHTML = '<div class="qoe-seccion-intermitencia" style="padding:2rem;text-align:center;color:rgba(255,255,255,0.8)">Cargando módulo NOC…</div>';
-        var qoeOrder = ['js/qoe/config.js?v=4','js/qoe/parser.js?v=4','js/qoe/vendorCommands.js?v=1','js/qoe/rulesEngine.js?v=4','js/qoe/healthScores.js?v=4','js/qoe/gauge.js?v=5','js/qoe/interpretacion.js?v=1','js/qoe/nocAnalyzer.js?v=2'];
+        var qoeOrder = ['js/qoe/config.js?v=4','js/qoe/parser.js?v=4','js/qoe/vendorCommands.js?v=1','js/qoe/rulesEngine.js?v=4','js/qoe/healthScores.js?v=4','js/qoe/gauge.js?v=5','js/qoe/interpretacion.js?v=1','js/qoe/decisionTree.js?v=1','js/qoe/confidenceClassifier.js?v=1','js/qoe/nocAnalyzer.js?v=2'];
         (function loadNext(i) {
           if (i >= qoeOrder.length) { window._qoeLoading = false; refreshProductividadAgente(); return; }
           loadScript(qoeOrder[i]).then(function () { loadNext(i + 1); }).catch(function () { loadNext(i + 1); });
@@ -920,15 +930,11 @@
               '</div>' +
               '<button type="button" class="portal-btn portal-btn-secondary" id="qoeBtnGuardarIntermitencia">Guardar</button>' +
             '</div>' +
-            '<p class="qoe-desc">Output CMTS: show cable modem &lt;mac&gt; verbose | show interface upstream &lt;x&gt; stat</p>' +
+            '<p class="qoe-desc">Output CMTS: show cable modem &lt;mac&gt; verbose</p>' +
             '<div class="qoe-inputs">' +
               '<div class="qoe-field">' +
                 '<label for="qoeModemOutput">show cable modem &lt;mac&gt; verbose</label>' +
-                '<textarea id="qoeModemOutput" rows="6" placeholder="Pegar output..."></textarea>' +
-              '</div>' +
-              '<div class="qoe-field">' +
-                '<label for="qoeUpstreamOutput">show interface upstream &lt;x&gt; stat</label>' +
-                '<textarea id="qoeUpstreamOutput" rows="6" placeholder="Pegar output..."></textarea>' +
+                '<textarea id="qoeModemOutput" rows="8" placeholder="Pegar output..."></textarea>' +
               '</div>' +
             '</div>' +
             '<button type="button" class="portal-btn portal-btn-primary" id="qoeBtnAnalizar">Ejecutar análisis</button>' +
@@ -1009,7 +1015,7 @@
                 '<div class="qoe-noc-grid">' +
                   '<div class="qoe-noc-metric" id="qoeNocUtil"><span class="qoe-noc-metric-label">Util. Upstream %</span><span class="qoe-noc-metric-val qoe-semaforo-muted">—</span></div>' +
                   '<div class="qoe-noc-metric" id="qoeNocModemsChan"><span class="qoe-noc-metric-label">Modems en canal</span><span class="qoe-noc-metric-val qoe-semaforo-muted">—</span></div>' +
-                  '<div class="qoe-noc-metric" id="qoeNocUncorrGlob"><span class="qoe-noc-metric-label">Uncorrectables globales</span><span class="qoe-noc-metric-val qoe-semaforo-muted">—</span></div>' +
+                  '<div class="qoe-noc-metric" id="qoeNocUncorrGlob"><span class="qoe-noc-metric-label">Uncorrectables (acum. / min)</span><span class="qoe-noc-metric-val qoe-semaforo-muted">—</span></div>' +
                   '<div class="qoe-noc-metric" id="qoeNocMasivo"><span class="qoe-noc-metric-label">Estado</span><span class="qoe-noc-metric-val qoe-semaforo-muted">—</span></div>' +
                 '</div>' +
               '</div>' +
@@ -1017,6 +1023,18 @@
             '<div class="qoe-noc-recomendaciones" id="qoeNocRecomendaciones">' +
               '<h4>Protocolo NOC</h4>' +
               '<div class="qoe-noc-rec-list" id="qoeNocRecList"><p class="qoe-noc-rec-empty">—</p></div>' +
+            '</div>' +
+            '<div class="qoe-noc-origen-card" id="qoeNocOrigenCard">' +
+              '<h4>Diagnóstico Operativo Tier 2</h4>' +
+              '<div class="qoe-noc-origen-body" id="qoeNocOrigenBody">' +
+                '<p class="qoe-noc-origen-empty">Ejecuta análisis para ver clasificación de origen.</p>' +
+              '</div>' +
+            '</div>' +
+            '<div class="qoe-noc-reporte-tecnico-preview" id="qoeNocReporteTecnicoPreview" style="display:none">' +
+              '<h4>Reporte para Técnico</h4>' +
+              '<p class="qoe-noc-reporte-hint">Se actualiza automáticamente con cada validación.</p>' +
+              '<pre id="qoeNocReporteTecnicoBody" class="qoe-reporte-tecnico-preview"></pre>' +
+              '<div class="qoe-reporte-tecnico-wrap"><button type="button" class="qoe-btn-reporte-tecnico" id="qoeBtnReporteTecnico" title="Copia el reporte al portapapeles">Generar Reporte para Técnico</button></div>' +
             '</div>' +
             '<div class="qoe-noc-grafica-afectacion" id="qoeNocGraficaAfectacion">' +
               '<h4>Afectación · Actividad e impacto</h4>' +
@@ -1268,7 +1286,12 @@
       { m: 'Navega correctamente en las', causales: ['Revisi\u00f3n OT cliente','Identifica Segmento cliente','Revisi\u00f3n Avisos','Revisi\u00f3n Vecinos'] },
       { m: 'Realiza devoluci\u00f3n de la', causales: ['Realiza devoluci\u00f3n de la llamada'] }
     ],
-    A2: []
+    A2: [
+      { m: 'Realiza confirmación y/o', d: 'Realiza confirmación y/o actualización de datos' },
+      { m: 'Realiza confirmación y/o actualización de datos', d: 'Realiza confirmación y/o actualización de datos' },
+      { m: 'Transfiere correctamente a', d: 'Transfiere correctamente a otras áreas' },
+      { m: 'Transfiere correctamente a otras áreas', d: 'Transfiere correctamente a otras áreas' }
+    ]
   };
   var ROLES = ['supervisor', 'fibra-optica', 'qoe', 'administrador'];
   var TRES_MESES_MS = 90 * 24 * 60 * 60 * 1000;
@@ -1324,11 +1347,16 @@
       var arr = letra && MATRIZ_CALIDAD[letra] ? MATRIZ_CALIDAD[letra] : [];
       var isN = letra === 'N' && arr.length && arr[0] && arr[0].causales;
       selItem.innerHTML = _selItemPlaceholder;
-      if (selCausales) { selCausales.innerHTML = _selCausalPlaceholder; selCausales.style.display = 'none'; }
+      if (selCausales) {
+        selCausales.innerHTML = _selCausalPlaceholder;
+        selCausales.style.display = isN ? '' : 'none';
+      }
       if (!letra) return;
       selItem.innerHTML = buildOpts(arr, _selItemPlaceholder, function (_, i) { return i; }, function (it) { return isN ? (it.m || '') : (it.m || it.d || ''); });
+      if (isN && selCausales) selCausales.style.display = '';
     }
     selLetra.addEventListener('change', onLetraChange);
+    onLetraChange();
     selItem.addEventListener('change', function () {
       var letra = selLetra.value, arr = letra && MATRIZ_CALIDAD[letra] ? MATRIZ_CALIDAD[letra] : [];
       if (!selCausales || letra !== 'N' || !arr.length || !arr[0].causales) return;
@@ -1366,12 +1394,28 @@
     var top3 = [];
     for (var k in byMacro) top3.push({ macro: k, count: byMacro[k] });
     top3.sort(function (a, b) { return b.count - a.count; });
-    _calidadMetricsCache = { letraMasAfectada: letraOut, top3Macro: top3.slice(0, 3), spark: spark, totalAuditorias: list.length };
+    var byAgente = {};
+    for (var j = 0; j < list.length; j++) {
+      var ag = String(list[j].agente || '').trim();
+      if (!ag) continue;
+      var cant = parseInt(String(list[j].cantMonitoreos || 1).replace(',', '.'), 10) || 1;
+      var notaNum = parseFloat(String(list[j].nota || '').replace(',', '.')) || 0;
+      if (!byAgente[ag]) byAgente[ag] = { count: 0, minNota: null };
+      byAgente[ag].count += cant;
+      if (notaNum > 0) {
+        if (byAgente[ag].minNota == null || notaNum < byAgente[ag].minNota) byAgente[ag].minNota = notaNum;
+      }
+    }
+    var top5Ag = [];
+    for (var k in byAgente) top5Ag.push({ agente: k, count: byAgente[k].count, minNota: byAgente[k].minNota });
+    top5Ag.sort(function (a, b) { return b.count - a.count; });
+    _calidadMetricsCache = { letraMasAfectada: letraOut, top3Macro: top3.slice(0, 3), top5Agentes: top5Ag.slice(0, 5), spark: spark, totalAuditorias: list.length };
     return _calidadMetricsCache;
   }
   function invalidateCalidadCache() { _calidadMetricsCache = null; }
   function getLetraMasAfectada() { return getCalidadMetrics().letraMasAfectada; }
   function getTop3MacroprocesosAfectados() { return getCalidadMetrics().top3Macro; }
+  function getTop5AgentesAfectados() { return getCalidadMetrics().top5Agentes || []; }
   var _sparkChars = '\u2581\u2582\u2583\u2584\u2585\u2586\u2587\u2588';
   function getCalidadSparklineData() { return getCalidadMetrics().spark; }
 
@@ -1937,7 +1981,7 @@
       var clave = ($('portalClave') || {}).value || genClaveTemp();
       if (!nombre.trim()) return;
       var items = (getData().portalUsuarios || []).slice();
-      items.push({ nombre: nombre.trim(), usuario: usuario.trim() || nombreToLogin(nombre), clave: clave, estado: 'Temporal', role: 'fibra-optica' });
+      items.push({ nombre: nombre.trim(), usuario: usuario.trim() || nombreToLogin(nombre), clave: clave, estado: 'Temporal', role: 'fibra-optica', jefeInmediato: '' });
       saveData('portalUsuarios', trimArrayNewestLast(items, MAX_PORTAL_USUARIOS));
       flushSaveAsync()
         .then(function () {
@@ -1955,7 +1999,7 @@
       if (!lines.length) return;
       var items = (getData().portalUsuarios || []).slice();
       lines.forEach(function (nombre) {
-        items.push({ nombre: nombre, usuario: nombreToLogin(nombre), clave: genClaveTemp(), estado: 'Temporal', role: 'fibra-optica' });
+        items.push({ nombre: nombre, usuario: nombreToLogin(nombre), clave: genClaveTemp(), estado: 'Temporal', role: 'fibra-optica', jefeInmediato: '' });
       });
       saveData('portalUsuarios', trimArrayNewestLast(items, MAX_PORTAL_USUARIOS));
       flushSaveAsync()
@@ -2004,7 +2048,7 @@
         var p = parsed[k];
         var usrKey = String(p.usuario).toLowerCase();
         var prev = byUsuario[usrKey];
-        byUsuario[usrKey] = { nombre: p.nombre, usuario: p.usuario, clave: (prev && prev.clave) || genClaveTemp(), estado: 'Permanente', role: (prev && prev.role) || 'fibra-optica' };
+        byUsuario[usrKey] = { nombre: p.nombre, usuario: p.usuario, clave: (prev && prev.clave) || genClaveTemp(), estado: 'Permanente', role: (prev && prev.role) || 'fibra-optica', jefeInmediato: (prev && prev.jefeInmediato) || '' };
       }
       var merged = [];
       for (var key in byUsuario) { if (byUsuario.hasOwnProperty(key) && byUsuario[key] && (byUsuario[key].nombre || byUsuario[key].usuario)) merged.push(byUsuario[key]); }
@@ -2384,13 +2428,29 @@
       return;
     }
     var max = safeMax(items.map(function (r) { return r.count || 0; })) || 1;
-    var h = 80;
-    wrap.innerHTML = '<div class="top3-macro-chart">' + items.map(function (r) {
+    wrap.innerHTML = '<div class="top3-macro-kpi">' + items.map(function (r, i) {
       var c = r.count || 0;
-      var px = max > 0 ? Math.round((c / max) * h) : 0;
-      if (px < 6 && c > 0) px = 6;
+      var pct = max > 0 ? Math.round((c / max) * 100) : 0;
+      if (pct < 3 && c > 0) pct = 3;
       var cls = (c >= max && c > 0) ? ' top3-macro-fill-max' : '';
-      return '<div class="top3-macro-bar"><span class="top3-macro-val">' + c + '</span><div class="top3-macro-fill-wrap"><div class="top3-macro-fill' + cls + '" style="height:' + px + 'px"></div></div><span class="top3-macro-label">' + escapeHtml(r.macro || '—') + '</span></div>';
+      return '<div class="top3-macro-kpi-row"><span class="top3-macro-rank">' + (i + 1) + '</span><span class="top3-macro-label">' + escapeHtml(r.macro || '—') + '</span><div class="top3-macro-bar-wrap"><div class="top3-macro-fill' + cls + '" style="width:' + pct + '%"></div></div><span class="top3-macro-val">' + c + '</span></div>';
+    }).join('') + '</div>';
+  }
+
+  function refreshTop5AgentesAfectados(metrics) {
+    var wrap = $('top5AgentesWrap');
+    if (!wrap) return;
+    var items = (metrics && metrics.top5Agentes) ? metrics.top5Agentes : getTop5AgentesAfectados();
+    if (!items.length) {
+      wrap.innerHTML = '<div class="letra-mas-afectada-empty">Sin datos. Registra auditorías en Calidad.</div>';
+      return;
+    }
+    wrap.innerHTML = '<div class="top5-agentes-list">' + items.map(function (r, i) {
+      var c = r.count || 0;
+      var nota = r.minNota;
+      var notaStr = nota != null ? (nota <= 10 ? (nota).toFixed(1).replace('.', ',') : Math.round(nota) + '') : '—';
+      var rankClass = 'top5-agentes-rank top5-agentes-rank-' + (i + 1);
+      return '<div class="top5-agentes-card"><span class="' + rankClass + '">' + (i + 1) + '</span><span class="top5-agentes-nombre">' + escapeHtml(r.agente || '—') + '</span><span class="top5-agentes-campo"><span class="top5-agentes-etiqueta">NOTA</span><span class="top5-agentes-minnota">' + notaStr + '</span></span><span class="top5-agentes-campo"><span class="top5-agentes-etiqueta">CANT MONITOREO</span><span class="top5-agentes-badge">' + c + '</span></span></div>';
     }).join('') + '</div>';
   }
 
@@ -2452,7 +2512,8 @@
       var letra = r.letra || '';
       var macro = r.macroproceso || '';
       var desc = r.descripcionItem || r.itemAfectado || '';
-      return '<tr><td>' + escapeHtml(r.agente || '') + '</td><td>' + escapeHtml(r.nota || '') + '</td><td>' + escapeHtml(letra) + '</td><td>' + escapeHtml(macro) + '</td><td>' + escapeHtml(desc) + '</td><td><button type="button" class="btn-remove auditoria-borrar" data-i="' + i + '">Quitar</button></td></tr>';
+      var cant = r.cantMonitoreos != null ? String(r.cantMonitoreos) : '—';
+      return '<tr><td>' + escapeHtml(r.agente || '') + '</td><td>' + escapeHtml(cant) + '</td><td>' + escapeHtml(r.nota || '') + '</td><td>' + escapeHtml(letra) + '</td><td>' + escapeHtml(macro) + '</td><td>' + escapeHtml(desc) + '</td><td><button type="button" class="btn-remove auditoria-borrar" data-i="' + i + '">Quitar</button></td></tr>';
     }).join('');
   }
 
@@ -2481,14 +2542,354 @@
     var m = getCalidadMetrics();
     refreshLetraMasAfectada(m);
     refreshTop3Macroprocesos(m);
+    refreshTop5AgentesAfectados(m);
     refreshCalidadSemaforo(m);
     refreshCalidadInsight(m);
     refreshCalidadTendencia(m);
+    refreshTablaCalificaciones();
+    refreshTablaPorcentaje();
+  }
+
+  function toNum(v) { return parseFloat(String(v == null ? 0 : v).replace(',', '.')) || 0; }
+  function displayQMont(v) { return (v === 0 || v == null) ? 1 : v; }
+  function buildPctSelectOptions(selectedVal) {
+    var opts = ['<option value="">—</option>'];
+    var nearest = selectedVal != null ? Math.round(Number(selectedVal) / 5) * 5 : null;
+    for (var i = 0; i <= 100; i += 5) opts.push('<option value="' + i + '"' + (nearest === i ? ' selected' : '') + '>' + i + ',00%</option>');
+    return opts.join('');
+  }
+  function getOverridesPorcentaje() {
+    var d = getData();
+    return (d.overridesPorcentajeAgentes && typeof d.overridesPorcentajeAgentes === 'object') ? d.overridesPorcentajeAgentes : {};
+  }
+  function setOverridePorcentaje(agente, col, val) {
+    var o = getOverridesPorcentaje();
+    if (!o[agente]) o[agente] = {};
+    if (val == null || val === '') delete o[agente][col]; else o[agente][col] = val;
+    if (Object.keys(o[agente]).length === 0) delete o[agente];
+    saveData('overridesPorcentajeAgentes', o);
+  }
+  function calculateGanaST(row) {
+    var vG = toNum(row.pctG);
+    var vA1 = toNum(row.pctA1);
+    var vN = toNum(row.pctN);
+    var vA2 = toNum(row.pctA2);
+    var gana = vG + vA1 + vN + vA2;
+    return Math.round(gana * 100) / 100;
+  }
+  function getGanaSTClass(ganaPct) {
+    if (ganaPct >= 100) return 'tabla-cal-gana-alto';
+    return 'tabla-cal-gana-bajo';
+  }
+  function notaToPct(v) { if (v == null) return null; return v > 10 ? Math.min(100, v) : v * 10; }
+  function getCalificacionesPorLetra() {
+    var list = getAuditoriasAgentes();
+    var byAgente = {};
+    for (var i = 0; i < list.length; i++) {
+      var r = list[i];
+      var ag = String(r.agente || '').trim();
+      if (!ag) continue;
+      if (!byAgente[ag]) byAgente[ag] = { G: [], A1: [], N: [], A2: [], total: 0 };
+      var letra = String(r.letra || '').trim().toUpperCase();
+      if (letra === 'G' || letra === 'A1' || letra === 'N' || letra === 'A2') {
+        var notaNum = parseFloat(String(r.nota || '').replace(',', '.')) || 0;
+        if (notaNum > 0) byAgente[ag][letra].push(notaNum);
+      }
+      var cant = parseInt(String(r.cantMonitoreos || 1).replace(',', '.'), 10) || 1;
+      byAgente[ag].total += cant;
+    }
+    return byAgente;
+  }
+  function avg(arr) { return (!arr || !arr.length) ? null : arr.reduce(function (a, b) { return a + b; }, 0) / arr.length; }
+  function buildRowsCalidad(agentes, porLetra, withValores) {
+    var overrides = getOverridesPorcentaje();
+    return agentes.map(function (a) {
+      var nombre = a.nombre || a.usuario || '—';
+      var data = porLetra[nombre] || { G: [], A1: [], N: [], A2: [], total: 0 };
+      var g = avg(data.G), a1 = avg(data.A1), n = avg(data.N), a2 = avg(data.A2);
+      var pctG = notaToPct(g), pctA1 = notaToPct(a1), pctN = notaToPct(n), pctA2 = notaToPct(a2);
+      var noAuditado = data.total === 0;
+      if (noAuditado) { pctG = 25; pctA1 = 20; pctN = 35; pctA2 = 20; }
+      var pctGOut = noAuditado ? 25 : (pctG != null ? pctG : 0);
+      var pctA1Out = noAuditado ? 20 : (pctA1 != null ? pctA1 : 0);
+      var pctNOut = noAuditado ? 35 : (pctN != null ? pctN : 0);
+      var pctA2Out = noAuditado ? 20 : (pctA2 != null ? pctA2 : 0);
+      var ov = overrides[nombre] || {};
+      var qMont = (ov.qMont != null && ov.qMont !== '') ? toNum(ov.qMont) : data.total;
+      pctGOut = (ov.pctG != null && ov.pctG !== '') ? toNum(ov.pctG) : pctGOut;
+      pctA1Out = (ov.pctA1 != null && ov.pctA1 !== '') ? toNum(ov.pctA1) : pctA1Out;
+      pctNOut = (ov.pctN != null && ov.pctN !== '') ? toNum(ov.pctN) : pctNOut;
+      pctA2Out = (ov.pctA2 != null && ov.pctA2 !== '') ? toNum(ov.pctA2) : pctA2Out;
+      var rowData = { pctG: pctGOut, pctA1: pctA1Out, pctN: pctNOut, pctA2: pctA2Out };
+      var hasOv = (ov.pctG != null && ov.pctG !== '') || (ov.pctA1 != null && ov.pctA1 !== '') || (ov.pctN != null && ov.pctN !== '') || (ov.pctA2 != null && ov.pctA2 !== '');
+      var ganaPct = (noAuditado && !hasOv) ? 100 : calculateGanaST(rowData);
+      var row = { nombre: nombre, jefeInmediato: a.jefeInmediato || '', qMont: qMont, pctG: pctGOut, pctA1: pctA1Out, pctN: pctNOut, pctA2: pctA2Out, ganaPct: ganaPct };
+      if (withValores) { row.valG = g; row.valA1 = a1; row.valN = n; row.valA2 = a2; }
+      return row;
+    });
+  }
+  function refreshTablaCalificaciones() {
+    var tbody = $('tablaCalificacionesBody'), emptyEl = $('tablaCalificacionesEmpty'), wrap = $('tablaCalificacionesWrap');
+    if (!tbody) return;
+    var agentes = getPortalAgentes();
+    if (!agentes || !agentes.length) {
+      tbody.innerHTML = '';
+      if (wrap) wrap.style.display = 'none';
+      if (emptyEl) emptyEl.style.display = 'block';
+      return;
+    }
+    if (wrap) wrap.style.display = '';
+    var porLetra = getCalificacionesPorLetra();
+    var rows = buildRowsCalidad(agentes, porLetra, true);
+    var ordenJefes = JEFES_INMEDIATOS.slice();
+    ordenJefes.push('');
+    var byJefe = {};
+    rows.forEach(function (r) {
+      var j = r.jefeInmediato || '';
+      if (!byJefe[j]) byJefe[j] = [];
+      byJefe[j].push(r);
+    });
+    ordenJefes.forEach(function (j) { if (byJefe[j]) byJefe[j].sort(function (a, b) { if (b.ganaPct !== a.ganaPct) return b.ganaPct - a.ganaPct; return (a.nombre || '').localeCompare(b.nombre || ''); }); });
+    var jefesOrdenados = [];
+    ordenJefes.forEach(function (j) { if (byJefe[j] && byJefe[j].length) jefesOrdenados.push({ jefe: j, rows: byJefe[j] }); });
+    for (var k in byJefe) { if (ordenJefes.indexOf(k) < 0) jefesOrdenados.push({ jefe: k, rows: byJefe[k] }); }
+    function fmtDecimal(v) { return v != null ? (v).toFixed(2).replace('.', ',') : '0,00'; }
+    function fmtPct(v) { return v != null ? (v).toFixed(2).replace('.', ',') + '%' : '—'; }
+    var html = [];
+    jefesOrdenados.forEach(function (g) {
+      var jefeLabel = g.jefe || 'Sin asignar';
+      html.push('<tr class="tabla-cal-jefe-row"><td class="tabla-cal-jefe" colspan="6">' + escapeHtml(jefeLabel) + '</td><td class="tabla-cal-jefe-accion"><button type="button" class="tabla-cal-jefe-toggle" aria-label="Expandir/Colapsar" title="Colapsar">−</button></td></tr>');
+      g.rows.forEach(function (r) {
+        var ganaCls = r.ganaPct > 0 ? getGanaSTClass(r.ganaPct) : 'tabla-cal-gana-vacio';
+        var fmt = fmtPct;
+        var selG = '<select class="tabla-cal-pct-sel" data-agent="' + escapeHtml(r.nombre) + '" data-col="pctG" title="Elegir porcentaje">' + buildPctSelectOptions(r.pctG) + '</select>';
+        var selA1 = '<select class="tabla-cal-pct-sel" data-agent="' + escapeHtml(r.nombre) + '" data-col="pctA1" title="Elegir porcentaje">' + buildPctSelectOptions(r.pctA1) + '</select>';
+        var selN = '<select class="tabla-cal-pct-sel" data-agent="' + escapeHtml(r.nombre) + '" data-col="pctN" title="Elegir porcentaje">' + buildPctSelectOptions(r.pctN) + '</select>';
+        var selA2 = '<select class="tabla-cal-pct-sel" data-agent="' + escapeHtml(r.nombre) + '" data-col="pctA2" title="Elegir porcentaje">' + buildPctSelectOptions(r.pctA2) + '</select>';
+        html.push('<tr class="tabla-cal-agente-row"><td class="tabla-cal-nombre tabla-cal-agente">' + escapeHtml(r.nombre) + '</td>' +
+          '<td class="tabla-cal-qmont tabla-cal-editable" contenteditable="true" data-agent="' + escapeHtml(r.nombre) + '" data-col="qMont" title="Editar">' + displayQMont(r.qMont) + '</td>' +
+          '<td class="tabla-cal-pct tabla-cal-pct-cell">' + selG + '</td><td class="tabla-cal-pct tabla-cal-pct-cell">' + selA1 + '</td>' +
+          '<td class="tabla-cal-pct tabla-cal-pct-cell">' + selN + '</td><td class="tabla-cal-pct tabla-cal-pct-cell">' + selA2 + '</td>' +
+          '<td class="tabla-cal-gana ' + ganaCls + '">' + (r.ganaPct > 0 ? fmt(r.ganaPct) : '—') + '</td></tr>');
+      });
+    });
+    tbody.innerHTML = html.join('');
+    if (emptyEl) emptyEl.style.display = 'none';
+    var tabla = $('tablaCalificaciones');
+    if (tabla && !tabla._tablaCalToggleBound) {
+      tabla._tablaCalToggleBound = true;
+      tabla.addEventListener('click', function (e) {
+        var btn = e.target.closest('.tabla-cal-jefe-toggle');
+        if (!btn) return;
+        var jefeRow = btn.closest('.tabla-cal-jefe-row');
+        if (!jefeRow) return;
+        var collapsed = jefeRow.classList.toggle('tabla-cal-jefe-collapsed');
+        btn.textContent = collapsed ? '+' : '−';
+        btn.title = collapsed ? 'Expandir' : 'Colapsar';
+        var next = jefeRow.nextElementSibling;
+        while (next && !next.classList.contains('tabla-cal-jefe-row')) {
+          next.style.display = collapsed ? 'none' : '';
+          next = next.nextElementSibling;
+        }
+      });
+      tabla.addEventListener('blur', function (e) {
+        var cell = e.target.closest('.tabla-cal-editable[contenteditable="true"]');
+        if (!cell) return;
+        var agent = cell.getAttribute('data-agent');
+        var col = cell.getAttribute('data-col');
+        if (!agent || !col) return;
+        var raw = (cell.textContent || '').trim().replace(',', '.');
+        var val = raw === '' ? null : (parseInt(raw, 10) || null);
+        setOverridePorcentaje(agent, col, val);
+        flushSave();
+        refreshTablaCalificaciones();
+        refreshTablaPorcentaje();
+      }, true);
+      tabla.addEventListener('change', function (e) {
+        var sel = e.target.closest('.tabla-cal-pct-sel');
+        if (!sel) return;
+        var agent = sel.getAttribute('data-agent');
+        var col = sel.getAttribute('data-col');
+        if (!agent || !col) return;
+        var v = sel.value;
+        var val = v === '' ? null : (parseFloat(v) || null);
+        setOverridePorcentaje(agent, col, val);
+        flushSave();
+        refreshTablaCalificaciones();
+        refreshTablaPorcentaje();
+      });
+      tabla.addEventListener('keydown', function (e) {
+        if (e.target.closest('.tabla-cal-editable') && e.key === 'Enter') { e.preventDefault(); e.target.blur(); }
+      });
+    }
+  }
+
+  function refreshTablaPorcentaje() {
+    var tbody = $('tablaPorcentajeBody'), emptyEl = $('tablaPorcentajeEmpty'), wrap = $('tablaPorcentajeWrap');
+    if (!tbody) return;
+    var agentes = getPortalAgentes();
+    if (!agentes || !agentes.length) {
+      tbody.innerHTML = '';
+      if (wrap) wrap.style.display = 'none';
+      if (emptyEl) emptyEl.style.display = 'block';
+      return;
+    }
+    var porLetra = getCalificacionesPorLetra();
+    var rows = buildRowsCalidad(agentes, porLetra, false);
+    var ordenJefes = JEFES_INMEDIATOS.slice();
+    ordenJefes.push('');
+    var byJefe = {};
+    rows.forEach(function (r) {
+      var j = r.jefeInmediato || '';
+      if (!byJefe[j]) byJefe[j] = [];
+      byJefe[j].push(r);
+    });
+    var jefesOrdenados = [];
+    ordenJefes.forEach(function (j) { if (byJefe[j] && byJefe[j].length) jefesOrdenados.push({ jefe: j, rows: byJefe[j] }); });
+    for (var k in byJefe) { if (ordenJefes.indexOf(k) < 0) jefesOrdenados.push({ jefe: k, rows: byJefe[k] }); }
+    function fmtPct(v) { return v != null ? (v).toFixed(2).replace('.', ',') + '%' : '—'; }
+    function agregarJefe(grp) {
+      var totQ = 0, sumG = 0, sumA1 = 0, sumN = 0, sumA2 = 0, sumGana = 0, w = 0;
+      grp.rows.forEach(function (r) {
+        totQ += r.qMont;
+        w += r.qMont;
+        if (r.pctG != null) sumG += r.pctG * r.qMont;
+        if (r.pctA1 != null) sumA1 += r.pctA1 * r.qMont;
+        if (r.pctN != null) sumN += r.pctN * r.qMont;
+        if (r.pctA2 != null) sumA2 += r.pctA2 * r.qMont;
+        sumGana += r.ganaPct * r.qMont;
+      });
+      if (w === 0 && grp.rows.length > 0) {
+        grp.rows.forEach(function (r) {
+          var rw = 1;
+          w += rw;
+          if (r.pctG != null) sumG += (r.pctG || 0) * rw;
+          if (r.pctA1 != null) sumA1 += (r.pctA1 || 0) * rw;
+          if (r.pctN != null) sumN += (r.pctN || 0) * rw;
+          if (r.pctA2 != null) sumA2 += (r.pctA2 || 0) * rw;
+          sumGana += (r.ganaPct || 0) * rw;
+        });
+      }
+      var sumWG = grp.rows.filter(function (r) { return r.pctG != null; }).reduce(function (s, r) { return s + r.qMont; }, 0);
+      var sumWA1 = grp.rows.filter(function (r) { return r.pctA1 != null; }).reduce(function (s, r) { return s + r.qMont; }, 0);
+      var sumWN = grp.rows.filter(function (r) { return r.pctN != null; }).reduce(function (s, r) { return s + r.qMont; }, 0);
+      var sumWA2 = grp.rows.filter(function (r) { return r.pctA2 != null; }).reduce(function (s, r) { return s + r.qMont; }, 0);
+      var cntG = grp.rows.filter(function (r) { return r.pctG != null; }).length;
+      var cntA1 = grp.rows.filter(function (r) { return r.pctA1 != null; }).length;
+      var cntN = grp.rows.filter(function (r) { return r.pctN != null; }).length;
+      var cntA2 = grp.rows.filter(function (r) { return r.pctA2 != null; }).length;
+      var wG = sumWG > 0 ? sumWG : cntG;
+      var wA1 = sumWA1 > 0 ? sumWA1 : cntA1;
+      var wN = sumWN > 0 ? sumWN : cntN;
+      var wA2 = sumWA2 > 0 ? sumWA2 : cntA2;
+      return { qMont: totQ, pctG: wG > 0 ? sumG / wG : null, pctA1: wA1 > 0 ? sumA1 / wA1 : null, pctN: wN > 0 ? sumN / wN : null, pctA2: wA2 > 0 ? sumA2 / wA2 : null, ganaPct: w > 0 ? sumGana / w : 0 };
+    }
+    var html = [];
+    var totalGeneral = { qMont: 0, sumG: 0, sumA1: 0, sumN: 0, sumA2: 0, sumGana: 0, w: 0, wG: 0, wA1: 0, wN: 0, wA2: 0 };
+    rows.forEach(function (r) {
+      var rw = r.qMont > 0 ? r.qMont : 0;
+      totalGeneral.qMont += r.qMont;
+      if (rw > 0) {
+        totalGeneral.w += rw;
+        totalGeneral.sumGana += r.ganaPct * rw;
+        if (r.pctG != null) { totalGeneral.sumG += r.pctG * rw; totalGeneral.wG += rw; }
+        if (r.pctA1 != null) { totalGeneral.sumA1 += r.pctA1 * rw; totalGeneral.wA1 += rw; }
+        if (r.pctN != null) { totalGeneral.sumN += r.pctN * rw; totalGeneral.wN += rw; }
+        if (r.pctA2 != null) { totalGeneral.sumA2 += r.pctA2 * rw; totalGeneral.wA2 += rw; }
+      }
+    });
+    if (totalGeneral.w === 0 && rows.length > 0) {
+      rows.forEach(function (r) {
+        var rw = 1;
+        totalGeneral.w += rw;
+        totalGeneral.sumGana += (r.ganaPct || 0) * rw;
+        if (r.pctG != null) { totalGeneral.sumG += (r.pctG || 0) * rw; totalGeneral.wG += rw; }
+        if (r.pctA1 != null) { totalGeneral.sumA1 += (r.pctA1 || 0) * rw; totalGeneral.wA1 += rw; }
+        if (r.pctN != null) { totalGeneral.sumN += (r.pctN || 0) * rw; totalGeneral.wN += rw; }
+        if (r.pctA2 != null) { totalGeneral.sumA2 += (r.pctA2 || 0) * rw; totalGeneral.wA2 += rw; }
+      });
+    }
+    jefesOrdenados.forEach(function (g) {
+      var jefeLabel = g.jefe || 'Sin asignar';
+      var agg = agregarJefe(g);
+      var aggGanaCls = getGanaSTClass(agg.ganaPct);
+      html.push('<tr class="tabla-pct-jefe-row"><td class="tabla-pct-equipo"><button type="button" class="tabla-pct-toggle" aria-label="Expandir/Colapsar">−</button><span class="tabla-pct-label">' + escapeHtml(jefeLabel) + '</span></td><td class="tabla-pct-qmont tabla-pct-bold">' + displayQMont(agg.qMont) + '</td><td class="tabla-pct-val tabla-pct-bold">' + fmtPct(agg.pctG) + '</td><td class="tabla-pct-val tabla-pct-bold">' + fmtPct(agg.pctA1) + '</td><td class="tabla-pct-val tabla-pct-bold">' + fmtPct(agg.pctN) + '</td><td class="tabla-pct-val tabla-pct-bold">' + fmtPct(agg.pctA2) + '</td><td class="tabla-pct-gana tabla-pct-bold ' + aggGanaCls + '">' + fmtPct(agg.ganaPct) + '</td></tr>');
+      g.rows.forEach(function (r) {
+        var ganaClsPct = getGanaSTClass(r.ganaPct);
+        var fmt = fmtPct;
+        var selG = '<select class="tabla-pct-pct-sel" data-agent="' + escapeHtml(r.nombre) + '" data-col="pctG" title="Elegir porcentaje">' + buildPctSelectOptions(r.pctG) + '</select>';
+        var selA1 = '<select class="tabla-pct-pct-sel" data-agent="' + escapeHtml(r.nombre) + '" data-col="pctA1" title="Elegir porcentaje">' + buildPctSelectOptions(r.pctA1) + '</select>';
+        var selN = '<select class="tabla-pct-pct-sel" data-agent="' + escapeHtml(r.nombre) + '" data-col="pctN" title="Elegir porcentaje">' + buildPctSelectOptions(r.pctN) + '</select>';
+        var selA2 = '<select class="tabla-pct-pct-sel" data-agent="' + escapeHtml(r.nombre) + '" data-col="pctA2" title="Elegir porcentaje">' + buildPctSelectOptions(r.pctA2) + '</select>';
+        html.push('<tr class="tabla-pct-agente-row"><td class="tabla-pct-equipo tabla-pct-agente"><span class="tabla-pct-agente-icon"></span>' + escapeHtml(r.nombre) + '</td>' +
+          '<td class="tabla-pct-qmont tabla-pct-editable" contenteditable="true" data-agent="' + escapeHtml(r.nombre) + '" data-col="qMont" title="Editar">' + displayQMont(r.qMont) + '</td>' +
+          '<td class="tabla-pct-val tabla-pct-sel-cell">' + selG + '</td><td class="tabla-pct-val tabla-pct-sel-cell">' + selA1 + '</td>' +
+          '<td class="tabla-pct-val tabla-pct-sel-cell">' + selN + '</td><td class="tabla-pct-val tabla-pct-sel-cell">' + selA2 + '</td>' +
+          '<td class="tabla-pct-gana ' + ganaClsPct + '">' + fmt(r.ganaPct) + '</td></tr>');
+      });
+    });
+    var tg = totalGeneral;
+    var tgG = tg.wG > 0 ? tg.sumG / tg.wG : null;
+    var tgA1 = tg.wA1 > 0 ? tg.sumA1 / tg.wA1 : null;
+    var tgN = tg.wN > 0 ? tg.sumN / tg.wN : null;
+    var tgA2 = tg.wA2 > 0 ? tg.sumA2 / tg.wA2 : null;
+    var tgGana = tg.w > 0 ? tg.sumGana / tg.w : 0;
+    var tgGanaCls = getGanaSTClass(tgGana);
+    html.push('<tr class="tabla-pct-total-row"><td class="tabla-pct-equipo tabla-pct-total"><span class="tabla-pct-total-spacer"></span>Total general</td><td class="tabla-pct-qmont tabla-pct-bold">' + displayQMont(tg.qMont) + '</td><td class="tabla-pct-val tabla-pct-bold">' + fmtPct(tgG) + '</td><td class="tabla-pct-val tabla-pct-bold">' + fmtPct(tgA1) + '</td><td class="tabla-pct-val tabla-pct-bold">' + fmtPct(tgN) + '</td><td class="tabla-pct-val tabla-pct-bold">' + fmtPct(tgA2) + '</td><td class="tabla-pct-gana tabla-pct-bold ' + tgGanaCls + '">' + fmtPct(tgGana) + '</td></tr>');
+    tbody.innerHTML = html.join('');
+    if (wrap) wrap.style.display = '';
+    if (emptyEl) emptyEl.style.display = 'none';
+    var tbl = $('tablaPorcentaje');
+    if (tbl && !tbl._tablaPctBound) {
+      tbl._tablaPctBound = true;
+      tbl.addEventListener('click', function (e) {
+        var btn = e.target.closest('.tabla-pct-toggle');
+        if (!btn) return;
+        var jefeRow = btn.closest('.tabla-pct-jefe-row');
+        if (!jefeRow) return;
+        var collapsed = jefeRow.classList.toggle('tabla-pct-jefe-collapsed');
+        btn.textContent = collapsed ? '+' : '−';
+        var next = jefeRow.nextElementSibling;
+        while (next && !next.classList.contains('tabla-pct-jefe-row') && !next.classList.contains('tabla-pct-total-row')) {
+          next.style.display = collapsed ? 'none' : '';
+          next = next.nextElementSibling;
+        }
+      });
+      tbl.addEventListener('blur', function (e) {
+        var cell = e.target.closest('.tabla-pct-editable[contenteditable="true"]');
+        if (!cell) return;
+        var agent = cell.getAttribute('data-agent');
+        var col = cell.getAttribute('data-col');
+        if (!agent || !col) return;
+        var raw = (cell.textContent || '').trim().replace(',', '.');
+        var val = raw === '' ? null : (parseInt(raw, 10) || null);
+        setOverridePorcentaje(agent, col, val);
+        flushSave();
+        refreshTablaPorcentaje();
+        refreshTablaCalificaciones();
+      }, true);
+      tbl.addEventListener('change', function (e) {
+        var sel = e.target.closest('.tabla-pct-pct-sel');
+        if (!sel) return;
+        var agent = sel.getAttribute('data-agent');
+        var col = sel.getAttribute('data-col');
+        if (!agent || !col) return;
+        var v = sel.value;
+        var val = v === '' ? null : (parseFloat(v) || null);
+        setOverridePorcentaje(agent, col, val);
+        flushSave();
+        refreshTablaPorcentaje();
+        refreshTablaCalificaciones();
+      });
+      tbl.addEventListener('keydown', function (e) {
+        if (e.target.closest('.tabla-pct-editable') && e.key === 'Enter') { e.preventDefault(); e.target.blur(); }
+      });
+    }
   }
 
   function resetAuditoriaForm() {
-    var a = $('auditoriaAgente'), n = $('auditoriaNota'), l = $('auditoriaLetra'), i = $('auditoriaItem'), c = $('auditoriaItemCausales'), notaActual = $('auditoriaNotaActual');
-    if (a) a.value = ''; if (n) n.value = ''; if (l) l.value = '';
+    var a = $('auditoriaAgente'), cant = $('auditoriaCantMonitoreos'), n = $('auditoriaNota'), l = $('auditoriaLetra'), i = $('auditoriaItem'), c = $('auditoriaItemCausales'), notaActual = $('auditoriaNotaActual');
+    if (a) a.value = ''; if (cant) cant.value = ''; if (n) n.value = ''; if (l) l.value = '';
     if (notaActual) notaActual.textContent = 'Nota actual: —';
     if (i) i.innerHTML = _selItemPlaceholder;
     if (c) { c.innerHTML = _selCausalPlaceholder; c.style.display = 'none'; }
@@ -2524,7 +2925,7 @@
   function getPortalAgentes() {
     var d = getData();
     var list = (d.portalUsuarios && Array.isArray(d.portalUsuarios)) ? d.portalUsuarios : [];
-    return list.filter(function (u) { return (u.nombre || u.usuario); }).map(function (u) { return { nombre: u.nombre || u.usuario, usuario: u.usuario || u.nombre }; });
+    return list.filter(function (u) { return (u.nombre || u.usuario); }).map(function (u) { return { nombre: u.nombre || u.usuario, usuario: u.usuario || u.nombre, jefeInmediato: u.jefeInmediato || '' }; });
   }
   function refreshAsignarCasosTable(asignacion) {
     var tbody = $('asignarCasosBody');
@@ -3009,84 +3410,164 @@
 
   function bindQoEDiagnostico() {
     var btn = $('qoeBtnAnalizar'), msgEl = $('qoeAnalisisMsg');
-    var modemTa = $('qoeModemOutput'), upstreamTa = $('qoeUpstreamOutput');
+    var modemTa = $('qoeModemOutput');
     function runAnalisis() {
-      var modemTa = $('qoeModemOutput'), upstreamTa = $('qoeUpstreamOutput');
+      var modemTa = $('qoeModemOutput');
       var modemOutput = (modemTa && modemTa.value) ? modemTa.value.trim() : '';
-      var upstreamOutput = (upstreamTa && upstreamTa.value) ? upstreamTa.value.trim() : '';
-      if (modemOutput && !upstreamOutput && /show\s+interface\s+upstream|Interface\s+upstream\s+[\d\/]/i.test(modemOutput)) {
-        var splitIdx = modemOutput.search(/show\s+interface\s+upstream|Interface\s+upstream\s+[\d\/]/i);
-        if (splitIdx > 10) {
-          upstreamOutput = modemOutput.substring(splitIdx);
-          modemOutput = modemOutput.substring(0, splitIdx).trim();
-        }
-      }
-      if (!modemOutput && !upstreamOutput) {
-        if (msgEl) { msgEl.style.display = ''; msgEl.innerHTML = '<span class="qoe-error">Pega al menos uno de los dos outputs.</span>'; }
+      if (!modemOutput) {
+        if (msgEl) { msgEl.style.display = ''; msgEl.innerHTML = '<span class="qoe-error">Pega el output de "show cable modem &lt;mac&gt; verbose".</span>'; }
         return;
       }
       var parsed = (typeof ParserQoE !== 'undefined' && ParserQoE.parseCmtsOutput)
-        ? ParserQoE.parseCmtsOutput({ modemOutput: modemOutput || undefined, upstreamOutput: upstreamOutput || undefined })
+        ? ParserQoE.parseCmtsOutput({ modemOutput: modemOutput, upstreamOutput: undefined })
         : null;
       if (!parsed) {
         if (msgEl) { msgEl.style.display = ''; msgEl.innerHTML = '<span class="qoe-error">Error: parser no disponible.</span>'; }
         return;
       }
       if (!parsed.modem && !parsed.upstream) {
-        if (msgEl) { msgEl.style.display = ''; msgEl.innerHTML = '<span class="qoe-error">No se pudo extraer información. Revisa el formato.</span>'; }
+        if (msgEl) { msgEl.style.display = ''; msgEl.innerHTML = '<span class="qoe-error">No se pudo extraer información. Revisa el formato. Usa output de "show cable modem &lt;mac&gt; verbose".</span>'; }
         return;
       }
       if (msgEl) msgEl.style.display = 'none';
       QOE_CMTS_PENDING.modemOutput = modemOutput;
-      QOE_CMTS_PENDING.upstreamOutput = upstreamOutput;
-      updateQoeNocAnalyzer(modemOutput, upstreamOutput);
+      QOE_CMTS_PENDING.upstreamOutput = '';
+      try {
+        updateQoeNocAnalyzer(modemOutput, '');
+      } catch (err) {
+        if (msgEl) { msgEl.style.display = ''; msgEl.innerHTML = '<span class="qoe-error">Error en análisis: ' + escapeHtml(String(err && err.message ? err.message : err)) + '</span>'; }
+        console.error('QoE análisis:', err);
+      }
     }
     if (btn) btn.addEventListener('click', runAnalisis);
     if (modemTa) {
       modemTa.addEventListener('paste', function () { setTimeout(runAnalisis, 80); });
       modemTa.addEventListener('input', debounce(runAnalisis, 400));
     }
-    if (upstreamTa) {
-      upstreamTa.addEventListener('paste', function () { setTimeout(runAnalisis, 80); });
-      upstreamTa.addEventListener('input', debounce(runAnalisis, 400));
-    }
-    if (QOE_CMTS_PENDING.modemOutput || QOE_CMTS_PENDING.upstreamOutput) {
+    if (QOE_CMTS_PENDING.modemOutput) {
       if (modemTa) modemTa.value = QOE_CMTS_PENDING.modemOutput || '';
-      if (upstreamTa) upstreamTa.value = QOE_CMTS_PENDING.upstreamOutput || '';
-      updateQoeNocAnalyzer(QOE_CMTS_PENDING.modemOutput || '', QOE_CMTS_PENDING.upstreamOutput || '');
+      updateQoeNocAnalyzer(QOE_CMTS_PENDING.modemOutput || '', '');
     }
-    var recList = $('qoeNocRecList');
-    if (recList && !recList._reporteBound) {
-      recList._reporteBound = true;
-      recList.addEventListener('click', function (e) {
+    var reportePreview = $('qoeNocReporteTecnicoPreview');
+    if (reportePreview && !reportePreview._reporteBound) {
+      reportePreview._reporteBound = true;
+      reportePreview.addEventListener('click', function (e) {
         if (e.target && e.target.id === 'qoeBtnReporteTecnico') generarReporteParaTecnico();
       });
     }
     updateQoeNocGraficaAfectacion();
   }
 
+  function generarReporteTecnicoTexto(diag) {
+    if (!diag || !diag.protocolo) return '';
+    var p = diag.protocolo;
+    var raw = diag.raw || {};
+    var lines = [];
+    lines.push('═══════════════════════════════════════════════════════════');
+    lines.push('  REPORTE TÉCNICO NOC HFC · DIAGNÓSTICO DOCSIS');
+    lines.push('═══════════════════════════════════════════════════════════');
+    lines.push('Fecha: ' + new Date().toLocaleString('es'));
+    lines.push('CMTS: ' + (diag.cmtsType || '—') + '  |  Nodo/Upstream: ' + (diag.node || '—'));
+    lines.push('Modems en canal: ' + (diag.totalModems != null ? diag.totalModems : 'N/A'));
+    lines.push('Estado general: ' + (diag.globalEstado ? diag.globalEstado.texto : '—'));
+    lines.push('');
+    lines.push('── NIVELES RF ────────────────────────────────────────────');
+    function nivelLine(label, valor, umbral, estado) {
+      var v = valor != null && valor !== '' && valor !== 'N/A' ? String(valor) : '—';
+      var e = estado === 'critico' ? '[CRÍTICO]' : (estado === 'limite' ? '[LÍMITE]' : (estado === 'nodata' ? '[Sin dato]' : '[OK]'));
+      return '  ' + label + ': ' + v + ' ' + (umbral ? '(' + umbral + ') ' : '') + e;
+    }
+    lines.push(nivelLine('TX Upstream', diag.tx && diag.tx.valor, 'óptimo 35-49 dBmV', diag.tx && diag.tx.estado));
+    var rxUmbral = (raw.powerLevel != null) ? ('óptimo power-level ' + raw.powerLevel + ' ±3 dB') : 'óptimo -7 a +7 dBmV';
+    lines.push(nivelLine('RX Downstream', diag.rx && diag.rx.valor, rxUmbral, diag.rx && diag.rx.estado));
+    lines.push(nivelLine('SNR Upstream', diag.snrUp && diag.snrUp.valor, 'óptimo >30 dB', diag.snrUp && diag.snrUp.estado));
+    lines.push(nivelLine('SNR Downstream', diag.snrDown && diag.snrDown.valor, 'óptimo >32 dB', diag.snrDown && diag.snrDown.estado));
+    if (raw.rxDeltaDownstream != null && raw.rxDeltaDownstream > 3) lines.push('  Desbalance DS (delta canales): ' + raw.rxDeltaDownstream.toFixed(1) + ' dB [PROBLEMA]');
+    lines.push('');
+    lines.push('── MÉTRICAS HISTÓRICAS (Acumulados) ───────────────────────');
+    var uncorr = (diag.masivoPanel && diag.masivoPanel.uncorrectablesGlobal != null) ? diag.masivoPanel.uncorrectablesGlobal : (diag.estabilidad && diag.estabilidad.uncorrectables) || (raw.uncorrectables != null ? raw.uncorrectables : raw.uncorrectablesGlobal);
+    var ratePerMinReport = (diag.masivoPanel && diag.masivoPanel.ratePerMin != null) ? diag.masivoPanel.ratePerMin : null;
+    lines.push('  Uncorrectables acumulado: ' + (uncorr != null ? (uncorr >= 1000 ? Math.round(uncorr / 1000) + 'k' : uncorr) : 'N/A'));
+    lines.push('');
+    lines.push('── ACTIVIDAD EN TIEMPO REAL (ventana móvil 30 min) ─────────');
+    var flaps = (diag.intermitencia && diag.intermitencia.valor != null) ? diag.intermitencia.valor : (diag.estabilidad && diag.estabilidad.flaps);
+    var util = diag.masivoPanel && diag.masivoPanel.utilization;
+    lines.push('  Actividad errores: ' + (ratePerMinReport != null ? ratePerMinReport.toFixed(0) + '/min' : '0/min'));
+    lines.push('  Flaps: ' + (flaps != null ? flaps : 'N/A') + (flaps != null && flaps > 50 ? ' [INTERMITENTE]' : ''));
+    lines.push('  Utilización Upstream: ' + (util != null ? util + '%' : 'N/A') + (util != null && util >= 70 ? ' [ALTA]' : ''));
+    lines.push('  Ranging retries: ' + ((diag.estabilidad && diag.estabilidad.rangingRetries) != null ? diag.estabilidad.rangingRetries : 'N/A'));
+    lines.push('');
+    if (p.decisionTreeCausa) {
+      lines.push('── DECISIÓN DEL MOTOR (ÁRBOL DE DECISIÓN) ────────────────');
+      lines.push('  ' + p.decisionTreeCausa);
+      if (p.decisionTreeTipo) lines.push('  Escalamiento: ' + p.decisionTreeTipo);
+      lines.push('');
+    }
+    if (diag.confidenceClassification) {
+      var cc = diag.confidenceClassification;
+      lines.push('── DIAGNÓSTICO OPERATIVO TIER 2 ────────────────────────────');
+      lines.push('  Tipo: ' + cc.classification + '  |  Nivel Operativo: ' + (cc.operationalLayer || 'N/A'));
+      lines.push('  Confianza: ' + cc.confidenceScore + '% (' + cc.confidenceLevel + ')');
+      lines.push('  Duración evento: ' + (cc.eventDurationMinutes != null ? cc.eventDurationMinutes + ' min' : '—'));
+      lines.push('  Ventanas consecutivas: ' + (cc.consecutiveWindows != null ? cc.consecutiveWindows : '—'));
+      lines.push('  Impacto: ' + (cc.percentAffected != null ? cc.percentAffected.toFixed(1) + '%' : '—'));
+      lines.push('  Actividad: ' + (cc.avgActivityPerMin != null ? cc.avgActivityPerMin : '0') + '/min');
+      if (cc.validationStatus) lines.push('  Estado: ' + cc.validationStatus);
+      lines.push('  Acción: ' + cc.action);
+      (cc.technicalJustification || []).forEach(function (j) { lines.push('  - ' + j); });
+      lines.push('');
+    }
+    lines.push('── DIAGNÓSTICO ───────────────────────────────────────────');
+    if (p.esMasivo) {
+      var errStr = uncorr != null ? (uncorr >= 1000 ? Math.round(uncorr / 1000) + 'k' : uncorr) : 'N/A';
+      lines.push('  AFECTACIÓN MASIVA CONFIRMADA');
+      lines.push('  El canal presenta ' + (diag.totalModems != null ? diag.totalModems : 'N/A') + ' módems con ' + errStr + ' errores globales.');
+      lines.push('  Se requiere revisión del nodo y portadora en sitio.');
+      lines.push('  Acciones: Escalar a Planta Exterior. Revisar niveles RF del nodo.');
+    } else if (p.esDegradacion) {
+      lines.push('  DEGRADACIÓN COMPARTIDA');
+      lines.push('  Señales de degradación en canal. Monitorear. Visitas individuales permitidas.');
+    } else if (p.esEventoPasado) {
+      lines.push('  EVENTO PASADO');
+      lines.push('  Sin actividad actual de errores. Tendencia bajando. No escalar a Planta.');
+    } else {
+      var totalModems = diag.totalModems != null ? diag.totalModems : (diag.masivoPanel && diag.masivoPanel.totalModems);
+      var restoFrase = totalModems != null && totalModems > 1 ? (totalModems - 1) + ' módems' : 'demás equipos';
+      lines.push('  FALLA LOCAL CONFIRMADA');
+      lines.push('  El equipo presenta ' + (flaps != null ? flaps : 'N/A') + ' Flaps y ' + (uncorr != null ? (uncorr >= 1000 ? Math.round(uncorr / 1000) + 'k' : uncorr) : 'N/A') + ' errores.');
+      lines.push('  El resto del canal (' + restoFrase + ') está estable.');
+      lines.push('  Se requiere revisión de acometida, conectores y splitter en sitio.');
+    }
+    lines.push('');
+    if (p.accionOperativa && p.accionOperativa.length) {
+      lines.push('── ACCIONES SUGERIDAS ───────────────────────────────────');
+      p.accionOperativa.forEach(function (a, i) { lines.push('  ' + (i + 1) + '. ' + a); });
+      lines.push('');
+    }
+    lines.push('═══════════════════════════════════════════════════════════');
+    return lines.join('\n');
+  }
+
+  function actualizarReporteTecnicoDisplay(diag) {
+    var previewWrap = $('qoeNocReporteTecnicoPreview');
+    var previewBody = $('qoeNocReporteTecnicoBody');
+    if (!previewWrap || !previewBody) return;
+    var txt = generarReporteTecnicoTexto(diag);
+    if (txt) {
+      previewBody.textContent = txt;
+      previewWrap.style.display = '';
+    } else {
+      previewWrap.style.display = 'none';
+    }
+  }
+
   function generarReporteParaTecnico() {
     var diag = QOE_CMTS_PENDING && QOE_CMTS_PENDING.lastDiag;
-    if (!diag || !diag.protocolo) return;
-    var txt;
-    if (diag.protocolo.esMasivo) {
-      var modems = diag.totalModems != null ? diag.totalModems : (diag.masivo && diag.masivo.modems) || (diag.masivoPanel && diag.masivoPanel.totalModems);
-      var uncorr = (diag.masivoPanel && diag.masivoPanel.uncorrectablesGlobal != null) ? diag.masivoPanel.uncorrectablesGlobal : (diag.masivo && diag.masivo.uncorr) || (diag.raw && diag.raw.uncorrectablesGlobal);
-      var modemsStr = modems != null ? String(modems) : 'N/A';
-      var errStr = uncorr != null ? (uncorr >= 1000 ? (Math.round(uncorr / 1000) + 'k') : String(uncorr)) : 'N/A';
-      txt = 'Afectación Masiva Confirmada: El canal presenta ' + modemsStr + ' módems con ' + errStr + ' errores globales. Se requiere revisión del nodo y portadora en sitio.';
-    } else {
-      var flaps = (diag.intermitencia && diag.intermitencia.valor != null) ? diag.intermitencia.valor : (diag.estabilidad && diag.estabilidad.flaps != null ? diag.estabilidad.flaps : null);
-      var uncorr = (diag.estabilidad && diag.estabilidad.uncorrectables != null) ? diag.estabilidad.uncorrectables : (diag.raw && diag.raw.uncorrectables != null ? diag.raw.uncorrectables : null);
-      var totalModems = diag.totalModems != null ? diag.totalModems : (diag.masivoPanel && diag.masivoPanel.totalModems);
-      var flapsStr = flaps != null ? String(flaps) : 'N/A';
-      var errStr = uncorr != null ? (uncorr >= 1000 ? (Math.round(uncorr / 1000) + 'k') : String(uncorr)) : 'N/A';
-      var restoFrase = totalModems != null && totalModems > 1 ? (totalModems - 1) + ' módems' : 'demás equipos';
-      txt = 'Falla Local Confirmada: El equipo presenta ' + flapsStr + ' Flaps y ' + errStr + ' errores, mientras que el resto del canal (' + restoFrase + ') está estable. Se requiere revisión de conectores y splitter en sitio.';
-    }
+    var txt = generarReporteTecnicoTexto(diag);
+    if (!txt) return;
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(txt).then(function () {
-        showSaveStatus('Reporte copiado al portapapeles', false);
+        showSaveStatus('Reporte técnico copiado al portapapeles', false);
       }).catch(function () { fallbackCopyReporte(txt); });
     } else {
       fallbackCopyReporte(txt);
@@ -3111,7 +3592,8 @@
 
   function updateQoeNocAnalyzer(modemOutput, upstreamOutput) {
     if (typeof NocAnalyzerQoE === 'undefined' || !NocAnalyzerQoE.analyze) return;
-    var diag = NocAnalyzerQoE.analyze(modemOutput || '', upstreamOutput || '');
+    var history = typeof getNocAfectacionHistory === 'function' ? getNocAfectacionHistory() : [];
+    var diag = NocAnalyzerQoE.analyze(modemOutput || '', upstreamOutput || '', { history: history, now: Date.now() });
     QOE_CMTS_PENDING.lastDiag = diag;
     function semaforoClass(c) { return 'qoe-semaforo-' + (c || 'muted'); }
     function setVal(parentId, val, color) {
@@ -3141,7 +3623,11 @@
     setVal('qoeNocUptime', (diag.estabilidad && diag.estabilidad.uptime) || 'N/A', null);
     setVal('qoeNocUtil', diag.masivoPanel && diag.masivoPanel.utilization != null ? diag.masivoPanel.utilization + '%' : null, null);
     setVal('qoeNocModemsChan', diag.masivoPanel && diag.masivoPanel.totalModems, null);
-    setVal('qoeNocUncorrGlob', diag.masivoPanel && diag.masivoPanel.uncorrectablesGlobal, null);
+    var uncGlob = diag.masivoPanel && diag.masivoPanel.uncorrectablesGlobal;
+    var rpMin = diag.masivoPanel && diag.masivoPanel.ratePerMin;
+    var uncGlobStr = uncGlob != null ? (uncGlob >= 1000 ? Math.round(uncGlob / 1000) + 'k' : uncGlob) : '—';
+    var uncGlobDisplay = uncGlobStr + (rpMin != null ? ' (' + rpMin.toFixed(0) + '/min)' : '');
+    setVal('qoeNocUncorrGlob', uncGlobDisplay, null);
     setVal('qoeNocMasivo', diag.masivo && diag.masivo.texto, diag.masivo && diag.masivo.color);
     QOE_CMTS_PENDING.visitabloqueada = !!(diag.protocolo && diag.protocolo.visitabloqueada);
     applyVisitaBloqueadaUI(QOE_CMTS_PENDING.visitabloqueada);
@@ -3154,22 +3640,37 @@
         html += '<span class="qoe-noc-nivel">Nivel: Afectación compartida</span>';
         if (p.severidad) html += '<span class="qoe-noc-severidad">Severidad: ' + escapeHtml(p.severidad) + '</span>';
         html += '<span class="qoe-noc-visita-bloq">Visita técnica bloqueada</span></div>';
+        if (p.decisionTreeCausa) html += '<div class="qoe-noc-decision-tree qoe-noc-rec-card"><strong>Decisión del motor:</strong> ' + escapeHtml(p.decisionTreeCausa) + (p.decisionTreeTipo ? ' <span class="qoe-noc-tipo-escal">[' + escapeHtml(p.decisionTreeTipo) + ']</span>' : '') + '</div>';
         if (p.diagnosticoExplicito) html += '<div class="qoe-noc-diagnostico">' + escapeHtml(p.diagnosticoExplicito) + '</div>';
         if (p.mensajeBloqueo) html += '<div class="qoe-noc-mensaje-bloqueo">' + escapeHtml(p.mensajeBloqueo) + '</div>';
         if (p.accionOperativa && p.accionOperativa.length) {
           html += '<div class="qoe-noc-accion-operativa"><strong>Acción:</strong><ol class="qoe-noc-rec-pasos">' + p.accionOperativa.map(function (x) { return '<li>' + escapeHtml(x) + '</li>'; }).join('') + '</ol></div>';
         }
-        html += '<div class="qoe-reporte-tecnico-wrap"><button type="button" class="qoe-btn-reporte-tecnico" id="qoeBtnReporteTecnico" title="Genera un resumen para enviar al técnico de campo">Generar Reporte para Técnico</button></div>';
+      } else if (p.esDegradacion || p.esEventoPasado) {
+        html += '<div class="qoe-noc-protocolo-header qoe-noc-protocolo-' + (p.esEventoPasado ? 'evento-pasado' : 'degradacion') + '">';
+        html += '<span class="qoe-noc-nivel">' + (p.esEventoPasado ? 'Evento pasado' : 'Degradación compartida') + '</span></div>';
+        if (p.decisionTreeCausa) html += '<div class="qoe-noc-decision-tree qoe-noc-rec-card"><strong>Decisión del motor:</strong> ' + escapeHtml(p.decisionTreeCausa) + (p.decisionTreeTipo ? ' <span class="qoe-noc-tipo-escal">[' + escapeHtml(p.decisionTreeTipo) + ']</span>' : '') + '</div>';
+        if (p.diagnosticoExplicito) html += '<div class="qoe-noc-diagnostico">' + escapeHtml(p.diagnosticoExplicito) + '</div>';
+        if (p.accionOperativa && p.accionOperativa.length) {
+          html += '<div class="qoe-noc-accion-operativa"><strong>Acción:</strong><ol class="qoe-noc-rec-pasos">' + p.accionOperativa.map(function (x) { return '<li>' + escapeHtml(x) + '</li>'; }).join('') + '</ol></div>';
+        }
       } else {
         var v = p.validacionIndividual || {};
         var sem = function (s) { return s === 'verde' ? '\uD83D\uDFE2' : (s === 'amarillo' ? '\uD83D\uDFE1' : (s === 'rojo' ? '\uD83D\uDD34' : '\uD83D\uDD35')); };
         html += '<div class="qoe-validacion-individual">';
+        if (p.decisionTreeCausa) {
+          html += '<div class="qoe-noc-decision-tree qoe-noc-rec-card"><strong>Decisión del motor:</strong> ' + escapeHtml(p.decisionTreeCausa);
+          if (p.decisionTreeTipo) html += ' <span class="qoe-noc-tipo-escal">[' + escapeHtml(p.decisionTreeTipo) + ']</span>';
+          html += '</div>';
+        }
         html += '<div class="qoe-validacion-estado"><span class="qoe-validacion-semaforo">' + sem('verde') + '</span> <strong>Estado: INDIVIDUAL</strong></div>';
         html += '<div class="qoe-validacion-conclusion">' + escapeHtml(v.conclusion || 'El problema se limita exclusivamente a este cable módem.') + '</div>';
         if (v.matriz && v.matriz.length) {
           html += '<div class="qoe-validacion-matriz"><h5>Por qué no es masiva</h5><table class="qoe-matriz-tabla"><thead><tr><th>Criterio de Red</th><th>Valor Actual</th><th>Umbral Masivo</th><th>Estado</th></tr></thead><tbody>';
           v.matriz.forEach(function (f) {
-            html += '<tr><td>' + escapeHtml(f.criterio) + '</td><td>' + escapeHtml(String(f.valorActual)) + '</td><td>' + escapeHtml(f.umbralMasivo) + '</td><td><span class="qoe-matriz-sema qoe-matriz-' + (f.semaforo || 'muted') + '">' + sem(f.semaforo) + ' ' + escapeHtml(f.estado) + '</span></td></tr>';
+            var valCell = escapeHtml(String(f.valorActual || '—'));
+            if (f.valorActividad != null && f.valorActividad !== '—') valCell += '<br><span class="qoe-matriz-actividad">Actividad actual: ' + escapeHtml(String(f.valorActividad)) + '</span>';
+            html += '<tr><td>' + escapeHtml(f.criterio) + '</td><td>' + valCell + '</td><td>' + escapeHtml(f.umbralMasivo) + '</td><td><span class="qoe-matriz-sema qoe-matriz-' + (f.semaforo || 'muted') + '">' + sem(f.semaforo) + ' ' + escapeHtml(f.estado) + '</span></td></tr>';
           });
           html += '</tbody></table></div>';
         }
@@ -3185,13 +3686,119 @@
         if (p.accionOperativa && p.accionOperativa.length) {
           html += '<div class="qoe-noc-accion-operativa"><strong>Pasos:</strong><ol class="qoe-noc-rec-pasos">' + p.accionOperativa.map(function (x) { return '<li>' + escapeHtml(x) + '</li>'; }).join('') + '</ol></div>';
         }
-        html += '<div class="qoe-reporte-tecnico-wrap"><button type="button" class="qoe-btn-reporte-tecnico" id="qoeBtnReporteTecnico" title="Genera un resumen para enviar al técnico de campo">Generar Reporte para Técnico</button></div>';
         html += '</div>';
       }
       recList.innerHTML = html || '<p class="qoe-noc-rec-empty">—</p>';
     } else if (recList) {
       recList.innerHTML = '<p class="qoe-noc-rec-empty">—</p>';
     }
+    /* Diagnóstico Operativo Tier 2 */
+    function getAlertColor(value, type) {
+      if (value == null || value === '' || value === '—') return 'qoe-tier2-muted';
+      var v = parseFloat(value);
+      if (type === 'SNR') {
+        if (v < 25) return 'qoe-tier2-rojo';
+        if (v <= 32) return 'qoe-tier2-amarillo';
+        return 'qoe-tier2-verde';
+      }
+      if (type === 'TX') {
+        if (v < 35 || v > 52) return 'qoe-tier2-amarillo';
+        if (v >= 36 && v <= 50) return 'qoe-tier2-verde';
+        return 'qoe-tier2-amarillo';
+      }
+      if (type === 'CONFIDENCE') {
+        if (v < 40) return 'qoe-tier2-gris';
+        if (v < 70) return 'qoe-tier2-azul';
+        return 'qoe-tier2-purpura';
+      }
+      return 'qoe-tier2-muted';
+    }
+    function getJustificationIcon(text) {
+      if (!text || typeof text !== 'string') return '•';
+      var t = text.toLowerCase();
+      if (/sin actividad|ok|normal/i.test(t)) return '\u2713'; /* CheckCircle */
+      if (/bajo|límite|limite|advertencia/i.test(t)) return '\u26A0'; /* AlertTriangle */
+      if (/falla|crítico|critico|error|masivo|afectad/i.test(t)) return '\u26A1'; /* Zap */
+      return '•';
+    }
+    var origenEl = $('qoeNocOrigenBody');
+    if (origenEl && diag.confidenceClassification) {
+      var cc = diag.confidenceClassification;
+      var tipoClass = 'qoe-noc-origen-' + (cc.classification === 'MODEM' ? 'modem' : (cc.classification === 'PORTADORA' ? 'portadora' : (cc.classification === 'PLANTA' ? 'planta' : 'monitoreo')));
+      var interpretacion = '';
+      var accionResumen = '';
+      if (cc.classification === 'MONITOREO') {
+        interpretacion = 'No hay errores activos en los últimos 30 minutos. El canal opera dentro de lo normal.';
+        accionResumen = 'No hay nada que hacer. Seguir monitoreando de forma rutinaria.';
+      } else if (cc.classification === 'MODEM') {
+        interpretacion = 'Solo 1 módem presenta actividad de errores. El resto del canal está bien. El problema parece estar en el equipo o la acometida del cliente.';
+        accionResumen = cc.action === 'AGENDAR VISITA TÉCNICA' ? 'Se recomienda agendar visita técnica para revisar acometida, conectores o cambiar equipo.' : 'Aún no hay suficiente persistencia para agendar. Vuelve a medir en 5–10 min.';
+      } else if (cc.classification === 'PORTADORA') {
+        interpretacion = 'Varios módems del mismo canal tienen errores a la vez. El problema está en la portadora o el nodo, no en clientes individuales.';
+        accionResumen = cc.action === 'ESCALAR A PLANTA' ? 'Escalar a Planta Exterior para revisión del nodo.' : 'Esperar más mediciones para confirmar antes de escalar.';
+      } else {
+        interpretacion = 'Más del 50% de los módems del canal están afectados. Es una falla compartida a nivel de planta.';
+        accionResumen = cc.action === 'DECLARAR MASIVA' ? 'Declarar afectación masiva. Bloquear visitas individuales.' : 'Confirmar con otra medición antes de declarar masiva.';
+      }
+      if (cc.validationStatus === 'VALIDACIÓN EN CURSO') {
+        accionResumen = 'El sistema aún está validando. Se necesita más tiempo o más mediciones antes de tomar acción.';
+      }
+      var confColor = getAlertColor(cc.confidenceScore, 'CONFIDENCE');
+      var snrVal = diag.snrUp && diag.snrUp.valor != null ? diag.snrUp.valor : (diag.raw && diag.raw.snrUp);
+      var txVal = diag.tx && diag.tx.valor != null ? diag.tx.valor : (diag.raw && diag.raw.tx);
+      var snrColor = getAlertColor(snrVal, 'SNR');
+      var txColor = getAlertColor(txVal, 'TX');
+      var opLayer = (cc.operationalLayer || 'N/A').toUpperCase();
+      var opBadgeClass = opLayer === 'CLIENTE' ? 'qoe-tier2-op-cliente' : (opLayer === 'PORTADORA' ? 'qoe-tier2-op-portadora' : (opLayer === 'NODO' ? 'qoe-tier2-op-nodo' : 'qoe-tier2-op-na'));
+      var esperandoEstabilidad = (cc.consecutiveWindows != null && cc.consecutiveWindows < 2) && cc.classification !== 'MONITOREO';
+      var decisionBlockClass = 'qoe-noc-tier2-block qoe-noc-tier2-decision' + (esperandoEstabilidad ? ' qoe-tier2-esperando-estabilidad' : '');
+      var tooltipBreakdown = '';
+      if (cc.activityBreakdown) {
+        var b = cc.activityBreakdown;
+        tooltipBreakdown = 'Errores/min: ' + (b.errPerMin != null ? b.errPerMin.toFixed(0) : '—') + ' · ErrorRatio: ' + (b.errorRatio != null ? (b.errorRatio * 100).toFixed(2) + '%' : '—') + ' · T4: ' + (b.t4 ? 'Sí' : 'No');
+      } else {
+        tooltipBreakdown = 'Errores/min + ErrorRatio + T4 (desglose)';
+      }
+      var htmlOrigen = '<div class="qoe-noc-tier2-result ' + tipoClass + '">';
+      htmlOrigen += '<div class="qoe-noc-tier2-interpretacion"><p class="qoe-noc-tier2-resumen">' + escapeHtml(interpretacion) + '</p>';
+      htmlOrigen += '<p class="qoe-noc-tier2-quehacer"><strong>¿Qué debo hacer?</strong> ' + escapeHtml(accionResumen) + '</p></div>';
+      htmlOrigen += '<div class="qoe-noc-tier2-datos"><h6>Datos del análisis</h6><div class="qoe-noc-tier2-summary">';
+      htmlOrigen += '<div class="qoe-noc-tier2-row"><span class="qoe-noc-tier2-label">Origen del problema:</span><span class="qoe-noc-tier2-val">' + escapeHtml(cc.classification) + '</span></div>';
+      var confExtra = cc.confidenceScore >= 70 ? ' qoe-tier2-conf-alto' : '';
+      htmlOrigen += '<div class="qoe-noc-tier2-row"><span class="qoe-noc-tier2-label">Nivel de confianza del diagnóstico:</span><span class="qoe-noc-tier2-val ' + confColor + confExtra + '">' + cc.confidenceScore + '% (' + escapeHtml(cc.confidenceLevel) + ')</span></div>';
+      htmlOrigen += '<div class="qoe-noc-tier2-row"><span class="qoe-noc-tier2-label">Nivel operativo:</span><span class="qoe-tier2-op-badge ' + opBadgeClass + '">' + escapeHtml(cc.operationalLayer || 'N/A') + '</span></div>';
+      htmlOrigen += '<div class="qoe-noc-tier2-row"><span class="qoe-noc-tier2-label">Cuánto tiempo llevan los errores:</span><span class="qoe-noc-tier2-val">' + (cc.eventDurationMinutes != null ? cc.eventDurationMinutes + ' min' : '—') + '</span></div>';
+      htmlOrigen += '<div class="qoe-noc-tier2-row"><span class="qoe-noc-tier2-label">Veces seguidas que se detectó el mismo patrón:</span><span class="qoe-noc-tier2-val">' + (cc.consecutiveWindows != null ? cc.consecutiveWindows : '—') + '</span></div>';
+      htmlOrigen += '<div class="qoe-noc-tier2-row"><span class="qoe-noc-tier2-label">Porcentaje de módems afectados:</span><span class="qoe-noc-tier2-val">' + (cc.percentAffected != null ? cc.percentAffected.toFixed(1) + '%' : '—') + '</span></div>';
+      htmlOrigen += '<div class="qoe-noc-tier2-row"><span class="qoe-noc-tier2-label">Errores por minuto en promedio:</span><span class="qoe-noc-tier2-val">' + (cc.avgActivityPerMin != null ? cc.avgActivityPerMin : '—') + '</span></div>';
+      if (cc.validationStatus) htmlOrigen += '<div class="qoe-noc-tier2-row qoe-noc-tier2-validation"><span class="qoe-noc-tier2-label">Estado de validación:</span><span class="qoe-noc-tier2-val">' + escapeHtml(cc.validationStatus) + '</span></div>';
+      htmlOrigen += '</div>';
+      htmlOrigen += '<div class="qoe-noc-tier2-blocks">';
+      htmlOrigen += '<div class="qoe-noc-tier2-block qoe-tier2-activity-wrap" title="' + escapeHtml(tooltipBreakdown) + '"><h6>Cantidad de errores detectados</h6><p>Puntaje de actividad <span class="qoe-tier2-activity-score" title="' + escapeHtml(tooltipBreakdown) + '">' + (cc.activityScore != null ? cc.activityScore : '—') + '</span>/50 (según errores por minuto, ratio de errores, CRC y T4)</p></div>';
+      htmlOrigen += '<div class="qoe-noc-tier2-block"><h6>Magnitud del impacto</h6><p>Puntaje de impacto ' + (cc.impactScore != null ? cc.impactScore : '—') + '/50 (según % afectados, uso del canal y correlación entre módems)</p></div>';
+      htmlOrigen += '<div class="' + decisionBlockClass + '">' + (esperandoEstabilidad ? '<span class="qoe-tier2-badge-esperando">ESPERANDO ESTABILIDAD</span>' : '') + '<h6>Acción recomendada</h6><p>' + escapeHtml(cc.action) + '</p></div>';
+      htmlOrigen += '</div>';
+      htmlOrigen += '<details class="qoe-noc-origen-justif-wrap"><summary>Ver justificación técnica</summary><div class="qoe-noc-origen-justif"><ul class="qoe-tier2-justif-icons">';
+      (cc.technicalJustification || []).forEach(function (j) {
+        var icon = getJustificationIcon(j);
+        var iconClass = icon === '\u2713' ? 'qoe-tier2-ico-check' : (icon === '\u26A0' ? 'qoe-tier2-ico-alert' : (icon === '\u26A1' ? 'qoe-tier2-ico-zap' : ''));
+        htmlOrigen += '<li><span class="qoe-tier2-justif-icon ' + iconClass + '" aria-hidden="true">' + icon + '</span> ' + escapeHtml(j) + '</li>';
+      });
+      htmlOrigen += '</ul></div></details>';
+      if (cc.affectedModemsDetail && cc.affectedModemsDetail.length) {
+        htmlOrigen += '<div class="qoe-noc-origen-table-wrap"><strong>Módems afectados (' + cc.affectedModemsDetail.length + ' / ' + (diag.totalModems != null ? diag.totalModems : '—') + '):</strong>';
+        htmlOrigen += '<table class="qoe-noc-origen-table"><thead><tr><th>MAC</th><th>Error/min</th><th>ErrorRatio</th><th>SNR</th><th>Motivo</th></tr></thead><tbody>';
+        cc.affectedModemsDetail.forEach(function (r) {
+          htmlOrigen += '<tr><td>' + escapeHtml(r.mac) + '</td><td>' + escapeHtml(r.errorRate) + '</td><td>' + escapeHtml(r.errorRatio) + '</td><td>' + escapeHtml(r.snr) + '</td><td>' + escapeHtml(r.motivo) + '</td></tr>';
+        });
+        htmlOrigen += '</tbody></table></div>';
+      }
+      htmlOrigen += '</div></div>';
+      origenEl.innerHTML = htmlOrigen;
+    } else if (origenEl) {
+      origenEl.innerHTML = '<p class="qoe-noc-origen-empty">Ejecuta análisis para ver clasificación de origen Tier 2.</p>';
+    }
+    actualizarReporteTecnicoDisplay(diag);
     /* Guardar en historial y actualizar gráfica de afectación / intermitencia */
     var uncorr = (diag.masivoPanel && diag.masivoPanel.uncorrectablesGlobal != null) ? diag.masivoPanel.uncorrectablesGlobal : (diag.raw && diag.raw.uncorrectablesGlobal);
     if (uncorr != null || (diag.raw && diag.raw.uncorrectables != null)) {
@@ -3199,7 +3806,9 @@
       var snrUp = (diag.snrUp && diag.snrUp.valor != null) ? diag.snrUp.valor : (diag.raw && diag.raw.snrUp);
       var flaps = (diag.estabilidad && diag.estabilidad.flaps != null) ? diag.estabilidad.flaps : (diag.raw && diag.raw.flaps);
       var esMasivo = diag.protocolo && diag.protocolo.esMasivo;
-      pushNocAfectacionHistory({ ts: Date.now(), uncorr: uncorr || diag.raw.uncorrectables, modems: diag.totalModems, esMasivo: esMasivo, util: util, snrUp: snrUp, flaps: flaps });
+      var totalCw = (diag.raw && diag.raw.unerroreds != null && diag.raw.correctables != null) ? ((diag.raw.unerroreds || 0) + (diag.raw.correctables || 0) + (uncorr || 0)) : null;
+      var rpMin = diag.masivoPanel && diag.masivoPanel.ratePerMin;
+      pushNocAfectacionHistory({ ts: Date.now(), uncorr: uncorr || diag.raw.uncorrectables, modems: diag.totalModems, esMasivo: esMasivo, util: util, snrUp: snrUp, flaps: flaps, totalCodewords: totalCw, modemsOffline: diag.raw && diag.raw.modemsOffline, ratePerMin: rpMin });
       if (esMasivo) refreshGestionOperacionHfc();
       updateQoeNocGraficaAfectacion();
     }
@@ -3276,9 +3885,8 @@
     QOE_CMTS_PENDING.upstreamOutput = '';
     QOE_CMTS_PENDING.visitabloqueada = false;
     applyVisitaBloqueadaUI(false);
-    var modemTa = $('qoeModemOutput'), upstreamTa = $('qoeUpstreamOutput');
+    var modemTa = $('qoeModemOutput');
     if (modemTa) modemTa.value = '';
-    if (upstreamTa) upstreamTa.value = '';
     function setV(id, v) { var el = $(id); if (el) el.textContent = v != null ? v : '—'; }
     function setMetric(id, v) { var p = $(id); if (p) { var s = p.querySelector('.qoe-noc-metric-val'); if (s) { s.textContent = v != null ? v : '—'; s.className = 'qoe-noc-metric-val qoe-semaforo-muted'; } } }
     setV('qoeSummaryEstado', 'Estado General: —');
@@ -3500,14 +4108,16 @@
     areaPts = pts.map(function (p) { return p.x + ',' + p.y; });
     areaPts.push(pad.l + (rates.length > 1 ? gw : 0) + ',' + (pad.t + gh));
     areaPts.unshift(pad.l + ',' + (pad.t + gh));
+    function getBarColor(rate) { return rate > 50 ? '#ef4444' : 'rgba(255,255,255,0.25)'; }
     var lastCat = getRateCategory(pts.length ? pts[pts.length - 1].rate : 0);
+    var lastBarColor = getBarColor(pts.length ? pts[pts.length - 1].rate : 0);
     var fillRgba = lastCat.color === '#22c55e' ? 'rgba(34,197,94,0.25)' : lastCat.color === '#fbbf24' ? 'rgba(251,191,36,0.25)' : lastCat.color === '#f97316' ? 'rgba(249,115,22,0.25)' : 'rgba(239,68,68,0.25)';
     var svg = '<polygon fill="' + fillRgba + '" stroke="none" points="' + areaPts.join(' ') + '"/>';
     for (var i = 0; i < pts.length - 1; i++) {
-      var c = getRateCategory(pts[i].rate);
-      svg += '<line x1="' + pts[i].x + '" y1="' + pts[i].y + '" x2="' + pts[i + 1].x + '" y2="' + pts[i + 1].y + '" stroke="' + c.color + '" stroke-width="2" stroke-linecap="round"/>';
+      var barColor = getBarColor(pts[i].rate);
+      svg += '<line x1="' + pts[i].x + '" y1="' + pts[i].y + '" x2="' + pts[i + 1].x + '" y2="' + pts[i + 1].y + '" stroke="' + barColor + '" stroke-width="2" stroke-linecap="round"/>';
     }
-    if (pts.length) svg += '<line x1="' + pts[pts.length - 1].x + '" y1="' + pts[pts.length - 1].y + '" x2="' + pts[pts.length - 1].x + '" y2="' + (pad.t + gh) + '" stroke="' + lastCat.color + '" stroke-width="2"/>';
+    if (pts.length) svg += '<line x1="' + pts[pts.length - 1].x + '" y1="' + pts[pts.length - 1].y + '" x2="' + pts[pts.length - 1].x + '" y2="' + (pad.t + gh) + '" stroke="' + lastBarColor + '" stroke-width="2"/>';
     /* Ejes */
     svg += '<line x1="' + pad.l + '" y1="' + (pad.t + gh) + '" x2="' + (w - pad.r) + '" y2="' + (pad.t + gh) + '" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>';
     svg += '<line x1="' + pad.l + '" y1="' + pad.t + '" x2="' + pad.l + '" y2="' + (pad.t + gh) + '" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>';
@@ -3686,7 +4296,49 @@
     }
   }
 
+  var INTEGRA_DASHBOARD_IMAGE = 'integra_dashboard_image';
+  function refreshDashboardImagen() {
+    var wrap = $('dashboardImagenWrap'), img = $('dashboardImagen');
+    if (!wrap || !img) return;
+    var src = localStorage.getItem(INTEGRA_DASHBOARD_IMAGE) || '';
+    if (src) {
+      img.src = src;
+      img.alt = 'Imagen del dashboard';
+      wrap.style.display = '';
+    } else {
+      img.src = '';
+      wrap.style.display = 'none';
+    }
+  }
   function bindCalidad() {
+    var inpImagen = $('calidadImagenInput'), btnQuitar = $('btnCalidadImagenQuitar'), preview = $('calidadImagenPreview');
+    if (inpImagen) {
+      inpImagen.addEventListener('change', function () {
+        var f = this.files && this.files[0];
+        if (!f || !f.type || f.type.indexOf('image') !== 0) return;
+        var r = new FileReader();
+        r.onload = function () {
+          var data = r.result;
+          try { localStorage.setItem(INTEGRA_DASHBOARD_IMAGE, data); } catch (e) { return; }
+          refreshDashboardImagen();
+          if (preview) { preview.innerHTML = '<img src="' + data + '" alt="Vista previa" style="max-width:200px;max-height:150px;border-radius:6px">'; }
+          if (inpImagen) inpImagen.value = '';
+        };
+        r.readAsDataURL(f);
+      });
+    }
+    if (btnQuitar) {
+      btnQuitar.addEventListener('click', function () {
+        try { localStorage.removeItem(INTEGRA_DASHBOARD_IMAGE); } catch (e) {}
+        refreshDashboardImagen();
+        if (preview) preview.innerHTML = '';
+        if (inpImagen) inpImagen.value = '';
+      });
+    }
+    if (preview) {
+      var saved = localStorage.getItem(INTEGRA_DASHBOARD_IMAGE);
+      if (saved) preview.innerHTML = '<img src="' + saved + '" alt="Vista previa" style="max-width:200px;max-height:150px;border-radius:6px">';
+    }
     initMatrizLetraSelects();
     var inpAgente = $('auditoriaAgente'), dd = $('auditoriaAgenteDropdown');
     if (inpAgente) {
@@ -3706,10 +4358,11 @@
     }
     var btnAdd = $('btnAuditoriaAgregar'), tbl = $('tablaAuditorias');
     if (btnAdd) btnAdd.addEventListener('click', function () {
-      var a = $('auditoriaAgente'), n = $('auditoriaNota'), l = $('auditoriaLetra'), sel = $('auditoriaItem'), selC = $('auditoriaItemCausales');
-      var agenteVal = (a && a.value || '').trim(), notaVal = (n && n.value || '').trim();
+      var a = $('auditoriaAgente'), cant = $('auditoriaCantMonitoreos'), n = $('auditoriaNota'), l = $('auditoriaLetra'), sel = $('auditoriaItem'), selC = $('auditoriaItemCausales');
+      var agenteVal = (a && a.value || '').trim(), cantVal = (cant && cant.value || '').trim(), notaVal = (n && n.value || '').trim();
       var letra = (l && l.value) || '', idxStr = (sel && sel.value) || '';
       if (!agenteVal) return;
+      if (!cantVal) return;
       if (!notaVal) return;
       if (!letra || idxStr === '') return;
       var arr = MATRIZ_CALIDAD[letra];
@@ -3723,7 +4376,7 @@
         desc = it.causales[cIdx] || '';
       }
       var items = getAuditoriasAgentes();
-      items.push({ agente: agenteVal, nota: notaVal, letra: letra, macroproceso: macro, descripcionItem: desc, itemAfectado: desc, fechaHoraTs: Date.now() });
+      items.push({ agente: agenteVal, cantMonitoreos: cantVal, nota: notaVal, letra: letra, macroproceso: macro, descripcionItem: desc, itemAfectado: desc, fechaHoraTs: Date.now() });
       saveAuditoriasAgentes(items);
       flushSave();
       refreshAuditoriasTable();
@@ -3759,6 +4412,7 @@
     loadData();
     handleHashChange();
     window.addEventListener('pagehide', function () { flushSave(); });
+    window.addEventListener('beforeunload', function () { flushSave(); });
     var _visibilityTimer;
     document.addEventListener('visibilitychange', function () {
       if (document.hidden) {
@@ -3867,7 +4521,7 @@
     var btnBackupPegar = $('btnBackupPegar');
     var inputBackup = $('perfilBackupFile');
     var msgBackup = $('perfilBackupMsg');
-    var BACKUP_KEYS = ['integra_data', 'integra_user_password', 'integra_logged_in', 'integra_gestion_operacion_collapsed', 'integra_calidad_collapsed', 'integra_formacion_collapsed', 'integra_gestion_operacion_hfc_collapsed'];
+    var BACKUP_KEYS = ['integra_data', 'integra_user_password', 'integra_logged_in', 'integra_gestion_operacion_collapsed', 'integra_calidad_collapsed', 'integra_formacion_collapsed', 'integra_gestion_operacion_hfc_collapsed', 'integra_dashboard_image'];
     function buildBackupData() {
       var backup = { app: 'Integra', version: '1.0', timestamp: new Date().toISOString(), data: {} };
       for (var i = 0; i < BACKUP_KEYS.length; i++) {
@@ -4019,12 +4673,15 @@
         var hasLocalData = Object.keys(current).length > 0;
         var serverReturnedEmpty = Object.keys(parsed).length === 0;
         if (hasLocalData && serverReturnedEmpty) return;
-        var serverUsers = (parsed.portalUsuarios && Array.isArray(parsed.portalUsuarios)) ? parsed.portalUsuarios : [];
-        var localUsers = (current.portalUsuarios && Array.isArray(current.portalUsuarios)) ? current.portalUsuarios : [];
-        if (serverUsers.length === 0 && localUsers.length > 0) parsed.portalUsuarios = localUsers;
-        var serverInter = (parsed.intermitenciaRegistros && Array.isArray(parsed.intermitenciaRegistros)) ? parsed.intermitenciaRegistros : [];
-        var localInter = (current.intermitenciaRegistros && Array.isArray(current.intermitenciaRegistros)) ? current.intermitenciaRegistros : [];
-        if (serverInter.length === 0 && localInter.length > 0) parsed.intermitenciaRegistros = localInter;
+        function mergeIfEmpty(parsed, current, key) {
+          var sv = parsed[key];
+          var lv = current[key];
+          if ((!sv || (Array.isArray(sv) && sv.length === 0) || (typeof sv === 'object' && Object.keys(sv).length === 0)) && lv && ((Array.isArray(lv) && lv.length > 0) || (typeof lv === 'object' && Object.keys(lv).length > 0))) parsed[key] = lv;
+        }
+        mergeIfEmpty(parsed, current, 'portalUsuarios');
+        mergeIfEmpty(parsed, current, 'intermitenciaRegistros');
+        mergeIfEmpty(parsed, current, 'auditoriasAgentes');
+        mergeIfEmpty(parsed, current, 'overridesPorcentajeAgentes');
         setDataFromApi(parsed);
         refreshFromServerData();
       }).catch(function () {});
