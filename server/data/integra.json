@@ -1,17 +1,37 @@
 {
-  "currentUserAdmin": true,
+  "currentUserAdmin": false,
   "presentoPct": "65 %",
   "cobertura": "90 %",
   "sparkStaff": [
-    86,
-    87,
-    88,
-    89,
+    100,
+    100,
+    100,
+    100,
     100,
     100,
     100
   ],
-  "currentUserName": "admin",
-  "currentUserUsuario": "admin",
-  "currentUserRole": "administrador"
+  "currentUserName": "Gabriel",
+  "currentUserUsuario": "46123712",
+  "currentUserRole": "qoe",
+  "bolsaCasosAbiertos": {
+    "backNegocios": 0,
+    "negociosGI": 0,
+    "proactividadVIP": 0
+  },
+  "bolsaSlaFaseCierre": {
+    "backNegocios": 0,
+    "negociosGI": 0,
+    "proactividadVIP": 0
+  },
+  "portalUsuarios": [
+    {
+      "nombre": "Gabriel",
+      "usuario": "46123712",
+      "clave": "wy35zbak",
+      "estado": "Temporal",
+      "role": "qoe",
+      "jefeInmediato": ""
+    }
+  ]
 }

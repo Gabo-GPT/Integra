@@ -1089,12 +1089,16 @@
     </main>
   </div>
 
-  <!-- API: producción en Render. Para desarrollo local: window.INTEGRA_API_URL = 'http://localhost:3000'; -->
+  <!-- API: usa el mismo servidor. Para file://: window.INTEGRA_API_URL = 'http://IP-DEL-SERVIDOR:3000'; -->
   <script>
-    window.INTEGRA_API_URL = window.location.hostname === 'localhost'
-      ? 'http://localhost:3000'
-      : 'https://integra-e23d.onrender.com';
+    var _p = (window.location.protocol || '').toLowerCase();
+    var _h = (window.location.hostname || '').toLowerCase();
+    if (_p === 'http:' || _p === 'https:') {
+      window.INTEGRA_API_URL = window.location.origin;
+    } else {
+      window.INTEGRA_API_URL = (_h === 'localhost' || _h === '127.0.0.1' || _h === '') ? 'http://localhost:3000' : 'https://integra-e23d.onrender.com';
+    }
   </script>
-  <script src="js/integra.js?v=2" defer></script>
+  <script src="js/integra.js?v=5" defer></script>
 </body>
 </html>

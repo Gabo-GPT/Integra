@@ -4,9 +4,13 @@
 
   var API_URL = (typeof window !== 'undefined' && window.INTEGRA_API_URL) || '';
   if (!API_URL && typeof window !== 'undefined' && window.location) {
-    API_URL = window.location.hostname === 'localhost'
-      ? 'http://localhost:3000'
-      : 'https://integra-e23d.onrender.com';
+    var proto = (window.location.protocol || '').toLowerCase();
+    var h = (window.location.hostname || '').toLowerCase();
+    if (proto === 'http:' || proto === 'https:') {
+      API_URL = window.location.origin;
+    } else {
+      API_URL = (h === 'localhost' || h === '127.0.0.1' || h === '') ? 'http://localhost:3000' : 'https://integra-e23d.onrender.com';
+    }
   }
   function showSaveStatus(msg, isError) {
     var el = document.getElementById('integraSaveStatus');
