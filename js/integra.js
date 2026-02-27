@@ -104,28 +104,43 @@
   }
 
   var MAX_STORAGE_BYTES = 4 * 1024 * 1024;
+  var _lastSinConexionMsg = 0;
+  function _doPut(json, intento) {
+    intento = intento || 1;
+    var url = getApiBase() + '/api/data';
+    return fetch(url, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: json, keepalive: true, cache: 'no-store' })
+      .then(function (r) {
+        if (r.ok) {
+          _lastSavedJson = json;
+          try { localStorage.setItem(STORAGE, json); } catch (e) {}
+          return true;
+        }
+        localStorage.setItem(STORAGE, json);
+        if (intento < 3) return Promise.reject(new Error('RETRY'));
+        showSaveStatus('Error al guardar en servidor. Datos guardados localmente.', true);
+        return false;
+      })
+      .catch(function (err) {
+        localStorage.setItem(STORAGE, json);
+        if (intento < 3) return Promise.reject(err);
+        if (Date.now() - _lastSinConexionMsg > 60000) {
+          _lastSinConexionMsg = Date.now();
+          showSaveStatus('Sin conexión. Datos guardados localmente.');
+        }
+        return false;
+      });
+  }
   function _persistToStorage() {
     try {
       var json = JSON.stringify(getData());
       if (json !== _lastSavedJson && json.length <= MAX_STORAGE_BYTES) {
         if (API_URL) {
           _pendingApiPut = true;
-          var url = getApiBase() + '/api/data';
-          fetch(url, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: json, keepalive: true, cache: 'no-store' })
-            .then(function (r) {
-              if (r.ok) {
-                _lastSavedJson = json;
-                try { localStorage.setItem(STORAGE, json); } catch (e) {}
-              } else {
-                localStorage.setItem(STORAGE, json);
-                showSaveStatus('Error al guardar en servidor. Datos guardados localmente.', true);
-              }
-            })
-            .catch(function () {
-              localStorage.setItem(STORAGE, json);
-              showSaveStatus('Sin conexión. Datos guardados localmente.');
-            })
-            .finally(function () { _pendingApiPut = false; });
+          _doPut(json, 1).catch(function () {
+            return new Promise(function (resolve) { setTimeout(resolve, 2500); }).then(function () { return _doPut(json, 2); });
+          }).catch(function () {
+            return new Promise(function (resolve) { setTimeout(resolve, 2500); }).then(function () { return _doPut(json, 3); });
+          }).finally(function () { _pendingApiPut = false; });
         } else {
           localStorage.setItem(STORAGE, json);
           _lastSavedJson = json;
@@ -161,7 +176,10 @@
         })
         .catch(function (err) {
           localStorage.setItem(STORAGE, json);
-          showSaveStatus(err.message && err.message.indexOf('HTTP') === 0 ? 'Error al guardar en servidor. Datos guardados localmente.' : 'Sin conexión. Datos guardados localmente.', true);
+          if (Date.now() - _lastSinConexionMsg > 60000) {
+            _lastSinConexionMsg = Date.now();
+            showSaveStatus(err.message && err.message.indexOf('HTTP') === 0 ? 'Error al guardar en servidor. Datos guardados localmente.' : 'Sin conexión. Datos guardados localmente.', true);
+          }
           return Promise.reject(err);
         })
         .finally(function () { _pendingApiPut = false; });
