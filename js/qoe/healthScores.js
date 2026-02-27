@@ -30,14 +30,16 @@
     var upstream = parsedData && parsedData.upstream;
 
     var modemResult = calcModemHealth(modem, hc);
-    var carrierResult = calcCarrierHealth(upstream, hc);
+    var carrierResult = calcCarrierHealth(upstream, hc, modem);
 
     var modemHealth = modemResult && modemResult.score != null ? Math.round(clamp(modemResult.score, 0, 100)) : null;
     var carrierHealth = carrierResult && carrierResult.score != null ? Math.round(clamp(carrierResult.score, 0, 100)) : null;
+    var carrierHealthMeta = carrierResult && carrierResult.meta ? carrierResult.meta : {};
 
     return {
       modemHealth: modemHealth,
       carrierHealth: carrierHealth,
+      carrierHealthMeta: carrierHealthMeta,
       modemHealthBreakdown: modemResult && modemResult.breakdown ? modemResult.breakdown : [],
       carrierHealthBreakdown: carrierResult && carrierResult.breakdown ? carrierResult.breakdown : []
     };
@@ -144,7 +146,59 @@
     return { score: score, breakdown: breakdown };
   }
 
-  function calcCarrierHealth(upstream, hc) {
+  /**
+   * Salud Portadora: refleja disponibilidad real del canal.
+   * - Si utilización > 80%: mostrar valor de utilización (cuello de botella).
+   * - Si utilización <= 80%: basado en SNR (100% si > 30 dB).
+   * - Severidad: Rojo >90%, Naranja 80-90%, Verde <80% y SNR>30.
+   */
+  function calcCarrierHealth(upstream, hc, modem) {
+    var snrUp = (modem && modem.snr != null) ? modem.snr : (upstream && upstream.snrUp != null) ? upstream.snrUp : null;
+    var util = (upstream && upstream.avgChannelUtilization != null) ? upstream.avgChannelUtilization : null;
+    var utilNum = (util != null && !isNaN(util)) ? Math.min(100, Math.max(0, util)) : null;
+
+    var displayValue, subtitle, severity, score;
+
+    if (utilNum != null && utilNum > 80) {
+      displayValue = Math.round(utilNum);
+      subtitle = 'Portadora Saturada';
+      severity = utilNum > 90 ? 'rojo' : 'naranja';
+      score = displayValue;
+    } else {
+      var scoreBySnr = null;
+      if (snrUp != null && !isNaN(snrUp)) {
+        scoreBySnr = snrUp >= 32 ? 100 : Math.max(0, (snrUp / 32) * 100);
+      }
+      score = scoreBySnr;
+      subtitle = 'Portadora Estable';
+      severity = (snrUp != null && snrUp > 30) ? 'verde' : (scoreBySnr != null && scoreBySnr >= 60 ? 'amarillo' : 'amarillo');
+    }
+
+    if (score != null) {
+      var breakdown = [];
+      if (snrUp != null) {
+        breakdown.push({
+          metric: 'SNR Upstream',
+          value: snrUp,
+          unit: 'dB',
+          descripcion: 'SNR ' + snrUp + ' dB'
+        });
+      }
+      if (utilNum != null) {
+        breakdown.push({
+          metric: 'Utilización',
+          value: utilNum,
+          unit: '%',
+          descripcion: 'Utilización ' + utilNum + '%' + (utilNum > 80 ? ' (saturada)' : '')
+        });
+      }
+      return {
+        score: score,
+        breakdown: breakdown,
+        meta: { utilization: utilNum, subtitle: subtitle, severity: severity }
+      };
+    }
+
     if (!upstream || !hc.carrierWeights) return null;
     var w = hc.carrierWeights;
     var utilCfg = hc.carrierUtilization || {};
@@ -156,13 +210,13 @@
     var sumW = 0, sumP = 0;
 
     if (upstream.avgChannelUtilization != null && utilCfg.optimo) {
-      var util = upstream.avgChannelUtilization;
-      if (util < (utilCfg.optimo.max || 65)) {
+      var util2 = upstream.avgChannelUtilization;
+      if (util2 < (utilCfg.optimo.max || 65)) {
         utilPts = utilCfg.optimo.pointsMin != null ? utilCfg.optimo.pointsMin : 92;
-      } else if (utilCfg.medio && util >= utilCfg.medio.min && util <= utilCfg.medio.max) {
-        var t2 = (util - utilCfg.medio.min) / (utilCfg.medio.max - utilCfg.medio.min);
+      } else if (utilCfg.medio && util2 >= utilCfg.medio.min && util2 <= utilCfg.medio.max) {
+        var t2 = (util2 - utilCfg.medio.min) / (utilCfg.medio.max - utilCfg.medio.min);
         utilPts = (utilCfg.medio.pointsMax || 85) - t2 * ((utilCfg.medio.pointsMax || 85) - (utilCfg.medio.pointsMin || 70));
-      } else if (utilCfg.critico && util >= (utilCfg.critico.min || 80)) {
+      } else if (utilCfg.critico && util2 >= (utilCfg.critico.min || 80)) {
         utilPts = Math.min(utilCfg.critico.pointsMax || 60, 60);
       } else {
         utilPts = 70;
@@ -246,8 +300,21 @@
     }
 
     if (sumW <= 0) return null;
-    var score = sumP / sumW;
-    return { score: score, breakdown: breakdown };
+    var score2 = sumP / sumW;
+    var util2 = upstream.avgChannelUtilization;
+    var utilNum2 = (util2 != null && !isNaN(util2)) ? Math.min(100, Math.max(0, util2)) : null;
+    var meta2 = {};
+    if (utilNum2 != null && utilNum2 > 80) {
+      score2 = Math.round(utilNum2);
+      meta2 = { utilization: utilNum2, subtitle: 'Portadora Saturada', severity: utilNum2 > 90 ? 'rojo' : 'naranja' };
+    } else {
+      var snr2 = (modem && modem.snr != null) ? modem.snr : null;
+      meta2 = { utilization: utilNum2, subtitle: 'Portadora Estable', severity: (snr2 != null && snr2 > 30) ? 'verde' : 'amarillo' };
+      if (utilNum2 != null && utilNum2 > 85) {
+        score2 = Math.max(0, score2 - Math.min(25, 10 + (utilNum2 - 85)));
+      }
+    }
+    return { score: score2, breakdown: breakdown, meta: meta2 };
   }
 
   if (typeof module !== 'undefined' && module.exports) {

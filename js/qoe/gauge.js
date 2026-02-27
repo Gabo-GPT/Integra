@@ -9,7 +9,8 @@
   var ARC = 157;
   var DUR = 1000;
 
-  function colorFromValue(v) {
+  function colorFromValue(v, forceSeverity) {
+    if (forceSeverity) return forceSeverity;
     if (v == null || v < 0) return 'muted';
     var gc, vMin = 80, aMin = 60;
     if (typeof ConfigQoE !== 'undefined' && ConfigQoE.getConfig) {
@@ -32,10 +33,15 @@
     var id = p.id || 'g' + Date.now();
     var val = p.value;
     var label = p.label || '';
+    var subtitle = p.subtitle || '';
     var num = (val != null && !isNaN(val)) ? Math.round(Math.min(100, Math.max(0, val))) : null;
     var off = num != null ? ARC - (ARC * num) / 100 : ARC;
-    var col = colorFromValue(num);
+    var col = colorFromValue(num, p.forceSeverity);
     var sev = p.severity || 'normal';
+
+    var subCls = 'qoe-gauge-subtitle';
+    if (col === 'rojo') subCls += ' qoe-gauge-subtitle-saturada qoe-gauge-subtitle-critica';
+    else if (col === 'naranja') subCls += ' qoe-gauge-subtitle-saturada';
 
     return '<div class="qoe-gauge" data-gauge-id="' + escapeH(id) + '">' +
       (label ? '<div class="qoe-gauge-label">' + escapeH(label) + '</div>' : '') +
@@ -47,6 +53,7 @@
           '<text x="60" y="64" class="qoe-gauge-pct" text-anchor="middle">%</text>' +
         '</svg>' +
       '</div>' +
+      (subtitle ? '<div class="' + subCls + '">' + escapeH(subtitle) + '</div>' : '') +
     '</div>';
   }
 
@@ -62,7 +69,7 @@
     var val = p.value;
     var num = (val != null && !isNaN(val)) ? Math.round(Math.min(100, Math.max(0, val))) : null;
     var off = num != null ? ARC - (ARC * num) / 100 : ARC;
-    var col = colorFromValue(num);
+    var col = colorFromValue(num, p.forceSeverity);
     var sev = p.severity || 'normal';
     var animate = p.animate !== false;
 
@@ -70,9 +77,17 @@
     fill.style.strokeDashoffset = String(off);
     numEl.textContent = num != null ? num : '—';
 
-    fill.classList.remove('qoe-gauge-verde', 'qoe-gauge-amarillo', 'qoe-gauge-rojo', 'qoe-gauge-muted', 'qoe-gauge-sev-rf-pulse', 'qoe-gauge-sev-saturacion');
+    fill.classList.remove('qoe-gauge-verde', 'qoe-gauge-amarillo', 'qoe-gauge-rojo', 'qoe-gauge-naranja', 'qoe-gauge-muted', 'qoe-gauge-sev-rf-pulse', 'qoe-gauge-sev-saturacion');
     fill.classList.add('qoe-gauge-' + col);
     if (sev !== 'normal') fill.classList.add('qoe-gauge-sev-' + sev);
+
+    var subEl = root.querySelector('.qoe-gauge-subtitle');
+    if (subEl) {
+      subEl.textContent = p.subtitle || '';
+      subEl.classList.remove('qoe-gauge-subtitle-saturada', 'qoe-gauge-subtitle-critica');
+      if (col === 'rojo') subEl.classList.add('qoe-gauge-subtitle-saturada', 'qoe-gauge-subtitle-critica');
+      else if (col === 'naranja') subEl.classList.add('qoe-gauge-subtitle-saturada');
+    }
   }
 
   var api = { render: render, update: update };

@@ -484,6 +484,14 @@
     return 'Baja';
   }
 
+  function addSaturacionSiAplica(resultado, diag) {
+    var util = (diag.masivoPanel && diag.masivoPanel.utilization != null) ? diag.masivoPanel.utilization : (diag.raw && diag.raw.utilization != null) ? diag.raw.utilization : null;
+    if (util != null && !isNaN(util) && util > 80) {
+      var pct = Math.round(util);
+      resultado.accionOperativa.unshift('Saturación crítica detectada (' + pct + '%). Se sugiere migrar al cliente de portadora o realizar balanceo de carga.');
+    }
+  }
+
   function getRecommendations(diag, cmtsType) {
     var esMasivo = diag.masivo && diag.masivo.estado === 'masivo';
     var esDegradacion = diag.masivo && diag.masivo.estado === 'degradacion';
@@ -532,6 +540,7 @@
         condicion: 'Impacto real + errores/modemin + error ratio + SNR<32 + Util>70% (ventana 30 min, histéresis)',
         conclusion: 'Problema en canal upstream. Origen: infraestructura compartida, NO cliente individual.'
       });
+      addSaturacionSiAplica(resultado, diag);
       return resultado;
     }
 
@@ -539,6 +548,7 @@
       resultado.accionOperativa = ['1. Monitorear. Tasa de errores actual = 0 y tendencia bajando.', '2. No escalar a Planta.'];
       if (tree && tree.escalar) resultado.accionOperativa.unshift(tree.causa);
       resultado.recs.push({ accion: 'Evento pasado', condicion: 'Errores/min = 0, tendencia bajando', conclusion: 'Sin actividad actual. No es masiva.' });
+      addSaturacionSiAplica(resultado, diag);
       return resultado;
     }
 
@@ -546,6 +556,7 @@
       resultado.accionOperativa = ['1. Monitorear canal.', '2. Revisar health portadora si persiste.', '3. Visitas individuales permitidas.'];
       if (tree && tree.escalar) resultado.accionOperativa.unshift(tree.causa);
       resultado.recs.push({ accion: 'Degradación compartida', condicion: 'Score 40-75: RF/Util/Estabilidad con señales', conclusion: 'Monitorear. No bloquear visitas individuales.' });
+      addSaturacionSiAplica(resultado, diag);
       return resultado;
     }
 
@@ -599,6 +610,7 @@
     }
     resultado.accionOperativa = pasosParaVisita || [];
     if (tree && tree.escalar) resultado.accionOperativa.unshift(tree.causa);
+    addSaturacionSiAplica(resultado, diag);
 
     resultado.sugerirVisita = resultado.recs.some(function (r) { return r.sugiereVisita === true; });
 

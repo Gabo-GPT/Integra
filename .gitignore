@@ -10,6 +10,9 @@ npm-debug.log*
 .env
 .env.*
 
+# Azure Functions local
+api/local.settings.json
+
 # Build folders
 dist
 coverage

@@ -132,8 +132,10 @@
   }
   function _persistToStorage() {
     try {
-      var json = JSON.stringify(getData());
-      if (json !== _lastSavedJson && json.length <= MAX_STORAGE_BYTES) {
+      var d = getData();
+      var json = JSON.stringify(d);
+      if (json === _lastSavedJson) return;
+      if (json.length <= MAX_STORAGE_BYTES) {
         if (API_URL) {
           _pendingApiPut = true;
           _doPut(json, 1).catch(function () {
@@ -959,6 +961,16 @@
                 '<textarea id="qoeModemOutput" rows="8" placeholder="Pegar output..."></textarea>' +
               '</div>' +
             '</div>' +
+            '<details class="qoe-xpertrak-wrap"><summary>Datos Viavi Xpertrak (opcional)</summary>' +
+            '<div class="qoe-xpertrak-fields">' +
+              '<div class="qoe-field"><label for="qoeXpertrakQoe">QoE del Nodo (0-100)</label><input type="number" id="qoeXpertrakQoe" min="0" max="100" placeholder="86"></div>' +
+              '<div class="qoe-field"><label for="qoeXpertrakTendencia">Tendencia</label><select id="qoeXpertrakTendencia"><option value="">—</option><option value="estable">Estable</option><option value="caidas">Caídas en gráfica</option></select></div>' +
+              '<div class="qoe-field"><label for="qoeXpertrakUtilUs">Util. Upstream %</label><input type="number" id="qoeXpertrakUtilUs" min="0" max="100" placeholder="44"></div>' +
+              '<div class="qoe-field"><label for="qoeXpertrakUtilDs">Util. Downstream %</label><input type="number" id="qoeXpertrakUtilDs" min="0" max="100" placeholder="65"></div>' +
+              '<div class="qoe-field"><label for="qoeXpertrakAfectados">Módems afectados</label><input type="number" id="qoeXpertrakAfectados" min="0" placeholder="9"></div>' +
+              '<div class="qoe-field"><label for="qoeXpertrakEstresados">Módems estresados</label><input type="number" id="qoeXpertrakEstresados" min="0" placeholder="7"></div>' +
+              '<div class="qoe-field qoe-field-check"><label><input type="checkbox" id="qoeXpertrakClienteAfectado"> Cliente en grupo afectados</label></div>' +
+            '</div></details>' +
             '<button type="button" class="portal-btn portal-btn-primary" id="qoeBtnAnalizar">Ejecutar análisis</button>' +
             '<div class="qoe-analisis-msg" id="qoeAnalisisMsg" style="display:none"></div>' +
           '</div>' +
@@ -1545,7 +1557,10 @@
         if (mo === selMonth && y === selYear) opt.selected = true;
         selEl.appendChild(opt);
       }
-      selEl.addEventListener('change', function () { refreshTableroMensual(); });
+      if (!selEl._tableroMensualBound) {
+        selEl._tableroMensualBound = true;
+        selEl.addEventListener('change', refreshTableroMensual);
+      }
     }
     var btnExcel = $('btnTableroDescargarExcel');
     if (btnExcel && !btnExcel._tableroExcelBound) {
@@ -3484,6 +3499,11 @@
 
   function generarReporteTecnicoTexto(diag) {
     if (!diag || !diag.protocolo) return '';
+    var xpertrakFresh = typeof leerXpertrakDelDOM === 'function' ? leerXpertrakDelDOM() : null;
+    if (xpertrakFresh) {
+      xpertrakFresh.totalModems = diag.totalModems;
+      diag.xpertrak = xpertrakFresh;
+    }
     var p = diag.protocolo;
     var raw = diag.raw || {};
     var lines = [];
@@ -3521,6 +3541,33 @@
     lines.push('  Utilización Upstream: ' + (util != null ? util + '%' : 'N/A') + (util != null && util >= 70 ? ' [ALTA]' : ''));
     lines.push('  Ranging retries: ' + ((diag.estabilidad && diag.estabilidad.rangingRetries) != null ? diag.estabilidad.rangingRetries : 'N/A'));
     lines.push('');
+    var xp = diag.xpertrak;
+    if (xp) {
+      lines.push('── MÉTRICAS DE RED (XPERTRAK) ─────────────────────────────');
+      lines.push('\uD83D\uDCC8 Salud del Nodo (QoE): ' + (xp.qoeNodo != null ? xp.qoeNodo : '—') + ' / 100' + (xp.tendencia === 'caidas' ? ' [Tendencia: caídas en gráfica]' : ''));
+      lines.push('\uD83D\uDCCE Carga de Tráfico: US ' + (xp.utilUs != null ? xp.utilUs + '%' : '—') + ' | DS ' + (xp.utilDs != null ? xp.utilDs + '%' : '—'));
+      var totModems = xp.totalModems != null ? xp.totalModems : diag.totalModems;
+      lines.push('\uD83C\uDF65 Impacto en Zona: ' + (xp.afectados != null ? xp.afectados : '—') + ' afectados y ' + (xp.estresados != null ? xp.estresados : '—') + ' estresados de ' + (totModems != null ? totModems : '—') + ' módems');
+      lines.push('');
+      var conclBullets = [];
+      var qoeAlto = xp.qoeNodo != null && xp.qoeNodo >= 70;
+      var afectadosBajo = xp.afectados == null || xp.afectados <= 3;
+      var haySaturacion = (util != null && util > 80) || (xp.utilUs != null && xp.utilUs > 80);
+      if (xp.qoeNodo != null && xp.qoeNodo < 70) conclBullets.push('PROBLEMA DE RED DETECTADO (Falla masiva o ruido en zona).');
+      if (haySaturacion) conclBullets.push('SATURACIÓN DE CANAL confirmada (Coincide con métricas de CMTS).');
+      if (xp.clienteEnAfectados) conclBullets.push('FALLA DE SEGMENTO: Cliente en grupo de afectados' + (xp.afectados != null ? ' (' + xp.afectados + ' módems)' : '') + '.');
+      lines.push('── CONCLUSIÓN TÉCNICA ───────────────────────────────────');
+      conclBullets.forEach(function (c) { lines.push('  \u2022 ' + c); });
+      if (qoeAlto && afectadosBajo && !haySaturacion) {
+        lines.push('  La red está operando correctamente (' + xp.qoeNodo + ' QoE). El problema se limita exclusivamente a este cable módem.');
+      } else if (haySaturacion) {
+        var pctSat = util != null && util > 80 ? Math.round(util) : (xp.utilUs != null && xp.utilUs > 80 ? Math.round(xp.utilUs) : '—');
+        lines.push('  Se confirma saturación de subida (' + pctSat + '%) que impacta la experiencia de navegación.');
+      } else if (conclBullets.length === 0) {
+        lines.push('  Métricas Xpertrak dentro de rango. Sin anomalías de red detectadas.');
+      }
+      lines.push('');
+    }
     if (p.decisionTreeCausa) {
       lines.push('── DECISIÓN DEL MOTOR (ÁRBOL DE DECISIÓN) ────────────────');
       lines.push('  ' + p.decisionTreeCausa);
@@ -3541,33 +3588,42 @@
       (cc.technicalJustification || []).forEach(function (j) { lines.push('  - ' + j); });
       lines.push('');
     }
-    lines.push('── DIAGNÓSTICO ───────────────────────────────────────────');
-    if (p.esMasivo) {
-      var errStr = uncorr != null ? (uncorr >= 1000 ? Math.round(uncorr / 1000) + 'k' : uncorr) : 'N/A';
-      lines.push('  AFECTACIÓN MASIVA CONFIRMADA');
-      lines.push('  El canal presenta ' + (diag.totalModems != null ? diag.totalModems : 'N/A') + ' módems con ' + errStr + ' errores globales.');
-      lines.push('  Se requiere revisión del nodo y portadora en sitio.');
-      lines.push('  Acciones: Escalar a Planta Exterior. Revisar niveles RF del nodo.');
-    } else if (p.esDegradacion) {
-      lines.push('  DEGRADACIÓN COMPARTIDA');
-      lines.push('  Señales de degradación en canal. Monitorear. Visitas individuales permitidas.');
-    } else if (p.esEventoPasado) {
-      lines.push('  EVENTO PASADO');
-      lines.push('  Sin actividad actual de errores. Tendencia bajando. No escalar a Planta.');
-    } else {
-      var totalModems = diag.totalModems != null ? diag.totalModems : (diag.masivoPanel && diag.masivoPanel.totalModems);
-      var restoFrase = totalModems != null && totalModems > 1 ? (totalModems - 1) + ' módems' : 'demás equipos';
-      lines.push('  FALLA LOCAL CONFIRMADA');
-      lines.push('  El equipo presenta ' + (flaps != null ? flaps : 'N/A') + ' Flaps y ' + (uncorr != null ? (uncorr >= 1000 ? Math.round(uncorr / 1000) + 'k' : uncorr) : 'N/A') + ' errores.');
-      lines.push('  El resto del canal (' + restoFrase + ') está estable.');
-      lines.push('  Se requiere revisión de acometida, conectores y splitter en sitio.');
-    }
-    lines.push('');
-    if (p.accionOperativa && p.accionOperativa.length) {
-      lines.push('── ACCIONES SUGERIDAS ───────────────────────────────────');
-      p.accionOperativa.forEach(function (a, i) { lines.push('  ' + (i + 1) + '. ' + a); });
+    lines.push('── DIAGNÓSTICO DIFERENCIAL ────────────────────────────────');
+    var tieneNavLenta = util != null && util > 80;
+    var uncorrNum = uncorr != null ? (typeof uncorr === 'number' ? uncorr : parseInt(uncorr, 10)) : 0;
+    var flapsNum = flaps != null ? (typeof flaps === 'number' ? flaps : parseInt(flaps, 10)) : 0;
+    var tieneCaidas = uncorrNum > 100000 || (flapsNum > 0 && !isNaN(flapsNum));
+    if (tieneNavLenta) {
+      lines.push('\uD83D\uDCA1 SÍNTOMA: NAVEGACIÓN LENTA');
+      lines.push('Se debe a la SATURACIÓN DEL CANAL (' + Math.round(util) + '%). Problema de capacidad en zona. Requiere balanceo o migración.');
       lines.push('');
     }
+    if (tieneCaidas) {
+      var errStr = uncorr != null ? (uncorr >= 1000 ? Math.round(uncorr / 1000) + 'k' : uncorr) : '0';
+      lines.push('\uD83D\uDCA1 SÍNTOMA: CAÍDAS O INTERMITENCIA');
+      lines.push('Se debe a FALLA FÍSICA LOCAL (' + errStr + ' errores / ' + (flapsNum != null && !isNaN(flapsNum) ? flapsNum : '0') + ' flaps). Resto del nodo estable. Requiere revisión técnica en sitio.');
+      lines.push('');
+    }
+    if (!tieneNavLenta && !tieneCaidas) {
+      lines.push('  Sin síntomas críticos detectados. Métricas en rango o sin datos de saturación/errores.');
+      lines.push('');
+    }
+    lines.push('── DECISIÓN Y ACCIÓN ──────────────────────────────────────');
+    var estadoDec = tieneNavLenta || tieneCaidas ? 'SOPORTE LOCAL' : 'CONTINUAR MONITOREO';
+    lines.push('ESTADO: ' + estadoDec);
+    var accionItems = [];
+    if (tieneNavLenta) accionItems.push('Escalar a mantenimiento de red (Saturación).');
+    if (tieneCaidas) accionItems.push('Generar visita si hay reporte de desconexiones (Falla local).');
+    if (accionItems.length) {
+      lines.push('Acción: ' + accionItems.map(function (a, i) { return (i + 1) + '. ' + a; }).join(' '));
+    } else {
+      lines.push('Acción: Monitorear. Sin acciones inmediatas.');
+    }
+    if (p.accionOperativa && p.accionOperativa.length) {
+      lines.push('');
+      p.accionOperativa.forEach(function (a, i) { lines.push('  ' + (i + 1) + '. ' + a); });
+    }
+    lines.push('');
     lines.push('═══════════════════════════════════════════════════════════');
     return lines.join('\n');
   }
@@ -3614,10 +3670,33 @@
     document.body.removeChild(ta);
   }
 
+  function leerXpertrakDelDOM() {
+    var q = $('qoeXpertrakQoe'), t = $('qoeXpertrakTendencia'), us = $('qoeXpertrakUtilUs'), ds = $('qoeXpertrakUtilDs');
+    var aff = $('qoeXpertrakAfectados'), est = $('qoeXpertrakEstresados'), clienteAff = $('qoeXpertrakClienteAfectado');
+    function num(v) { var n = v != null && v.value !== '' ? parseFloat(v.value) : null; return (n != null && !isNaN(n)) ? n : null; }
+    var qoe = num(q), utilUs = num(us), utilDs = num(ds), afectados = num(aff), estresados = num(est);
+    var tieneDatos = qoe != null || utilUs != null || utilDs != null || afectados != null || estresados != null;
+    if (!tieneDatos && !(clienteAff && clienteAff.checked)) return null;
+    return {
+      qoeNodo: qoe,
+      tendencia: t && t.value ? t.value : null,
+      utilUs: utilUs,
+      utilDs: utilDs,
+      afectados: afectados,
+      estresados: estresados,
+      clienteEnAfectados: !!(clienteAff && clienteAff.checked)
+    };
+  }
+
   function updateQoeNocAnalyzer(modemOutput, upstreamOutput) {
     if (typeof NocAnalyzerQoE === 'undefined' || !NocAnalyzerQoE.analyze) return;
     var history = typeof getNocAfectacionHistory === 'function' ? getNocAfectacionHistory() : [];
     var diag = NocAnalyzerQoE.analyze(modemOutput || '', upstreamOutput || '', { history: history, now: Date.now() });
+    var xpertrak = leerXpertrakDelDOM();
+    if (xpertrak) {
+      xpertrak.totalModems = diag.totalModems;
+      diag.xpertrak = xpertrak;
+    }
     QOE_CMTS_PENDING.lastDiag = diag;
     function semaforoClass(c) { return 'qoe-semaforo-' + (c || 'muted'); }
     function setVal(parentId, val, color) {
@@ -3840,12 +3919,28 @@
     var estEl = $('qoeSummaryEstado'), modEl = $('qoeSummarySaludModem'), portEl = $('qoeSummarySaludPortadora'), probEl = $('qoeSummaryProbVisita');
     var estSym = (diag.globalEstado && diag.globalEstado.color === 'verde') ? '\uD83D\uDFE2' : (diag.globalEstado && diag.globalEstado.color === 'rojo') ? '\uD83D\uDD34' : (diag.globalEstado && diag.globalEstado.color === 'amarillo') ? '\uD83D\uDFE1' : '\uD83D\uDD35';
     if (estEl) estEl.textContent = 'Estado General: ' + estSym + ' ' + (diag.globalEstado ? diag.globalEstado.texto : '—');
+    var upRaw = (upstreamOutput && String(upstreamOutput).trim()) ? upstreamOutput : (modemOutput || '');
     var parsed = (typeof ParserQoE !== 'undefined' && ParserQoE.parseCmtsOutput)
-      ? ParserQoE.parseCmtsOutput({ modemOutput: modemOutput || '', upstreamOutput: upstreamOutput || '' }) : null;
+      ? ParserQoE.parseCmtsOutput({ modemOutput: modemOutput || '', upstreamOutput: upRaw }) : null;
     var scores = (parsed && typeof HealthScoresQoE !== 'undefined' && HealthScoresQoE.calculateHealthScores)
       ? HealthScoresQoE.calculateHealthScores(parsed) : null;
     var modemH = scores && scores.modemHealth != null ? scores.modemHealth : null;
     var carrierH = scores && scores.carrierHealth != null ? scores.carrierHealth : null;
+    var carrierMeta = scores && scores.carrierHealthMeta ? scores.carrierHealthMeta : {};
+    var utilDiag = (diag.masivoPanel && diag.masivoPanel.utilization != null) ? diag.masivoPanel.utilization : null;
+    var carrierUtil = carrierMeta.utilization != null ? carrierMeta.utilization : utilDiag;
+    var carrierSubtitle = carrierMeta.subtitle || (carrierUtil != null && carrierUtil > 80 ? 'Portadora Saturada' : 'Portadora Estable');
+    var carrierSeverity = carrierMeta.severity || null;
+    if (carrierUtil != null && carrierUtil > 80) {
+      carrierH = Math.round(carrierUtil);
+      carrierSubtitle = 'Portadora Saturada';
+      carrierSeverity = carrierUtil > 90 ? 'rojo' : 'naranja';
+    } else if (carrierH == null && (parsed && parsed.modem && parsed.modem.snr != null)) {
+      var snrFallback = parsed.modem.snr;
+      carrierH = snrFallback >= 32 ? 100 : Math.round(Math.max(0, (snrFallback / 32) * 100));
+      carrierSubtitle = 'Portadora Estable';
+      carrierSeverity = snrFallback > 30 ? 'verde' : 'amarillo';
+    }
     if (modEl) modEl.textContent = 'Salud Modem: ' + (modemH != null ? modemH + '%' : '—');
     if (portEl) portEl.textContent = 'Salud Portadora: ' + (carrierH != null ? carrierH + '%' : '—');
     var probVisita = (diag.protocolo && diag.protocolo.sugerirVisita) ? 75 : (diag.protocolo && diag.protocolo.visitabloqueada) ? 0 : 0;
@@ -3863,7 +3958,13 @@
     if (typeof GaugeQoE !== 'undefined' && GaugeQoE.render) {
       var modWrap = $('qoeGaugeModemWrap'), portWrap = $('qoeGaugePortadoraWrap');
       if (modWrap) modWrap.innerHTML = GaugeQoE.render({ id: 'gaugeModem', value: modemH, label: 'Salud Cable Modem' });
-      if (portWrap) portWrap.innerHTML = GaugeQoE.render({ id: 'gaugePortadora', value: carrierH, label: 'Salud Portadora' });
+      if (portWrap) portWrap.innerHTML = GaugeQoE.render({
+        id: 'gaugePortadora',
+        value: carrierH,
+        label: 'Salud Portadora',
+        subtitle: carrierSubtitle,
+        forceSeverity: carrierSeverity
+      });
     }
     var p = diag.protocolo || {};
     var diagForInterp = {
@@ -4666,54 +4767,89 @@
   }
 
   function refreshFromServerData() {
-    refreshGestionCasos();
-    refreshTableroMensual();
-    if (isAdmin()) {
-      refreshGestionOperacion();
-      refreshReincidencias(getData(), getGestionDataFromStorage());
-      refreshUsuariosPortal(getData());
-    } else {
-      refreshProductividadAgente();
-    }
+    if (document.hidden) return;
+    var raf = window.requestAnimationFrame || function (f) { setTimeout(f, 0); };
+    raf(function () {
+      var d = getData();
+      var gData = getGestionDataFromStorage();
+      refreshGestionCasos();
+      refreshTableroMensual();
+      if (isAdmin()) {
+        refreshGestionOperacion();
+        refreshReincidencias(d, gData);
+        refreshUsuariosPortal(d);
+      } else {
+        refreshProductividadAgente();
+      }
+    });
   }
 
   function setupRealtimeSync() {
     if (!API_URL) return;
     var POLL_MS = 5000;
+    var _pollInterval = null;
+    var _refreshDebounce = null;
+    var _pollAbort = null;
     function poll() {
-      if (document.visibilityState === 'hidden' || _saveTimer || _pendingApiPut) return;
-      fetch(getApiBase() + '/api/data', { cache: 'no-store' })
+      if (_saveTimer || _pendingApiPut) return;
+      _pollAbort = new AbortController();
+      var sig = _pollAbort.signal;
+      fetch(getApiBase() + '/api/data', { cache: 'no-store', signal: sig })
         .then(function (r) {
           if (!r.ok) return;
           return r.json();
         })
         .then(function (d) {
           if (!d) return;
-        var parsed = d && typeof d === 'object' ? d : {};
-        if (parsed.data && typeof parsed.data === 'object') parsed = parsed.data;
-        var incoming = JSON.stringify(parsed);
-        if (incoming === _lastSavedJson) return;
-        var current = getData();
-        var hasLocalData = Object.keys(current).length > 0;
-        var serverReturnedEmpty = Object.keys(parsed).length === 0;
-        if (hasLocalData && serverReturnedEmpty) return;
-        function mergeIfEmpty(parsed, current, key) {
-          var sv = parsed[key];
-          var lv = current[key];
-          if ((!sv || (Array.isArray(sv) && sv.length === 0) || (typeof sv === 'object' && Object.keys(sv).length === 0)) && lv && ((Array.isArray(lv) && lv.length > 0) || (typeof lv === 'object' && Object.keys(lv).length > 0))) parsed[key] = lv;
-        }
-        mergeIfEmpty(parsed, current, 'portalUsuarios');
-        mergeIfEmpty(parsed, current, 'intermitenciaRegistros');
-        mergeIfEmpty(parsed, current, 'auditoriasAgentes');
-        mergeIfEmpty(parsed, current, 'overridesPorcentajeAgentes');
-        setDataFromApi(parsed);
-        refreshFromServerData();
-      }).catch(function () {});
+          var parsed = d && typeof d === 'object' ? d : {};
+          if (parsed.data && typeof parsed.data === 'object') parsed = parsed.data;
+          var incoming = JSON.stringify(parsed);
+          if (incoming === _lastSavedJson) return;
+          var current = getData();
+          var hasLocalData = Object.keys(current).length > 0;
+          var serverReturnedEmpty = Object.keys(parsed).length === 0;
+          if (hasLocalData && serverReturnedEmpty) return;
+          function mergeIfEmpty(p, c, key) {
+            var sv = p[key], lv = c[key];
+            if ((!sv || (Array.isArray(sv) && sv.length === 0) || (typeof sv === 'object' && Object.keys(sv).length === 0)) && lv && ((Array.isArray(lv) && lv.length > 0) || (typeof lv === 'object' && Object.keys(lv).length > 0))) p[key] = lv;
+          }
+          mergeIfEmpty(parsed, current, 'portalUsuarios');
+          mergeIfEmpty(parsed, current, 'intermitenciaRegistros');
+          mergeIfEmpty(parsed, current, 'auditoriasAgentes');
+          mergeIfEmpty(parsed, current, 'overridesPorcentajeAgentes');
+          setDataFromApi(parsed);
+          if (_refreshDebounce) clearTimeout(_refreshDebounce);
+          _refreshDebounce = setTimeout(refreshFromServerData, 100);
+        }).catch(function (err) { if (err && err.name !== 'AbortError') { /* ignore */ } });
     }
-    setInterval(poll, POLL_MS);
+    function startPoll() {
+      if (_pollInterval) return;
+      _pollInterval = setInterval(poll, POLL_MS);
+      poll();
+    }
+    function stopPoll() {
+      if (_pollInterval) {
+        clearInterval(_pollInterval);
+        _pollInterval = null;
+      }
+      if (_refreshDebounce) {
+        clearTimeout(_refreshDebounce);
+        _refreshDebounce = null;
+      }
+      if (_pollAbort) {
+        _pollAbort.abort();
+        _pollAbort = null;
+      }
+    }
     document.addEventListener('visibilitychange', function () {
-      if (document.visibilityState === 'visible') poll();
+      if (document.visibilityState === 'visible') {
+        startPoll();
+      } else {
+        stopPoll();
+      }
     });
+    window.addEventListener('pagehide', stopPoll);
+    if (document.visibilityState === 'visible') startPoll();
   }
 
   function start() {
