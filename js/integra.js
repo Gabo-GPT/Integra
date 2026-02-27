@@ -2712,7 +2712,8 @@
         var col = sel.getAttribute('data-col');
         if (!agent || !col) return;
         var v = sel.value;
-        var val = v === '' ? null : (parseFloat(v) || null);
+        var parsed = parseFloat(v);
+        var val = (v === '' || isNaN(parsed)) ? null : parsed;
         setOverridePorcentaje(agent, col, val);
         flushSave();
         refreshTablaCalificaciones();
@@ -2875,7 +2876,8 @@
         var col = sel.getAttribute('data-col');
         if (!agent || !col) return;
         var v = sel.value;
-        var val = v === '' ? null : (parseFloat(v) || null);
+        var parsed = parseFloat(v);
+        var val = (v === '' || isNaN(parsed)) ? null : parsed;
         setOverridePorcentaje(agent, col, val);
         flushSave();
         refreshTablaPorcentaje();

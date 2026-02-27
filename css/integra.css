@@ -909,7 +909,7 @@ body {
 .tabla-calificaciones tbody tr:hover { background: rgba(6, 182, 212, 0.06); }
 .tabla-calificaciones tbody tr:nth-child(even) { background: rgba(0,0,0,0.1); }
 .tabla-calificaciones tbody tr:nth-child(even):hover { background: rgba(6, 182, 212, 0.08); }
-.tabla-cal-nombre { font-weight: 500; min-width: 180px; }
+.tabla-cal-nombre { font-weight: 500; min-width: 180px; font-size: 0.95rem; text-transform: uppercase; letter-spacing: 0.03em; }
 .tabla-cal-qmont { width: 4rem; text-align: center; font-variant-numeric: tabular-nums; }
 .tabla-cal-pct { text-align: center; font-variant-numeric: tabular-nums; min-width: 5rem; }
 .tabla-cal-gana { text-align: center; font-weight: 700; font-variant-numeric: tabular-nums; min-width: 5.5rem; }
@@ -924,11 +924,11 @@ body {
 .tabla-cal-gana-vacio { background: rgba(255,255,255,0.03); color: rgba(255,255,255,0.4); }
 .tabla-calificaciones-empty { display: none; margin: 1rem 0 0; padding: 1.25rem; font-size: 0.9rem; color: rgba(255,255,255,0.6); text-align: center; background: rgba(0,0,0,0.15); border-radius: 8px; }
 .tabla-cal-jefe-row { background: rgba(6, 182, 212, 0.12) !important; }
-.tabla-cal-jefe { font-weight: 700; font-size: 0.9rem; color: rgba(255,255,255,0.98); padding: 0.75rem 1rem !important; }
+.tabla-cal-jefe { font-weight: 700; font-size: 0.95rem; color: rgba(255,255,255,0.98); padding: 0.75rem 1rem !important; text-transform: uppercase; letter-spacing: 0.03em; }
 .tabla-cal-jefe-accion { padding: 0.6rem 1rem !important; text-align: right; vertical-align: middle; }
 .tabla-cal-jefe-toggle { width: 1.5rem; height: 1.5rem; padding: 0; border: 1px solid rgba(255,255,255,0.35); background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.95); font-size: 1rem; line-height: 1; cursor: pointer; border-radius: 4px; display: inline-flex; align-items: center; justify-content: center; transition: background 0.2s, border-color 0.2s; }
 .tabla-cal-jefe-toggle:hover { background: rgba(6, 182, 212, 0.35); border-color: rgba(6, 182, 212, 0.6); }
-.tabla-cal-agente { padding-left: 2rem !important; }
+.tabla-cal-agente { padding-left: 2rem !important; font-size: 0.95rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.03em; }
 
 .card-tabla-porcentaje { grid-column: 1 / -1; margin-top: 1rem; }
 .tabla-porcentaje-wrap { overflow-x: auto; margin: 0 -0.5rem; border-radius: 8px; background: #fff; border: 1px solid #d1d5db; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
@@ -941,7 +941,7 @@ body {
 .tabla-porcentaje td { color: #374151; background: #fff; }
 .tabla-porcentaje tbody tr:hover td { background: #f8fafc; }
 .tabla-pct-equipo { font-weight: 500; min-width: 220px; display: flex; align-items: center; gap: 0.5rem; }
-.tabla-pct-label { font-weight: 700; }
+.tabla-pct-label { font-weight: 700; font-size: 0.95rem; text-transform: uppercase; letter-spacing: 0.03em; }
 .tabla-pct-qmont { width: 4.5rem; text-align: center; font-variant-numeric: tabular-nums; }
 .tabla-pct-val { text-align: center; font-variant-numeric: tabular-nums; min-width: 5.5rem; }
 .tabla-pct-gana { text-align: center; font-variant-numeric: tabular-nums; min-width: 6rem; }
@@ -958,11 +958,11 @@ body {
 .tabla-pct-jefe-row:hover td { background: #f1f5f9 !important; }
 .tabla-pct-toggle { width: 1.25rem; height: 1.25rem; padding: 0; border: 1px solid #94a3b8; background: #fff; color: #475569; font-size: 0.75rem; line-height: 1; cursor: pointer; border-radius: 2px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; font-weight: 600; }
 .tabla-pct-toggle:hover { background: #e2e8f0; }
-.tabla-pct-agente { padding-left: 2rem !important; }
+.tabla-pct-agente { padding-left: 2rem !important; font-size: 0.95rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.03em; }
 .tabla-pct-agente-icon { display: inline-block; width: 0.5rem; height: 0.5rem; margin-right: 0.5rem; background: #94a3b8; border-radius: 50%; flex-shrink: 0; }
 .tabla-pct-total-row td { background: #f0fdf4 !important; font-weight: 700; }
 .tabla-pct-total-row:hover td { background: #dcfce7 !important; }
-.tabla-pct-total { font-weight: 700 !important; color: #166534; }
+.tabla-pct-total { font-weight: 700 !important; color: #166534; font-size: 0.95rem; text-transform: uppercase; letter-spacing: 0.03em; }
 .tabla-pct-total-spacer { display: inline-block; width: 1.25rem; margin-right: 0.5rem; }
 .tabla-porcentaje-empty { display: none; margin: 1rem 0 0; padding: 1.25rem; font-size: 0.9rem; color: #6b7280; text-align: center; background: #f3f4f6; border-radius: 8px; }
 
@@ -2573,7 +2573,7 @@ body {
 .top5-agentes-rank-3 { background: linear-gradient(135deg, #b45309, #92400e); color: #fef3c7; }
 .top5-agentes-rank-4, .top5-agentes-rank-5 { background: rgba(99, 102, 241, 0.3); color: rgba(199, 210, 254, 0.95); }
 .top5-agentes-leyenda { font-size: 0.75rem; color: rgba(167, 139, 250, 0.6); margin: -0.5rem 0 0.75rem; }
-.top5-agentes-nombre { flex: 1; font-size: 0.95rem; font-weight: 500; color: rgba(255,255,255,0.92); word-break: break-word; }
+.top5-agentes-nombre { flex: 1; font-size: 0.95rem; font-weight: 500; color: rgba(255,255,255,0.92); word-break: break-word; text-transform: uppercase; letter-spacing: 0.03em; }
 .top5-agentes-campo { display: flex; flex-direction: column; align-items: center; gap: 0.2rem; }
 .top5-agentes-etiqueta { font-size: 0.65rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: rgba(255,255,255,0.5); }
 .top5-agentes-minnota { font-size: 0.9rem; font-weight: 600; color: rgba(251, 191, 36, 0.95); background: rgba(251, 191, 36, 0.15); padding: 0.3rem 0.6rem; border-radius: 6px; min-width: 2.5rem; text-align: center; font-variant-numeric: tabular-nums; }
