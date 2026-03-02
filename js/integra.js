@@ -5008,25 +5008,43 @@
       showLogin();
     });
     var loginForm = $('loginForm');
+    var loginError = $('loginError');
+    function showLoginErr(msg) {
+      if (loginError) {
+        loginError.textContent = msg || '';
+        loginError.style.display = msg ? '' : 'none';
+      }
+    }
     if (loginForm) loginForm.addEventListener('submit', function (e) {
       e.preventDefault();
+      showLoginErr('');
       var user = String(($('loginUsuario') || {}).value || '').trim();
       var pass = ($('loginPassword') || {}).value || '';
-      if (!user) return;
+      if (!user) {
+        showLoginErr('Ingresa usuario o correo.');
+        return;
+      }
       var portal = findPortalUser(user, getData());
+      var list = (getData().portalUsuarios || []);
       if (portal) {
-        if (portal.clave !== pass) return;
+        if (portal.clave !== pass) {
+          showLoginErr('Usuario o contraseña incorrectos.');
+          return;
+        }
         saveData('currentUserName', portal.nombre || portal.usuario || user);
         saveData('currentUserUsuario', portal.usuario || user);
         saveData('currentUserAdmin', portal.role === 'administrador');
         saveData('currentUserRole', portal.role || 'fibra-optica');
         invalidateAdminCache();
-      } else {
-        saveData('currentUserName', user);
-        saveData('currentUserUsuario', user);
+      } else if (list.length === 0 && user === 'admin' && pass === 'admin') {
+        saveData('currentUserName', 'Administrador');
+        saveData('currentUserUsuario', 'admin');
         saveData('currentUserAdmin', true);
         saveData('currentUserRole', 'administrador');
         invalidateAdminCache();
+      } else {
+        showLoginErr('Usuario no registrado. Agrega usuarios en Agentes o usa admin/admin si es primera vez.');
+        return;
       }
       localStorage.setItem(SESSION_KEY, '1');
       refreshUserDisplay();

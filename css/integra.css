@@ -534,6 +534,13 @@ body {
   cursor: pointer;
 }
 .login-remember input { cursor: pointer; }
+.login-error {
+  margin: 0;
+  padding: 0.5rem 0;
+  font-size: 0.85rem;
+  color: var(--integra-rose, #f43f5e);
+  text-align: center;
+}
 .login-btn {
   padding: 0.95rem 1.75rem;
   margin-top: 0.5rem;
