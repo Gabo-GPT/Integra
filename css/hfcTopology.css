@@ -1,0 +1,268 @@
+/**
+ * HfcTopologyView - Topología granular HFC · Dashboard Industrial
+ * CMTS → NODO → TAP → DROP → SPLITTER → CONECTOR → MÓDEM
+ * 100% ancho · min 300px · Iconos 80x80 · Conexiones 6px
+ */
+.noc-topology-row,
+.noc-topology-inline,
+.hfc-topology-container {
+  margin-bottom: 0.5rem;
+  width: 100%;
+  max-width: 100%;
+}
+
+.noc-topology-inline .hfc-topology-view,
+.noc-topology-row .hfc-topology-view {
+  width: 100%;
+}
+
+.hfc-topology-view {
+  --hfc-seg-default: #38bdf8;
+  width: 100%;
+  min-height: 300px;
+  padding: 1.25rem;
+  background: rgba(10, 14, 23, 0.85);
+  border: 1px solid rgba(56, 189, 248, 0.2);
+  border-radius: 12px;
+  margin: 1rem 0;
+  box-sizing: border-box;
+}
+
+.hfc-topology-flow {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  gap: 0.5rem;
+  flex-wrap: nowrap;
+  min-height: 260px;
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0.75rem 0;
+  -webkit-overflow-scrolling: touch;
+}
+
+.hfc-topology-flow::-webkit-scrollbar { height: 6px; }
+.hfc-topology-flow::-webkit-scrollbar-track { background: rgba(30, 41, 59, 0.5); border-radius: 3px; }
+.hfc-topology-flow::-webkit-scrollbar-thumb { background: rgba(56, 189, 248, 0.4); border-radius: 3px; }
+
+.hfc-topology-node {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 80px;
+  min-width: 80px;
+  height: 80px;
+  padding: 0.5rem;
+  border-radius: 10px;
+  border: 2px solid var(--hfc-color, #38bdf8);
+  background: rgba(15, 23, 42, 0.95);
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+  transition: transform 0.25s, border-color 0.2s, box-shadow 0.2s;
+  position: relative;
+}
+
+/* Efecto de enfoque: nodo con falla 20% más grande */
+.hfc-topology-node.hfc-node-destacado {
+  transform: scale(1.2);
+}
+
+.hfc-topology-node[style*="--hfc-color:#22c55e"] {
+  box-shadow: 0 0 15px rgba(34, 197, 94, 0.3), 0 0 8px rgba(0, 0, 0, 0.4);
+}
+
+.hfc-topology-node[style*="--hfc-color:#f59e0b"] {
+  box-shadow: 0 0 15px rgba(245, 158, 11, 0.3), 0 0 8px rgba(0, 0, 0, 0.4);
+}
+
+.hfc-topology-node[style*="--hfc-color:#ef4444"] {
+  box-shadow: 0 0 15px rgba(239, 68, 68, 0.4), 0 0 8px rgba(0, 0, 0, 0.4);
+}
+
+.hfc-topology-node[style*="--hfc-color:#f97316"] {
+  box-shadow: 0 0 15px rgba(249, 115, 22, 0.4), 0 0 8px rgba(0, 0, 0, 0.4);
+}
+
+.hfc-node-icon {
+  font-size: 2.5rem;
+  line-height: 1;
+  width: 56px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--hfc-color, #38bdf8);
+  margin-bottom: 0.35rem;
+}
+
+.hfc-node-label {
+  font-size: 14px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #e2e8f0;
+  text-align: center;
+  line-height: 1.1;
+}
+
+.hfc-node-desc {
+  font-size: 0.65rem;
+  color: #94a3b8;
+  margin-top: 0.15rem;
+}
+
+
+/* Conector: naranja parpadeante */
+.hfc-topology-conector-parpadeante .hfc-conector-falla,
+.hfc-topology-conector-parpadeante .hfc-conector-falla .hfc-node-icon {
+  animation: hfc-conector-blink 0.6s ease-in-out infinite alternate;
+}
+
+@keyframes hfc-conector-blink {
+  from { opacity: 1; filter: brightness(1); }
+  to   { opacity: 0.75; filter: brightness(1.3); }
+}
+
+/* X roja gigante sobre NODO en falla masiva */
+.hfc-topology-nodo-x {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 2.5rem;
+  font-weight: 900;
+  color: #ef4444;
+  text-shadow: 0 0 10px #ef4444, 0 0 20px rgba(239, 68, 68, 0.8);
+  z-index: 2;
+  pointer-events: none;
+  animation: hfc-x-pulse 0.8s ease-in-out infinite alternate;
+}
+
+.hfc-nodo-masiva {
+  border-color: #ef4444 !important;
+  box-shadow: 0 0 20px rgba(239, 68, 68, 0.5), 0 0 8px rgba(0, 0, 0, 0.4) !important;
+}
+
+@keyframes hfc-x-pulse {
+  from { opacity: 0.9; transform: translate(-50%, -50%) scale(1); }
+  to   { opacity: 1;   transform: translate(-50%, -50%) scale(1.1); }
+}
+
+/* Tramos (segmentos) - conexiones 6px, glow en falla */
+.hfc-topology-segment {
+  flex: 1;
+  min-width: 24px;
+  height: 6px;
+  background: var(--hfc-seg-color, var(--hfc-seg-default));
+  border-radius: 3px;
+  margin: 0 4px;
+  transition: background 0.3s, box-shadow 0.3s;
+}
+
+/* Líneas con falla: brillo con sombra del color de la falla */
+.hfc-topology-segment[style*="#ef4444"] {
+  box-shadow: 0 0 12px rgba(239, 68, 68, 0.7), 0 0 6px rgba(239, 68, 68, 0.5);
+}
+
+.hfc-topology-segment[style*="#f59e0b"],
+.hfc-topology-segment[style*="#f97316"] {
+  box-shadow: 0 0 12px rgba(245, 158, 11, 0.6), 0 0 6px rgba(245, 158, 11, 0.4);
+}
+
+/* Parpadeante para masiva (NODO rojo neón) */
+.hfc-topology-parpadeante .hfc-nodo-masiva,
+.hfc-topology-parpadeante .hfc-nodo-masiva .hfc-node-icon,
+.hfc-topology-parpadeante .hfc-topology-nodo-x {
+  animation: hfc-parpadeo 0.8s ease-in-out infinite alternate;
+}
+
+@keyframes hfc-parpadeo {
+  from { opacity: 1; filter: brightness(1); }
+  to   { opacity: 0.7; filter: brightness(1.2); }
+}
+
+/* Leyenda */
+.hfc-topology-leyenda {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  justify-content: center;
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid rgba(71, 85, 105, 0.4);
+}
+
+.hfc-leyenda-item {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.75rem;
+  color: #94a3b8;
+}
+
+.hfc-leyenda-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.hfc-leyenda-parpadeo {
+  animation: hfc-parpadeo 0.8s ease-in-out infinite alternate;
+}
+
+/* Estado vacío */
+.hfc-topology-empty .hfc-topology-node {
+  border-color: rgba(71, 85, 105, 0.6);
+  opacity: 0.7;
+}
+
+.hfc-topology-empty .hfc-topology-segment {
+  background: linear-gradient(90deg, transparent, rgba(71, 85, 105, 0.4), transparent);
+}
+
+.hfc-topology-empty-msg {
+  text-align: center;
+  font-size: 0.85rem;
+  color: #64748b;
+  margin-top: 0.75rem;
+}
+
+/* Responsivo */
+@media (max-width: 900px) {
+  .hfc-topology-node {
+    width: 64px;
+    min-width: 64px;
+    height: 64px;
+  }
+  .hfc-node-icon {
+    font-size: 1.8rem;
+    width: 44px;
+    height: 44px;
+  }
+  .hfc-node-label { font-size: 11px; }
+}
+
+@media (max-width: 600px) {
+  .hfc-topology-flow {
+    flex-direction: column;
+    justify-content: flex-start;
+    overflow-x: visible;
+    overflow-y: auto;
+    min-height: 300px;
+  }
+  .hfc-topology-segment {
+    width: 6px;
+    min-width: 6px;
+    height: 24px;
+    flex: 0 0 24px;
+    background: var(--hfc-seg-color, var(--hfc-seg-default));
+    margin: 0;
+  }
+  .hfc-topology-node {
+    width: 80px;
+    min-width: 80px;
+    height: 80px;
+  }
+}
