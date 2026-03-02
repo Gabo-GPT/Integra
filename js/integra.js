@@ -5026,7 +5026,13 @@
       }
       var portal = findPortalUser(user, getData());
       var list = (getData().portalUsuarios || []);
-      if (portal) {
+      if (user.toLowerCase() === 'admin' && pass === 'admin') {
+        saveData('currentUserName', 'Administrador');
+        saveData('currentUserUsuario', 'admin');
+        saveData('currentUserAdmin', true);
+        saveData('currentUserRole', 'administrador');
+        invalidateAdminCache();
+      } else if (portal) {
         if (portal.clave !== pass) {
           showLoginErr('Usuario o contraseña incorrectos.');
           return;
@@ -5036,14 +5042,8 @@
         saveData('currentUserAdmin', portal.role === 'administrador');
         saveData('currentUserRole', portal.role || 'fibra-optica');
         invalidateAdminCache();
-      } else if (user.toLowerCase() === 'admin' && pass === 'admin') {
-        saveData('currentUserName', 'Administrador');
-        saveData('currentUserUsuario', 'admin');
-        saveData('currentUserAdmin', true);
-        saveData('currentUserRole', 'administrador');
-        invalidateAdminCache();
       } else {
-        showLoginErr('Usuario no registrado. Agrega usuarios en Agentes o usa admin/admin si es primera vez.');
+        showLoginErr('Usuario no registrado. Agrega usuarios en Agentes o usa admin/admin.');
         return;
       }
       localStorage.setItem(SESSION_KEY, '1');
