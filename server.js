@@ -73,13 +73,23 @@ app.get('/api/v1/inventario', (req, res) => {
   res.json(list);
 });
 
-/* Persistencia de datos (integra_data) para sincronización en producción */
+/* Persistencia: Supabase si está configurado, si no archivo local */
 const DATA_FILE = path.join(__dirname, 'data', 'integra_data.json');
+const SUPABASE_URL = process.env.SUPABASE_URL || '';
+const SUPABASE_KEY = process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_SERVICE_KEY || '';
+let supabase = null;
+if (SUPABASE_URL && SUPABASE_KEY) {
+  try {
+    supabase = require('@supabase/supabase-js').createClient(SUPABASE_URL, SUPABASE_KEY);
+    console.log('Supabase conectado');
+  } catch (e) { console.warn('Supabase:', e.message); }
+}
+
 function ensureDataDir() {
   const dir = path.dirname(DATA_FILE);
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 }
-function loadAppData() {
+function loadAppDataFile() {
   try {
     if (fs.existsSync(DATA_FILE)) {
       const raw = fs.readFileSync(DATA_FILE, 'utf8');
@@ -88,22 +98,42 @@ function loadAppData() {
   } catch (e) { console.warn('loadAppData:', e.message); }
   return {};
 }
-function saveAppData(data) {
+function saveAppDataFile(data) {
   try {
     ensureDataDir();
     fs.writeFileSync(DATA_FILE, JSON.stringify(data || {}, null, 0), 'utf8');
   } catch (e) { console.warn('saveAppData:', e.message); }
 }
 
-app.get('/api/data', (req, res) => {
-  const data = loadAppData();
+async function loadAppData() {
+  if (supabase) {
+    try {
+      const { data: row, error } = await supabase.from('app_data').select('value').eq('key', 'integra_data').single();
+      if (!error && row && row.value) return row.value;
+    } catch (e) { console.warn('Supabase load:', e.message); }
+    return {};
+  }
+  return loadAppDataFile();
+}
+async function saveAppData(data) {
+  if (supabase) {
+    try {
+      const { error } = await supabase.from('app_data').upsert({ key: 'integra_data', value: data || {}, updated_at: new Date().toISOString() }, { onConflict: 'key' });
+      if (!error) return;
+    } catch (e) { console.warn('Supabase save:', e.message); }
+  }
+  saveAppDataFile(data);
+}
+
+app.get('/api/data', async (req, res) => {
+  const data = await loadAppData();
   res.json(data);
 });
 
-app.put('/api/data', (req, res) => {
+app.put('/api/data', async (req, res) => {
   const data = req.body;
   if (data && typeof data === 'object') {
-    saveAppData(data);
+    await saveAppData(data);
     res.status(200).json({ ok: true });
   } else {
     res.status(400).json({ error: 'Body must be a JSON object' });

@@ -5036,7 +5036,7 @@
         saveData('currentUserAdmin', portal.role === 'administrador');
         saveData('currentUserRole', portal.role || 'fibra-optica');
         invalidateAdminCache();
-      } else if (list.length === 0 && user === 'admin' && pass === 'admin') {
+      } else if (user.toLowerCase() === 'admin' && pass === 'admin') {
         saveData('currentUserName', 'Administrador');
         saveData('currentUserUsuario', 'admin');
         saveData('currentUserAdmin', true);
