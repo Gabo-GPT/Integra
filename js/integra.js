@@ -5019,7 +5019,7 @@
       e.preventDefault();
       showLoginErr('');
       var user = String(($('loginUsuario') || {}).value || '').trim();
-      var pass = ($('loginPassword') || {}).value || '';
+      var pass = String(($('loginPassword') || {}).value || '').trim();
       if (!user) {
         showLoginErr('Ingresa usuario o correo.');
         return;
