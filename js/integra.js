@@ -5027,7 +5027,11 @@
       var portal = findPortalUser(user, getData());
       var list = (getData().portalUsuarios || []);
       var adminPass = localStorage.getItem('integra_admin_password') || 'admin';
-      if (user.toLowerCase() === 'admin' && pass === adminPass) {
+      if (user.toLowerCase() === 'admin') {
+        if (pass !== adminPass) {
+          showLoginErr('Usuario o contraseña incorrectos.');
+          return;
+        }
         saveData('currentUserName', 'Administrador');
         saveData('currentUserUsuario', 'admin');
         saveData('currentUserAdmin', true);
