@@ -5026,7 +5026,8 @@
       }
       var portal = findPortalUser(user, getData());
       var list = (getData().portalUsuarios || []);
-      if (user.toLowerCase() === 'admin' && pass === 'admin') {
+      var adminPass = localStorage.getItem('integra_admin_password') || 'admin';
+      if (user.toLowerCase() === 'admin' && pass === adminPass) {
         saveData('currentUserName', 'Administrador');
         saveData('currentUserUsuario', 'admin');
         saveData('currentUserAdmin', true);
@@ -5056,12 +5057,19 @@
     var perfilForm = $('perfilFormCambiarClave');
     if (perfilForm) perfilForm.addEventListener('submit', function (e) {
       e.preventDefault();
-      var actual = ($('perfilClaveActual') || {}).value || '';
-      var nueva = ($('perfilClaveNueva') || {}).value || '';
-      var confirmar = ($('perfilClaveConfirmar') || {}).value || '';
+      var actual = String(($('perfilClaveActual') || {}).value || '').trim();
+      var nueva = String(($('perfilClaveNueva') || {}).value || '').trim();
+      var confirmar = String(($('perfilClaveConfirmar') || {}).value || '').trim();
       var msgEl = $('perfilMsg');
-      var guardada = localStorage.getItem('integra_user_password') || '';
-      if (guardada && actual !== guardada) {
+      var usuarioActual = (getData().currentUserUsuario || '').trim().toLowerCase();
+      var claveEsperada = '';
+      if (usuarioActual === 'admin') {
+        claveEsperada = localStorage.getItem('integra_admin_password') || 'admin';
+      } else {
+        var portal = findPortalUser(usuarioActual, getData());
+        claveEsperada = (portal && portal.clave) ? String(portal.clave).trim() : '';
+      }
+      if (actual !== claveEsperada) {
         if (msgEl) { msgEl.textContent = 'Contraseña actual incorrecta.'; msgEl.style.color = 'var(--integra-rose)'; }
         return;
       }
@@ -5073,7 +5081,24 @@
         if (msgEl) { msgEl.textContent = 'Las contraseñas nuevas no coinciden.'; msgEl.style.color = 'var(--integra-rose)'; }
         return;
       }
-      try { localStorage.setItem('integra_user_password', nueva); } catch (x) {}
+      if (usuarioActual === 'admin') {
+        try { localStorage.setItem('integra_admin_password', nueva); } catch (x) {}
+      } else {
+        var portal = findPortalUser(usuarioActual, getData());
+        if (portal) {
+          var d = getData();
+          var list = (d.portalUsuarios && Array.isArray(d.portalUsuarios)) ? d.portalUsuarios : [];
+          var idx = -1;
+          for (var i = 0; i < list.length; i++) { if (String(list[i].usuario || '').toLowerCase() === usuarioActual) { idx = i; break; } }
+          if (idx >= 0) {
+            var arr = list.slice();
+            var u = arr[idx];
+            arr[idx] = { nombre: u.nombre, usuario: u.usuario, clave: nueva, estado: u.estado, role: u.role, jefeInmediato: u.jefeInmediato || '' };
+            saveData('portalUsuarios', trimArrayNewestLast(arr, MAX_PORTAL_USUARIOS));
+            flushSave();
+          }
+        }
+      }
       if (msgEl) { msgEl.textContent = 'Contraseña actualizada correctamente.'; msgEl.style.color = 'var(--integra-success)'; }
       perfilForm.reset();
     });
@@ -5082,7 +5107,7 @@
     var btnBackupPegar = $('btnBackupPegar');
     var inputBackup = $('perfilBackupFile');
     var msgBackup = $('perfilBackupMsg');
-    var BACKUP_KEYS = ['integra_data', 'integra_user_password', 'integra_logged_in', 'integra_gestion_operacion_collapsed', 'integra_calidad_collapsed', 'integra_formacion_collapsed', 'integra_gestion_operacion_hfc_collapsed', 'integra_dashboard_image'];
+    var BACKUP_KEYS = ['integra_data', 'integra_user_password', 'integra_admin_password', 'integra_logged_in', 'integra_gestion_operacion_collapsed', 'integra_calidad_collapsed', 'integra_formacion_collapsed', 'integra_gestion_operacion_hfc_collapsed', 'integra_dashboard_image'];
     function buildBackupData() {
       var backup = { app: 'Integra', version: '1.0', timestamp: new Date().toISOString(), data: {} };
       for (var i = 0; i < BACKUP_KEYS.length; i++) {
