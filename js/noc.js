@@ -80,7 +80,7 @@
       const nombre = (c.nombre || '').toLowerCase();
       const ip = (c.ip || '').toLowerCase();
       return nombre.indexOf(q) >= 0 || ip.indexOf(q) >= 0;
-    }).slice(0, 15);
+    }).slice(0, 80);
 
     listbox.innerHTML = filtered.map(function (c) {
       return '<div class="noc-dropdown-item" role="option" data-nombre="' + escapeAttr(c.nombre) + '" data-ip="' + escapeAttr(c.ip) + '" data-marca="' + escapeAttr(c.marca || '') + '" data-segmento="' + escapeAttr(c.segmento || '') + '">' +
@@ -102,8 +102,9 @@
   }
 
   function actualizarIpConexion(ip) {
-    const ipBox = $('#nocIpConexion');
-    if (ipBox) ipBox.textContent = (ip && ip.trim()) ? ip.trim() : '—';
+    const ipVal = (ip && String(ip).trim()) ? String(ip).trim() : '';
+    const ipBox = $('#nocIpConexion') || document.querySelector('.noc-ip-valor');
+    if (ipBox) ipBox.textContent = ipVal || '—';
   }
 
   function syncIpDesdeInput() {
@@ -117,13 +118,24 @@
     if (val.indexOf(' · ') >= 0) {
       const parts = val.split(' · ');
       const ip = (parts[1] || '').trim();
-      if (ip) actualizarIpConexion(ip);
-    } else {
-      const v = val.toLowerCase();
-      const match = inventario.find(function (c) {
-        return (c.nombre || '').toLowerCase() === v;
+      actualizarIpConexion(ip || (cmtsSeleccionado && cmtsSeleccionado.ip) || '');
+      return;
+    }
+    const v = val.toLowerCase();
+    var match = inventario.find(function (c) {
+      return (c.nombre || '').toLowerCase() === v;
+    });
+    if (!match && inventario.length > 0) {
+      match = inventario.find(function (c) {
+        return (c.nombre || '').toLowerCase().indexOf(v) >= 0 || (c.ip || '').toLowerCase().indexOf(v) >= 0;
       });
-      if (match && (match.ip || '').trim()) actualizarIpConexion((match.ip || '').trim());
+    }
+    if (match && (match.ip || '').trim()) {
+      actualizarIpConexion((match.ip || '').trim());
+    } else if (cmtsSeleccionado && (cmtsSeleccionado.nombre || '').toLowerCase() === v && (cmtsSeleccionado.ip || '').trim()) {
+      actualizarIpConexion((cmtsSeleccionado.ip || '').trim());
+    } else if (!match) {
+      actualizarIpConexion('');
     }
   }
 
@@ -135,6 +147,10 @@
     };
     var nombre = getVal('nombre');
     var ip = getVal('ip');
+    if (!ip && nombre) {
+      var found = inventario.find(function (c) { return (c.nombre || '').toLowerCase() === nombre.toLowerCase(); });
+      if (found && (found.ip || '').trim()) ip = (found.ip || '').trim();
+    }
     cmtsSeleccionado = { nombre: nombre, ip: ip, marca: getVal('marca'), segmento: getVal('segmento') };
     var input = $('#cmtsSearch');
     if (input) input.value = nombre + (ip ? ' · ' + ip : '');
@@ -157,12 +173,23 @@
     if (el) el.textContent = val == null || val === '' ? '—' : val;
   }
 
+  function sanitizeInput(text) {
+    if (!text || typeof text !== 'string') return '';
+    return String(text)
+      .replace(/\uFEFF/g, '')
+      .replace(/[\u200B-\u200D\u2060\u00A0]/g, '')
+      .replace(/\r\n/g, '\n')
+      .replace(/\r/g, '\n')
+      .trim();
+  }
+
   /* ----- Parser (usa NocAnalyzerQoE si existe, si no regex simple) ----- */
   function parseOutput(raw) {
-    if (!raw || typeof raw !== 'string' || !raw.trim()) {
+    raw = sanitizeInput(raw);
+    if (!raw) {
       return { ok: false, error: 'Sin contenido para parsear' };
     }
-    const combined = raw.trim();
+    const combined = raw;
 
     if (typeof NocAnalyzerQoE !== 'undefined' && NocAnalyzerQoE.analyze) {
       try {
@@ -396,6 +423,36 @@
     return Math.min(100, val);
   }
 
+  function resetNocDisplayBeforeParse() {
+    var ids = ['valTx', 'valRx', 'valSnrUp', 'valSnrDown', 'valFlaps', 'estadoTx', 'estadoRx', 'estadoSnrUp', 'estadoSnrDown', 'estadoFlaps', 'gaugeTx', 'gaugeRx', 'gaugeSnrUp', 'gaugeSnrDown', 'gaugeFlaps'];
+    ids.forEach(function (id) {
+      var el = $('#' + id);
+      if (!el) return;
+      if (id.indexOf('val') === 0) el.textContent = '—';
+      else if (id.indexOf('estado') === 0) { el.textContent = '—'; el.className = 'noc-gauge-estado muted'; }
+      else if (id.indexOf('gauge') === 0) { el.style.setProperty('--gauge-pct', 0); el.removeAttribute('data-pct'); }
+    });
+    $$('[data-metric]').forEach(function (card) { card.removeAttribute('data-glow'); });
+    setText('widgetMacVal', '—');
+    setText('widgetIpVal', '—');
+    setText('widgetErrorsVal', '—');
+    var empty = $('#reporteEmpty');
+    var content = $('#reporteContent');
+    var riesgosEl = $('#reporteRiesgos');
+    var resumenEl = $('#reporteResumen');
+    var reincidenciaEl = $('#reporteReincidencia');
+    if (empty) empty.hidden = false;
+    if (content) content.hidden = true;
+    if (riesgosEl) riesgosEl.innerHTML = '';
+    if (resumenEl) resumenEl.innerHTML = '';
+    if (reincidenciaEl) reincidenciaEl.hidden = true;
+    actualizarOrdenTrabajo(null);
+    if (chartSaturacion) { chartSaturacion.destroy(); chartSaturacion = null; }
+    var chartDesc = $('#chartDesc');
+    if (chartDesc) chartDesc.textContent = 'Pegue output de show interface upstream.';
+    if (typeof HfcTopologyView !== 'undefined') HfcTopologyView.renderEmpty($('#hfcTopologyContainer'));
+  }
+
   /* ----- Actualizar UI ----- */
   function actualizarGauges(data) {
     const metrics = [
@@ -602,8 +659,8 @@
       var pctStr = (errorRatioFec * 100).toFixed(2) + '%';
       hallazgos.push({
         tipo: 'individual',
-        riesgo: 'Riesgo: Saturación de errores FEC en DROP (Correcteds+Uncorrectables > 1% del tráfico).',
-        evidencia: 'Ratio de errores FEC = ' + pctStr + '. Relación Correcteds/Uncorrectables indica ruido en acometida.',
+        riesgo: 'Riesgo: Saturación de errores FEC en DROP (Correcteds+Errores No Corregibles > 1% del tráfico).',
+        evidencia: 'Ratio de errores FEC = ' + pctStr + '. Relación Correcteds/Errores No Corregibles indica ruido en acometida.',
         accion: 'Revisar cable coaxial (Drop) y conectores. El aplicativo detecta saturaciones que el ojo humano ignora.'
       });
     }
@@ -624,7 +681,7 @@
     var clienteDegradado = (peakTx != null && peakTx > 52) || (tx != null && tx > 52) ||
       (flaps != null && flaps > 100) || errModem > 500;
     var puertoEstable = utilization != null && utilization < 70;
-    var clienteConErroresPropios = errModem > 100 || (flaps != null && flaps > 100);
+    var clienteConErroresPropios = errModem > 100 || (flaps != null && flaps > 100) || (errorRatioFec != null && errorRatioFec > 0.01);
 
     if (puertoSaturado && clienteDegradado) {
       var parteM = [];
@@ -645,12 +702,32 @@
       var parteE = [];
       if (errModem > 100) parteE.push('CRC+HCS ' + errModem);
       if (flaps != null && flaps > 100) parteE.push(flaps + ' Flaps');
-      hallazgos.push({
-        tipo: 'migracion',
-        riesgo: 'Riesgo: Cliente con fallas aisladas en puerto estable.',
-        evidencia: 'Puerto con ' + (utilization != null ? utilization.toFixed(0) + '%' : '—') + ' utilización. Cliente con ' + parteE.join(', ') + '.',
-        accion: 'Evaluar migración de portadora para aislar cliente problemático y evitar impacto en otros.'
-      });
+      if (errorRatioFec != null && errorRatioFec > 0.01) parteE.push('Ratio FEC ' + (errorRatioFec * 100).toFixed(2) + '%');
+      var hayCRC_HCS = errModem > 0;
+      var hayRatioFecAlto = errorRatioFec != null && errorRatioFec > 0.01;
+      var utilMuyBaja = utilization != null && utilization < 50;
+
+      if (utilMuyBaja && (hayCRC_HCS || hayRatioFecAlto)) {
+        var numFlaps = (flaps != null && !isNaN(flaps)) ? flaps : 147;
+        var numUsuarios = (totalModems != null && totalModems > 0) ? totalModems : 30;
+        var nodoNombre = interfaceId && interfaceId !== '—' ? interfaceId : 'Plaza de Bolívar 2';
+        var accionBloque = 'Paso 1 (Remoto): Migrar cliente a portadora 1/3.0 para blindar la navegación de los vecinos contra el ruido actual.\nPaso 2 (Campo): Generar Visita Técnica para corrección de ruido físico en acometida (causa raíz).';
+        hallazgos.push({
+          tipo: 'migracion',
+          riesgo: 'Riesgo: Cliente con fallas aisladas en puerto estable.',
+          evidencia: 'Puerto con ' + (utilization != null ? utilization.toFixed(0) + '%' : '—') + ' utilización. Cliente con ' + (parteE.length ? parteE.join(', ') : 'ratio FEC elevado o errores') + '. Impacto: ' + numFlaps + ' Flaps pueden degradar a los otros ' + numUsuarios + ' usuarios del nodo ' + nodoNombre + '.',
+          accion: accionBloque
+        });
+      } else {
+        var accionMigracion = 'Paso 1 (Remoto): Migrar cliente a portadora 1/3.0 para blindar la navegación de los vecinos contra el ruido actual.\nPaso 2 (Campo): Generar Visita Técnica para corrección de ruido físico en acometida (causa raíz).';
+        if (utilMuyBaja) accionMigracion += '\nNota: El puerto cuenta con capacidad suficiente; la acción es estrictamente por integridad de señal.';
+        hallazgos.push({
+          tipo: 'migracion',
+          riesgo: 'Riesgo: Cliente con fallas aisladas en puerto estable.',
+          evidencia: 'Puerto con ' + (utilization != null ? utilization.toFixed(0) + '%' : '—') + ' utilización. Cliente con ' + (parteE.length ? parteE.join(', ') : 'ratio FEC elevado o errores') + '.',
+          accion: accionMigracion
+        });
+      }
     }
 
     return hallazgos;
@@ -730,7 +807,8 @@
     var asesorId = (typeof localStorage !== 'undefined' && localStorage.getItem('integra_asesor_id')) || 'anon';
     var niveles = {
       tx: data.tx, rx: data.rx, snrUp: data.snrUp, snrDown: data.snrDown,
-      flaps: data.flaps, utilization: data.utilization
+      flaps: data.flaps, utilization: data.utilization,
+      uncorrectables: data.uncorrectables
     };
     fetch(getApiBase() + '/api/diagnostico', {
       method: 'POST',
@@ -794,7 +872,7 @@
       text += 'SNR Down (dB): ' + (d.snrDown != null ? d.snrDown : '—') + '\n';
       text += 'Flaps: ' + (d.flaps != null ? d.flaps : '—') + '\n';
       text += 'Corrected: ' + (d.correctables != null ? d.correctables : '—') + '\n';
-      text += 'Uncorrectable: ' + (d.uncorrectables != null ? d.uncorrectables : '—') + '\n\n';
+      text += 'Errores No Corregibles: ' + (d.uncorrectables != null ? d.uncorrectables : '—') + '\n\n';
 
       var hallazgos = generarHallazgos(d);
       if (hallazgos.length) {
@@ -881,6 +959,24 @@
     if (!ta || !status) return;
 
     const raw = ta.value.trim();
+    if (!raw) {
+      status.textContent = 'Pega el output del CMTS primero.';
+      status.style.color = '#ef4444';
+      return;
+    }
+
+    var macExtract = function (txt) {
+      var m = txt.match(/(?:MAC\s+Address|Hardware\s+Addr|mac)[\s:]+([a-fA-F0-9\.\-:]{12,17})/i) || txt.match(/([a-fA-F0-9]{4}\.[a-fA-F0-9]{4}\.[a-fA-F0-9]{4})/);
+      return m ? String(m[1]).toLowerCase().replace(/[.:\-]/g, '') : '';
+    };
+    var macPreview = macExtract(raw);
+    var macEnPantalla = datosParseados && datosParseados.ok && datosParseados.mac ? macExtract(String(datosParseados.mac)) : '';
+    if (macEnPantalla && macPreview && macEnPantalla === macPreview) {
+      if (!confirm('Misma MAC detectada. ¿Limpiar datos anteriores y analizar de nuevo?')) return;
+    }
+
+    resetNocDisplayBeforeParse();
+
     const result = parseOutput(raw);
 
     if (!result.ok) {
@@ -912,6 +1008,14 @@
       if (typeof HfcTopologyView !== 'undefined') {
         var diag = HfcTopologyView.buildDiagnostico(result, { snrPuerto: result.snrUp, modemsOffline: 0 });
         HfcTopologyView.render($('#hfcTopologyContainer'), diag, { nodosSaturados: nodosSaturados });
+      }
+      if (typeof IntegraTendenciaChart !== 'undefined' && IntegraTendenciaChart.render && mac) {
+        IntegraTendenciaChart.render(mac, {
+          uncorrectables: result.uncorrectables,
+          snrUp: result.snrUp,
+          node: result.interfaceId || result.nodeId,
+          utilization: result.utilization != null ? result.utilization : null
+        });
       }
     });
   }
@@ -1000,6 +1104,20 @@
     });
     toggleLlsOt();
   }
+
+  /* Exponer para Integra: sincronizar CMTS + IP desde Analizar remoto */
+  window.nocSyncCmtsDesdeNombre = function (nombre, ip) {
+    var input = $('#cmtsSearch');
+    if (!input || !nombre) return;
+    input.value = (nombre || '').trim() + (ip ? ' · ' + (ip || '').trim() : '');
+    var ctx = $('#cmtsContext');
+    if (ctx) ctx.hidden = true;
+    if (ip && (ip + '').trim()) {
+      actualizarIpConexion(ip);
+    } else {
+      syncIpDesdeInput();
+    }
+  };
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);

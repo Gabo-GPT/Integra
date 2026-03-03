@@ -36,3 +36,13 @@ CREATE INDEX IF NOT EXISTS idx_diagnostico_reports_node_rx ON diagnostico_report
 
 ALTER TABLE diagnostico_reports ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Allow public read write diagnostico" ON diagnostico_reports FOR ALL USING (true) WITH CHECK (true);
+
+-- Vista para historial de diagnósticos (uncorrectables, snr_up) usada por gráfico de tendencia
+CREATE OR REPLACE VIEW historial_diagnosticos AS
+SELECT
+  mac,
+  COALESCE((niveles->>'uncorrectables')::numeric, 0) AS uncorrectables,
+  (niveles->>'snrUp')::numeric AS snr_up,
+  created_at
+FROM diagnostico_reports
+WHERE niveles IS NOT NULL;

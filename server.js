@@ -21,25 +21,42 @@ app.use(express.json({ limit: '256kb' }));
 app.use(express.static(__dirname));
 
 const inventarioPaths = [
-  path.join(__dirname, 'config', 'inventario_cmts.json'),
   path.join(__dirname, 'config', 'cmts_inventory.json'),
+  path.join(__dirname, 'config', 'inventario_cmts.json'),
   path.join(__dirname, 'inventario_cmts.json')
 ];
 let _cmtsCache = null;
 
+function parseMarca(raw) {
+  if (!raw || typeof raw !== 'string') return '';
+  const first = String(raw).split(/[|,]/)[0] || '';
+  return first.trim().toLowerCase();
+}
 function loadSingleList(p) {
   try {
     if (!fs.existsSync(p)) return [];
     const data = fs.readFileSync(p, 'utf8');
-    const parsed = JSON.parse(data);
-    const list = Array.isArray(parsed) ? parsed : (parsed.cmts || parsed.items || []);
+    let list = [];
+    try {
+      const parsed = JSON.parse(data);
+      list = Array.isArray(parsed) ? parsed : (parsed.cmts || parsed.items || []);
+    } catch (jsonErr) {
+      const lines = data.split(/\r?\n/).filter(l => l.trim());
+      for (const line of lines) {
+        const m = line.match(/^([^\t]+)\t+([^\t]+)\t*(.*)$/);
+        if (m) {
+          const marca = parseMarca(m[3]);
+          if (m[1].trim() && m[2].trim()) list.push({ nombre: m[1].trim(), ip: m[2].trim(), marca });
+        }
+      }
+    }
     return list
       .filter(c => c && (c.nombre || c.ip))
       .map(c => ({
         nombre: (c.nombre || c.name || '').trim(),
         ip: (c.ip || '').trim(),
-        marca: ((c.marca || c.vendor || c.brand || '')).toLowerCase(),
-        segmento: c.segmento || c.segment || ''
+        marca: (parseMarca(c.marca || c.vendor || c.brand) || (c.marca || c.vendor || c.brand || '').toString().trim()).toLowerCase(),
+        segmento: (c.segmento || c.segment || '').trim()
       }));
   } catch (e) {
     return [];
@@ -143,6 +160,7 @@ app.put('/api/data', async (req, res) => {
 /* Memoria persistente: diagnósticos para base de conocimientos compartida */
 app.post('/api/diagnostico', async (req, res) => {
   const body = req.body || {};
+  console.log('Texto recibido en el backend:', JSON.stringify(body, null, 0));
   const mac = (body.mac || '').toString().trim();
   if (!mac) {
     return res.status(400).json({ error: 'mac es requerido' });
@@ -159,8 +177,9 @@ app.post('/api/diagnostico', async (req, res) => {
 
   if (supabase) {
     try {
+      const created_at = new Date().toISOString();
       const { error } = await supabase.from('diagnostico_reports').insert({
-        mac, niveles, errores_fec, asesor_id, interface_id, node_id, rx_alto
+        mac, niveles, errores_fec, asesor_id, interface_id, node_id, rx_alto, created_at
       });
       if (error) {
         console.warn('Supabase diagnostico insert:', error.message);
@@ -204,6 +223,50 @@ app.get('/api/diagnostico/reincidencia', async (req, res) => {
   res.json({ reincidente: false, count: 0, mensaje: null });
 });
 
+/* Historial de diagnósticos por MAC (gráfico Tendencia Capti) */
+app.get('/api/history/:mac', async (req, res) => {
+  const mac = (req.params.mac || '').toString().trim();
+  if (!mac) {
+    return res.status(400).json({ error: 'mac es requerido' });
+  }
+  if (!supabase) {
+    return res.json({ data: [] });
+  }
+  try {
+    let data = [];
+    const { data: rowsView, error: errView } = await supabase
+      .from('historial_diagnosticos')
+      .select('uncorrectables, snr_up, created_at')
+      .eq('mac', mac)
+      .order('created_at', { ascending: true })
+      .limit(50);
+    if (!errView && rowsView && rowsView.length >= 0) {
+      data = rowsView.map(r => ({
+        uncorrectables: r.uncorrectables != null ? Number(r.uncorrectables) : null,
+        snr_up: r.snr_up != null ? Number(r.snr_up) : null,
+        created_at: r.created_at
+      })).filter(r => r.uncorrectables != null || r.snr_up != null);
+    } else {
+      const { data: rows, error } = await supabase
+        .from('diagnostico_reports')
+        .select('niveles, created_at')
+        .eq('mac', mac)
+        .order('created_at', { ascending: true })
+        .limit(50);
+      if (!error && rows) {
+        data = rows.map(r => ({
+          uncorrectables: (r.niveles && r.niveles.uncorrectables != null) ? Number(r.niveles.uncorrectables) : null,
+          snr_up: (r.niveles && r.niveles.snrUp != null) ? Number(r.niveles.snrUp) : null,
+          created_at: r.created_at
+        })).filter(r => r.uncorrectables != null || r.snr_up != null);
+      }
+    }
+    return res.json({ data });
+  } catch (e) {
+    return res.status(500).json({ error: e.message });
+  }
+});
+
 /* Historial por nodo: nodos con 3+ reportes de RX alto en la última hora (para topología parpadeante) */
 app.get('/api/diagnostico/historial-nodos', async (req, res) => {
   if (!supabase) {
@@ -235,5 +298,5 @@ app.get('/api/diagnostico/historial-nodos', async (req, res) => {
 
 app.listen(PORT, () => {
   console.log('Integra Local · Dashboard NOC Nivel 3 en http://localhost:' + PORT);
-  console.log('API: GET /api/v1/cmts | GET /api/data | PUT /api/data | POST /api/diagnostico | GET /api/diagnostico/reincidencia | GET /api/diagnostico/historial-nodos');
+  console.log('API: GET /api/v1/cmts | GET /api/data | PUT /api/data | POST /api/diagnostico | GET /api/diagnostico/reincidencia | GET /api/diagnostico/historial-nodos | GET /api/history/:mac');
 });

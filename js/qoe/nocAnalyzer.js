@@ -80,6 +80,7 @@
       if (m) { var dspwr = parseNum(m[2]); if (dspwr != null && !isNaN(dspwr) && String(m[2]) !== '-') out.rx = dspwr; }
     }
     /* Multi-canal DS: extraer potencias por canal para desbalance (delta) - tabla Arris/CASA */
+    /* Sin /g persistente: cada exec sobre texto nuevo; reset lastIndex al salir para evitar estado entre llamadas */
     var rxChannels = [];
     var rxChanRe = /(\d+[\/\-]\d+[\/\-]\d+[\/\-]?\d*)[\s\-]+([\d.,\-]+)\s+([\d.,\-]+)\s+([\d.,\-]+)\s+([\d.,\-]+)\s+([\d.,\-]+)/g;
     var rxChanM;
@@ -87,6 +88,7 @@
       var dspwr = parseNum(rxChanM[6]);
       if (dspwr != null && !isNaN(dspwr) && dspwr >= -25 && dspwr <= 25) rxChannels.push(dspwr);
     }
+    rxChanRe.lastIndex = 0;
     if (rxChannels.length < 2) {
       rxChannels = [];
       rxChanRe = /(?:logical-channel|Logical.?channel|channel)\s*\d+[\s\S]*?([\d.,\-]+)\s*dBmV/gi;
@@ -94,6 +96,7 @@
         var v = parseNum(rxChanM[1]);
         if (v != null && !isNaN(v)) rxChannels.push(v);
       }
+      rxChanRe.lastIndex = 0;
     }
     if (rxChannels.length >= 2) {
       var minR = Math.min.apply(null, rxChannels);
@@ -580,11 +583,11 @@
       var uncorrNum = uncorr != null ? uncorr : 0;
       var sugiereVisitaSnr = uncorrNum > 100000;
       if (sugiereVisitaSnr) {
-        resultado.recs.push({ accion: 'SNR Up crítico', condicion: 'SNR Up (' + diag.snrUp.valor + ' dB) < 25 Y Uncorrectables (' + uncorrNum + ') > 100k', conclusion: 'Ruido en upstream. Enviar visita.', prioridad: 'alta', sugiereVisita: true });
+        resultado.recs.push({ accion: 'SNR Up crítico', condicion: 'SNR Up (' + diag.snrUp.valor + ' dB) < 25 Y Errores No Corregibles (' + uncorrNum + ') > 100k', conclusion: 'Ruido en upstream. Enviar visita.', prioridad: 'alta', sugiereVisita: true });
         if (!pasosParaVisita) pasosParaVisita = ['1. Individual: acometida o modem.', '2. Si varios en canal: revisar portadora CMTS.', '3. Migrar a otra US si aplica.'];
       } else {
         resultado.recs.push({ accion: 'SNR Up crítico', condicion: 'SNR Up (' + diag.snrUp.valor + ' dB) < 25 pero errores actuales bajos (' + uncorrNum + ')', conclusion: 'Monitoreo - No enviar visita aún.', prioridad: 'media', sugiereVisita: false });
-        if (!pasosParaVisita) pasosParaVisita = ['1. Monitorear evolución.', '2. Enviar visita solo si Uncorrectables superan 100k.'];
+        if (!pasosParaVisita) pasosParaVisita = ['1. Monitorear evolución.', '2. Enviar visita solo si Errores No Corregibles superan 100k.'];
       }
     }
     if (diag.snrDown && diag.snrDown.estado === 'critico') {
@@ -603,7 +606,7 @@
     }
     var uncorr = (diag.masivoPanel && diag.masivoPanel.uncorrectablesGlobal != null) ? diag.masivoPanel.uncorrectablesGlobal : (diag.raw && diag.raw.uncorrectables);
     if (uncorr != null && uncorr > 0) {
-      resultado.recs.push({ accion: 'Alerta', condicion: 'Uncorrectables > 0 (' + uncorr + ')', conclusion: 'Indica pérdida de datos real que el CMTS no pudo reparar.', prioridad: 'alerta', sugiereVisita: false });
+      resultado.recs.push({ accion: 'Alerta', condicion: 'Errores No Corregibles > 0 (' + uncorr + ')', conclusion: 'Indica pérdida de datos real que el CMTS no pudo reparar.', prioridad: 'alerta', sugiereVisita: false });
     }
     if (resultado.recs.length === 0) {
       resultado.recs.push({ accion: 'Parámetros en rango', condicion: 'Sin condiciones críticas', conclusion: 'Continuar monitoreo.', prioridad: 'baja', sugiereVisita: false });
@@ -653,7 +656,7 @@
       var esMasivo = diag.masivo && diag.masivo.estado === 'masivo';
       var puedeAfirmarDanoInterno = !esMasivo && (errRatio != null && errRatio > 0.02) && (ratePerMinHall != null && ratePerMinHall > 50) && snrDegradado;
       var uncorrFrase = uncorr === 0 ? 'Cero. Sin pérdida de datos.' : (uncorr < 100000 ? 'Acumulado elevado. Revisar actividad actual (errores/min).' : (puedeAfirmarDanoInterno ? 'Crítico. Actividad actual alta + SNR degradado + T4. Origen probable en cableado interno o conector.' : 'Acumulado alto. Sin actividad actual significativa ni T3/T4. Monitorear evolución.'));
-      hallazgos.push({ metrica: 'Pérdida de datos (Uncorrectables)', valor: uncorrK + (ratePerMinHall != null ? ' · ' + ratePerMinHall.toFixed(0) + '/min' : ''), semaforo: uncorr === 0 ? 'verde' : (ratePerMinHall != null && ratePerMinHall > 50 ? 'rojo' : (uncorr < 100000 ? 'amarillo' : 'amarillo')), frase: uncorrFrase });
+      hallazgos.push({ metrica: 'Pérdida de datos (Errores No Corregibles)', valor: uncorrK + (ratePerMinHall != null ? ' · ' + ratePerMinHall.toFixed(0) + '/min' : ''), semaforo: uncorr === 0 ? 'verde' : (ratePerMinHall != null && ratePerMinHall > 50 ? 'rojo' : (uncorr < 100000 ? 'amarillo' : 'amarillo')), frase: uncorrFrase });
     }
     var flaps = diag.estabilidad && diag.estabilidad.flaps;
     if (flaps != null && flaps !== 'N/A') {
@@ -701,7 +704,19 @@
     };
   }
 
+  function sanitizeInput(text) {
+    if (!text || typeof text !== 'string') return '';
+    return String(text)
+      .replace(/\uFEFF/g, '')
+      .replace(/[\u200B-\u200D\u2060\u00A0]/g, '')
+      .replace(/\r\n/g, '\n')
+      .replace(/\r/g, '\n')
+      .trim();
+  }
+
   function analyze(modemOutput, upstreamOutput, context) {
+    modemOutput = sanitizeInput(modemOutput);
+    upstreamOutput = sanitizeInput(upstreamOutput);
     var combined = [modemOutput, upstreamOutput].filter(Boolean).join('\n');
     var cmtsType = detectCmtsType(combined);
     var metrics = extractMetrics(modemOutput, upstreamOutput);

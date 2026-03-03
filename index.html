@@ -1125,7 +1125,7 @@
           <div class="noc-widgets-inline">
             <div class="noc-widget card-noc"><span class="noc-widget-label">MAC</span><span class="noc-widget-val" id="widgetMacVal">—</span></div>
             <div class="noc-widget card-noc"><span class="noc-widget-label">IP</span><span class="noc-widget-val" id="widgetIpVal">—</span></div>
-            <div class="noc-widget card-noc"><span class="noc-widget-label">Corrected / Uncorrectable</span><span class="noc-widget-val" id="widgetErrorsVal">—</span></div>
+            <div class="noc-widget card-noc"><span class="noc-widget-label">Corrected / Errores No Corregibles</span><span class="noc-widget-val" id="widgetErrorsVal">—</span></div>
           </div>
           <div class="noc-topology-inline card-noc">
             <h3 class="noc-chart-title">Topología HFC · Flujo de señal</h3>
@@ -1156,6 +1156,24 @@
                 </div>
               </div>
             </div>
+          </div>
+          <div class="noc-tendencia-card noc-tendencia-card-capti card-noc" id="tendenciaCard" style="display:none">
+            <div class="noc-tendencia-header">
+              <div class="noc-tendencia-header-left">
+                <span class="noc-tendencia-pulse" id="tendenciaPulseIcon" aria-hidden="true"></span>
+                <h3 class="noc-chart-title" id="tendenciaChartTitle">Tendencia de Señal</h3>
+              </div>
+              <div class="noc-tendencia-badge-capti" id="tendenciaBadgeNodo">
+                <span id="tendenciaBadgeNodoVal">—</span>
+                <span class="noc-tendencia-badge-sep">·</span>
+                <span id="tendenciaBadgeUtil">0%</span>
+              </div>
+            </div>
+            <div class="noc-tendencia-alerta" id="tendenciaAlerta" hidden></div>
+            <div class="noc-tendencia-wrap noc-tendencia-canvas-capti">
+              <canvas id="tendenciaChart"></canvas>
+            </div>
+            <div class="noc-tendencia-leyenda" id="tendenciaLeyenda" hidden><span class="noc-leyenda-badge" id="tendenciaLeyendaBadge"></span></div>
           </div>
           </div>
         </div>

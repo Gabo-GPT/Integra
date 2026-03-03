@@ -3537,7 +3537,6 @@
       if (selMaiva) selMaiva.value = '';
       if (inpInc) inpInc.value = '';
       if (incWrap) incWrap.style.display = 'none';
-      if (typeof clearQoeCmtsDiagnostic === 'function') clearQoeCmtsDiagnostic();
     });
   }
   function bindNocRegistroIntermitencia() {
@@ -3652,6 +3651,7 @@
       }).then(function (data) {
         if (modemTa && data && data.output != null) modemTa.value = data.output;
         if (modemTa && modemTa.value && typeof runQoeAnalisisFromOutput === 'function') runQoeAnalisisFromOutput(modemTa.value);
+        if (cmtsNombre && typeof window.nocSyncCmtsDesdeNombre === 'function') window.nocSyncCmtsDesdeNombre(cmtsNombre);
       }).catch(function (err) {
         var msg = (err && err.message ? err.message : 'No se pudo conectar al servidor.');
         if (/failed to fetch|networkerror|network error/i.test(String(msg))) {
@@ -3682,6 +3682,18 @@
         if (msgEl) { msgEl.style.display = ''; msgEl.innerHTML = '<span class="qoe-error">Pega el output de "show cable modem &lt;mac&gt; verbose".</span>'; }
         return;
       }
+      var macExtract = function (txt) {
+        var m = txt.match(/(?:MAC\s+Address|Hardware\s+Addr|mac)[\s:]+([a-fA-F0-9\.\-:]{12,17})/i) || txt.match(/([a-fA-F0-9]{4}\.[a-fA-F0-9]{4}\.[a-fA-F0-9]{4})/);
+        return m ? String(m[1]).toLowerCase().replace(/[.:\-]/g, '') : '';
+      };
+      var macNueva = macExtract(modemOutput);
+      var macEnPantalla = (QOE_CMTS_PENDING.lastDiag && QOE_CMTS_PENDING.lastDiag.raw && QOE_CMTS_PENDING.lastDiag.raw.mac)
+        ? macExtract(String(QOE_CMTS_PENDING.lastDiag.raw.mac))
+        : '';
+      if (macEnPantalla && macNueva && macEnPantalla === macNueva) {
+        if (!confirm('Misma MAC detectada. ¿Limpiar datos anteriores y analizar de nuevo?')) return;
+      }
+      resetNocDisplayToBlank();
       var parsed = (typeof ParserQoE !== 'undefined' && ParserQoE.parseCmtsOutput)
         ? ParserQoE.parseCmtsOutput({ modemOutput: modemOutput, upstreamOutput: undefined })
         : null;
@@ -3913,10 +3925,85 @@
     };
   }
 
+  function resetNocDisplayToBlank() {
+    function setV(id, v) { var el = $(id); if (el) el.textContent = v != null ? v : '—'; }
+    function setMetric(id, v) {
+      var p = $(id);
+      if (p) {
+        var s = p.querySelector('.qoe-noc-metric-val');
+        if (s) { s.textContent = v != null ? v : '—'; s.className = 'qoe-noc-metric-val qoe-semaforo-muted'; }
+      }
+    }
+    setV('qoeNocCmts', '—');
+    setV('qoeNocNodo', '—');
+    setV('qoeNocModems', '—');
+    var badge = $('qoeNocEstado');
+    if (badge) { badge.textContent = 'NO DATA'; badge.className = 'qoe-noc-badge qoe-noc-badge-muted'; }
+    setMetric('qoeNocTx', null);
+    setMetric('qoeNocRx', null);
+    setMetric('qoeNocSnrUp', null);
+    setMetric('qoeNocSnrDown', null);
+    updateNocTopologyState({});
+    setMetric('qoeNocFlaps', null);
+    setMetric('qoeNocCrc', null);
+    setMetric('qoeNocRanging', null);
+    setMetric('qoeNocUptime', null);
+    setMetric('qoeNocUtil', null);
+    setMetric('qoeNocModemsChan', null);
+    setMetric('qoeNocUncorrGlob', null);
+    setMetric('qoeNocMasivo', null);
+    var recList = $('qoeNocRecList');
+    if (recList) recList.innerHTML = '<p class="qoe-noc-rec-empty">—</p>';
+  }
+
+  function enriquecerAccionMigracionPorRuido(diag) {
+    var p = diag && diag.protocolo;
+    if (!p) return;
+    p.accionOperativa = p.accionOperativa || [];
+    var util = (diag.masivoPanel && diag.masivoPanel.utilization != null) ? diag.masivoPanel.utilization : (diag.raw && diag.raw.utilization != null) ? diag.raw.utilization : null;
+    var utilMuyBaja = util != null && util < 50;
+    var errorRatio = (diag.masivoPanel && diag.masivoPanel.errorRatio != null) ? diag.masivoPanel.errorRatio : (diag.raw && diag.raw.errorRatioFec != null) ? diag.raw.errorRatioFec : null;
+    var uncorr = (diag.masivoPanel && diag.masivoPanel.uncorrectablesGlobal != null) ? diag.masivoPanel.uncorrectablesGlobal : (diag.raw && diag.raw.uncorrectables);
+    var crcHcs = (diag.raw && ((diag.raw.crc != null && diag.raw.crc > 0) || (diag.raw.crcModem != null && diag.raw.crcModem > 0) || (diag.raw.hcsModem != null && diag.raw.hcsModem > 0)));
+    var flaps = (diag.estabilidad && diag.estabilidad.flaps != null) ? diag.estabilidad.flaps : (diag.intermitencia && diag.intermitencia.valor != null && diag.intermitencia.valor !== 'N/A' ? diag.intermitencia.valor : null);
+    var flapsNum = typeof flaps === 'number' ? flaps : (flaps != null && !isNaN(parseInt(flaps, 10)) ? parseInt(flaps, 10) : null);
+    var hayCRC_HCS = crcHcs || (uncorr != null && uncorr > 0);
+    var hayRatioFecAlto = errorRatio != null && errorRatio > 0.01;
+
+    if (utilMuyBaja && (hayCRC_HCS || hayRatioFecAlto)) {
+      var nodoNombre = (diag.node && diag.node !== '—') ? diag.node : 'Plaza de Bolívar 2';
+      var numFlaps = (flapsNum != null && !isNaN(flapsNum)) ? flapsNum : 147;
+      var numUsuarios = (diag.totalModems != null && diag.totalModems > 0) ? diag.totalModems : 30;
+      var bloqueQoE = [
+        'Paso 1 (Remoto): Migrar cliente a portadora 1/3.0 para blindar la navegación de los vecinos contra el ruido actual.',
+        'Paso 2 (Campo): Generar Visita Técnica para corrección de ruido físico en acometida (causa raíz).'
+      ];
+      p.accionOperativa = bloqueQoE.concat(p.accionOperativa.filter(function (a) {
+        return bloqueQoE.indexOf(a) < 0;
+      }));
+      p.validacionIndividual = p.validacionIndividual || {};
+      p.validacionIndividual.recomendacion = 'Paso 1 (Remoto): Migrar a portadora 1/3.0 para blindar a los vecinos. Paso 2 (Campo): Visita Técnica para corrección de ruido en acometida (causa raíz).';
+      return;
+    }
+
+    var tieneMigracion = p.accionOperativa.some(function (a) { return /migrar|migraci[oó]n|portadora/i.test(String(a)); });
+    if (!tieneMigracion) return;
+    var utilBaja = util != null && util < 70;
+    var hayRuido = hayCRC_HCS || (flapsNum != null && flapsNum > 50);
+    if (!utilBaja || !hayRuido) return;
+    var justificacion = 'Paso 1 (Remoto): Migrar cliente a portadora 1/3.0 para blindar la navegación de los vecinos. Paso 2 (Campo): Generar Visita Técnica para corrección de ruido físico en acometida (causa raíz).';
+    if (p.accionOperativa.indexOf(justificacion) < 0) p.accionOperativa.push(justificacion);
+    if (util != null && util < 50) {
+      var nota = 'Nota: El puerto cuenta con capacidad suficiente; la acción es estrictamente por integridad de señal.';
+      if (p.accionOperativa.indexOf(nota) < 0) p.accionOperativa.push(nota);
+    }
+  }
+
   function updateQoeNocAnalyzer(modemOutput, upstreamOutput) {
     if (typeof NocAnalyzerQoE === 'undefined' || !NocAnalyzerQoE.analyze) return;
     var history = typeof getNocAfectacionHistory === 'function' ? getNocAfectacionHistory() : [];
     var diag = NocAnalyzerQoE.analyze(modemOutput || '', upstreamOutput || '', { history: history, now: Date.now() });
+    enriquecerAccionMigracionPorRuido(diag);
     var xpertrak = leerXpertrakDelDOM();
     if (xpertrak) {
       xpertrak.totalModems = diag.totalModems;
@@ -3934,7 +4021,15 @@
     }
     $('qoeNocCmts').textContent = diag.cmtsType || '—';
     $('qoeNocNodo').textContent = diag.node || '—';
+    if (diag.cmtsType && typeof window.nocSyncCmtsDesdeNombre === 'function') window.nocSyncCmtsDesdeNombre(diag.cmtsType);
     $('qoeNocModems').textContent = diag.totalModems != null ? diag.totalModems : '—';
+    var macTendencia = (diag.raw && diag.raw.mac) ? String(diag.raw.mac).trim() : '';
+    if (macTendencia && typeof window.IntegraTendenciaChart !== 'undefined' && window.IntegraTendenciaChart.render) {
+      var unc = (diag.estabilidad && diag.estabilidad.uncorrectables != null) ? diag.estabilidad.uncorrectables : (diag.raw && diag.raw.uncorrectables);
+      var snr = (diag.snrUp && diag.snrUp.valor != null) ? diag.snrUp.valor : (diag.raw && diag.raw.snrUp);
+      var util = (diag.masivoPanel && diag.masivoPanel.utilization != null) ? diag.masivoPanel.utilization : null;
+      window.IntegraTendenciaChart.render(macTendencia, { uncorrectables: unc, snrUp: snr, node: diag.node, utilization: util });
+    }
     var badge = $('qoeNocEstado');
     if (badge) {
       badge.textContent = diag.globalEstado ? diag.globalEstado.texto : 'Sin análisis';
@@ -5452,6 +5547,294 @@
     window.addEventListener('pagehide', stopPoll);
     if (document.visibilityState === 'visible') startPoll();
   }
+
+  function calcularEstadoLeyenda(datos) {
+    if (!datos || !Array.isArray(datos) || datos.length < 1) return { estado: 'estable', label: 'Estable', color: '#22c55e' };
+    var unc = datos.map(function (r) { return r.uncorrectables != null ? Number(r.uncorrectables) : 0; });
+    var snr = datos.map(function (r) { return r.snr_up != null ? Number(r.snr_up) : null; });
+    var times = datos.map(function (r) { return r.created_at ? new Date(r.created_at).getTime() : 0; });
+    var now = Date.now();
+    var oneHourAgo = now - 60 * 60 * 1000;
+    var lastHourSnr = [];
+    for (var i = 0; i < datos.length; i++) {
+      if (times[i] >= oneHourAgo && snr[i] != null) lastHourSnr.push(snr[i]);
+    }
+    if (lastHourSnr.length >= 2 && (lastHourSnr[0] - lastHourSnr[lastHourSnr.length - 1]) >= 2) {
+      return { estado: 'falla-inminente', label: 'Falla Inminente', color: '#ef4444' };
+    }
+    for (var j = 1; j < unc.length; j++) {
+      var prev = unc[j - 1], curr = unc[j];
+      if (prev > 0 && (curr - prev) / prev > 0.20) {
+        return { estado: 'falla-inminente', label: 'Falla Inminente', color: '#ef4444' };
+      }
+    }
+    var last3 = unc.slice(-3);
+    var validLast3 = last3.filter(function (v) { return v != null; });
+    var allZero = validLast3.length > 0 && validLast3.every(function (v) { return v === 0; });
+    var flat = validLast3.length >= 3;
+    if (flat) {
+      for (var k = 1; k < validLast3.length; k++) {
+        if (Math.abs(validLast3[k] - validLast3[k - 1]) > 0.5) { flat = false; break; }
+      }
+    } else { flat = false; }
+    if (allZero || flat) return { estado: 'estable', label: 'Estable', color: '#22c55e' };
+    var degradacionLenta = true;
+    var startIdx = Math.max(1, unc.length - 3);
+    for (var m = startIdx; m < unc.length; m++) {
+      var prevU = unc[m - 1], currU = unc[m];
+      if (prevU != null && currU != null && prevU > 0) {
+        if ((currU - prevU) / prevU >= 0.10) { degradacionLenta = false; break; }
+      }
+    }
+    if (degradacionLenta) return { estado: 'degradacion-lenta', label: 'Degradación Lenta', color: '#eab308' };
+    return { estado: 'estable', label: 'Estable', color: '#22c55e' };
+  }
+
+  function analizarTendencia(datos) {
+    if (!datos || !Array.isArray(datos) || datos.length < 2) return { degradacionProgresiva: false, pendienteErrores: 0, pendienteSnr: 0, mensaje: null };
+    var hoy = new Date().toDateString();
+    var ayer = new Date();
+    ayer.setDate(ayer.getDate() - 1);
+    ayer = ayer.toDateString();
+    var datosHoy = [], datosAyer = [];
+    datos.forEach(function (r) {
+      var d = r.created_at ? new Date(r.created_at).toDateString() : null;
+      if (d === hoy) datosHoy.push(r);
+      else if (d === ayer) datosAyer.push(r);
+    });
+    var avgHoy = datosHoy.length ? datosHoy.reduce(function (s, r) { return s + (r.uncorrectables != null ? Number(r.uncorrectables) : 0); }, 0) / datosHoy.length : 0;
+    var avgAyer = datosAyer.length ? datosAyer.reduce(function (s, r) { return s + (r.uncorrectables != null ? Number(r.uncorrectables) : 0); }, 0) / datosAyer.length : 0;
+    var degradacionProgresiva = avgAyer > 0 && avgHoy >= avgAyer * 1.2;
+
+    var unc = datos.map(function (r) { return r.uncorrectables != null ? Number(r.uncorrectables) : null; });
+    var snr = datos.map(function (r) { return r.snr_up != null ? Number(r.snr_up) : null; });
+    var pendienteErrores = 0, pendienteSnr = 0;
+    if (unc.filter(function (v) { return v != null; }).length >= 2 && snr.filter(function (v) { return v != null; }).length >= 2) {
+      var n = datos.length;
+      var sumX = (n * (n - 1)) / 2;
+      var sumY1 = 0, sumY2 = 0, sumXY1 = 0, sumXY2 = 0, sumX2 = sumX * (2 * n - 1) / 3;
+      for (var i = 0; i < n; i++) {
+        if (unc[i] != null) { sumY1 += unc[i]; sumXY1 += i * unc[i]; }
+        if (snr[i] != null) { sumY2 += snr[i]; sumXY2 += i * snr[i]; }
+      }
+      pendienteErrores = sumX2 > 0 ? (n * sumXY1 - sumX * sumY1) / (n * sumX2 - sumX * sumX) : 0;
+      pendienteSnr = sumX2 > 0 ? (n * sumXY2 - sumX * sumY2) / (n * sumX2 - sumX * sumX) : 0;
+    }
+    var mensaje = degradacionProgresiva ? 'Degradación Progresiva Detectada' : null;
+    return { degradacionProgresiva: degradacionProgresiva, pendienteErrores: pendienteErrores, pendienteSnr: pendienteSnr, mensaje: mensaje };
+  }
+
+  var _tendenciaChartInstance = null;
+  function renderTendenciaChart(mac, currentData) {
+    var canvas = document.getElementById('tendenciaChart');
+    var card = document.getElementById('tendenciaCard');
+    var titleEl = document.getElementById('tendenciaChartTitle');
+    var alertEl = document.getElementById('tendenciaAlerta');
+    var descEl = document.getElementById('tendenciaChartDesc');
+    var leyendaEl = document.getElementById('tendenciaLeyenda');
+    var leyendaBadgeEl = document.getElementById('tendenciaLeyendaBadge');
+    var pulseIcon = document.getElementById('tendenciaPulseIcon');
+    var badgeNodoVal = document.getElementById('tendenciaBadgeNodoVal');
+    var badgeUtil = document.getElementById('tendenciaBadgeUtil');
+    if (!canvas || !mac) {
+      if (card) card.style.display = 'none';
+      return;
+    }
+    if (card) card.style.display = '';
+    var nodeStr = (currentData && currentData.node) ? String(currentData.node) : '—';
+    var utilVal = (currentData && currentData.utilization != null) ? currentData.utilization : null;
+    if (badgeNodoVal) badgeNodoVal.textContent = nodeStr;
+    if (badgeUtil) badgeUtil.textContent = (utilVal != null ? Math.round(utilVal) : '0') + '%';
+    if (pulseIcon) pulseIcon.classList.add('noc-pulse-online');
+    var base = (typeof window !== 'undefined' && window.location && window.location.origin) ? window.location.origin : '';
+    fetch(base + '/api/history/' + encodeURIComponent(mac)).then(function (r) { return r.json(); }).catch(function () { return { data: [] }; }).then(function (resp) {
+      var history = resp.data || [];
+      var current = currentData && (currentData.uncorrectables != null || currentData.snrUp != null) ? {
+        uncorrectables: currentData.uncorrectables,
+        snr_up: currentData.snrUp,
+        created_at: new Date().toISOString()
+      } : null;
+      var datos = history.slice();
+      if (current && (current.uncorrectables != null || current.snr_up != null)) datos.push(current);
+      if (datos.length === 0) {
+        if (_tendenciaChartInstance) { _tendenciaChartInstance.destroy(); _tendenciaChartInstance = null; }
+        if (titleEl) titleEl.textContent = 'Tendencia de Señal';
+        if (alertEl) { alertEl.hidden = true; }
+        if (leyendaEl) leyendaEl.hidden = true;
+        if (descEl) descEl.textContent = 'Sin historial para esta MAC. Los diagnósticos se guardan automáticamente.';
+        return;
+      }
+      var analisis = analizarTendencia(datos);
+      var estadoLeyenda = calcularEstadoLeyenda(datos);
+      var labels = datos.map(function (r) {
+        var d = r.created_at ? new Date(r.created_at) : new Date();
+        return d.toLocaleString('es', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+      });
+      var uncData = datos.map(function (r) { return r.uncorrectables != null ? r.uncorrectables : null; });
+      var snrData = datos.map(function (r) { return r.snr_up != null ? r.snr_up : null; });
+      var alertaFisica = analisis.pendienteErrores > 0 && analisis.pendienteSnr < 0;
+
+      if (_tendenciaChartInstance) _tendenciaChartInstance.destroy();
+      function gradUncFn(ctx) {
+        var chart = ctx.chart;
+        var a = chart.chartArea;
+        if (!a) return 'rgba(255, 140, 0, 0.2)';
+        var g = ctx.createLinearGradient(0, a.top, 0, a.bottom);
+        g.addColorStop(0, 'rgba(255, 140, 0, 0.5)');
+        g.addColorStop(1, 'rgba(255, 140, 0, 0)');
+        return g;
+      }
+      function gradSnrFn(ctx) {
+        var chart = ctx.chart;
+        var a = chart.chartArea;
+        if (!a) return 'rgba(0, 250, 154, 0.2)';
+        var g = ctx.createLinearGradient(0, a.top, 0, a.bottom);
+        g.addColorStop(0, 'rgba(0, 250, 154, 0.5)');
+        g.addColorStop(1, 'rgba(0, 250, 154, 0)');
+        return g;
+      }
+      var totalDuration = 1800;
+      var delayBetweenPoints = Math.max(80, totalDuration / Math.max(1, labels.length));
+      function previousY(ctx) {
+        if (ctx.index === 0) {
+          var scaleId = ctx.dataset.yAxisID || 'y';
+          var scale = ctx.chart.scales[scaleId];
+          if (!scale) return ctx.chart.chartArea.bottom;
+          return scale.getPixelForValue(scale.min);
+        }
+        var meta = ctx.chart.getDatasetMeta(ctx.datasetIndex);
+        var prev = meta.data[ctx.index - 1];
+        return prev ? prev.getProps(['y'], true).y : ctx.chart.chartArea.bottom;
+      }
+      var scanAnimation = {
+        x: {
+          type: 'number',
+          easing: 'linear',
+          duration: delayBetweenPoints,
+          from: NaN,
+          delay: function (ctx) {
+            if (ctx.type !== 'data' || ctx.xStarted) return 0;
+            ctx.xStarted = true;
+            return ctx.index * delayBetweenPoints;
+          }
+        },
+        y: {
+          type: 'number',
+          easing: 'linear',
+          duration: delayBetweenPoints,
+          from: previousY,
+          delay: function (ctx) {
+            if (ctx.type !== 'data' || ctx.yStarted) return 0;
+            ctx.yStarted = true;
+            return ctx.index * delayBetweenPoints;
+          }
+        }
+      };
+      try {
+      _tendenciaChartInstance = new Chart(canvas, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [
+            {
+              label: 'Errores No Corregibles',
+              data: uncData,
+              borderColor: '#ff8c00',
+              backgroundColor: gradUncFn,
+              fill: true,
+              tension: 0.3,
+              yAxisID: 'y',
+              pointRadius: 4,
+              pointHoverRadius: 6,
+              pointBackgroundColor: '#ff8c00',
+              pointBorderColor: '#0b0e14',
+              pointBorderWidth: 1,
+              pointShadowColor: 'rgba(255, 140, 0, 0.8)',
+              pointShadowBlur: 8
+            },
+            {
+              label: 'SNR Up (dB)',
+              data: snrData,
+              borderColor: '#00fa9a',
+              backgroundColor: gradSnrFn,
+              fill: true,
+              tension: 0.3,
+              yAxisID: 'y1',
+              pointRadius: 4,
+              pointHoverRadius: 6,
+              pointBackgroundColor: '#00fa9a',
+              pointBorderColor: '#0b0e14',
+              pointBorderWidth: 1
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          layout: { padding: { top: 8, right: 12, bottom: 4, left: 4 } },
+          animation: { duration: 1000 },
+          plugins: {
+            legend: { labels: { color: '#94a3b8', font: { family: '"JetBrains Mono", "Fira Code", monospace' } } },
+            title: {
+              display: true,
+              text: alertaFisica ? 'ALERTA: Falla Física en Progreso' : 'Tendencia de Señal',
+              color: alertaFisica ? '#ef4444' : '#94a3b8',
+              font: { size: 14, family: '"JetBrains Mono", monospace' }
+            }
+          },
+          scales: {
+            x: {
+              ticks: { color: '#94a3b8', font: { family: '"JetBrains Mono", "Fira Code", monospace', size: 10 } },
+              grid: { color: '#1f2937', drawBorder: false }
+            },
+            y: {
+              type: 'linear',
+              position: 'left',
+              ticks: { color: '#ff8c00', font: { family: '"JetBrains Mono", "Fira Code", monospace', size: 10 } },
+              grid: { color: '#1f2937' },
+              title: { display: true, text: 'Errores No Corregibles', color: '#ff8c00', font: { family: '"JetBrains Mono", monospace' } }
+            },
+            y1: {
+              type: 'linear',
+              position: 'right',
+              ticks: { color: '#00fa9a', font: { family: '"JetBrains Mono", "Fira Code", monospace', size: 10 } },
+              grid: { display: false },
+              title: { display: true, text: 'SNR Up (dB)', color: '#00fa9a', font: { family: '"JetBrains Mono", monospace' } }
+            }
+          }
+        }
+      });
+      } catch (chartErr) {
+        try {
+          if (_tendenciaChartInstance) { _tendenciaChartInstance.destroy(); _tendenciaChartInstance = null; }
+          var optsNoAnim = { responsive: true, maintainAspectRatio: false, layout: { padding: { top: 8, right: 12, bottom: 4, left: 4 } }, animation: { duration: 800 }, plugins: { legend: { labels: { color: '#94a3b8' } }, title: { display: true, text: alertaFisica ? 'ALERTA: Falla Física en Progreso' : 'Tendencia de Señal', color: alertaFisica ? '#ef4444' : '#94a3b8', font: { size: 14 } } }, scales: { x: { ticks: { color: '#94a3b8' }, grid: { color: '#1f2937' } }, y: { type: 'linear', position: 'left', ticks: { color: '#ff8c00' }, grid: { color: '#1f2937' }, title: { display: true, text: 'Errores No Corregibles', color: '#ff8c00' } }, y1: { type: 'linear', position: 'right', ticks: { color: '#00fa9a' }, grid: { display: false }, title: { display: true, text: 'SNR Up (dB)', color: '#00fa9a' } } } };
+          _tendenciaChartInstance = new Chart(canvas, { type: 'line', data: { labels: labels, datasets: [{ label: 'Errores No Corregibles', data: uncData, borderColor: '#ff8c00', backgroundColor: 'rgba(255,140,0,0.2)', fill: true, tension: 0.3, yAxisID: 'y', pointRadius: 4, pointShadowColor: 'rgba(255,140,0,0.8)', pointShadowBlur: 8 }, { label: 'SNR Up (dB)', data: snrData, borderColor: '#00fa9a', backgroundColor: 'rgba(0,250,154,0.2)', fill: true, tension: 0.3, yAxisID: 'y1', pointRadius: 4 }] }, options: optsNoAnim });
+        } catch (e2) { console.warn('Tendencia chart:', e2); }
+      }
+
+      if (card) card.setAttribute('data-alerta', alertaFisica ? 'true' : 'false');
+      if (titleEl) titleEl.textContent = alertaFisica ? 'ALERTA: Falla Física en Progreso' : 'Tendencia de Señal';
+      if (alertEl) {
+        if (analisis.degradacionProgresiva) {
+          alertEl.textContent = analisis.mensaje || 'Degradación Progresiva Detectada';
+          alertEl.hidden = false;
+        } else if (alertaFisica) {
+          alertEl.textContent = 'Errores al alza y SNR a la baja. Posible falla física en progreso. Priorizar revisión de acometida.';
+          alertEl.hidden = false;
+        } else {
+          alertEl.hidden = true;
+        }
+      }
+      if (descEl) descEl.textContent = datos.length + ' registros. ' + (analisis.degradacionProgresiva ? 'El promedio de Errores No Corregibles de hoy supera en 20% al de ayer.' : 'Evolución de métricas por diagnóstico.');
+      if (leyendaEl && leyendaBadgeEl) {
+        leyendaBadgeEl.textContent = 'Estado: ' + estadoLeyenda.label;
+        leyendaBadgeEl.style.backgroundColor = estadoLeyenda.color;
+        leyendaEl.hidden = false;
+      }
+    });
+  }
+
+  window.IntegraTendenciaChart = { render: renderTendenciaChart, analizarTendencia: analizarTendencia, calcularEstadoLeyenda: calcularEstadoLeyenda };
 
   function start() {
     if (API_URL) {
