@@ -145,6 +145,8 @@
       var json = JSON.stringify(d);
       if (json === _lastSavedJson) return;
       if (json.length <= MAX_STORAGE_BYTES) {
+        localStorage.setItem(STORAGE, json);
+        _lastSavedJson = json;
         if (API_URL) {
           _pendingApiPut = true;
           _doPut(json, 1).catch(function () {
@@ -152,9 +154,6 @@
           }).catch(function () {
             return new Promise(function (resolve) { setTimeout(resolve, 2500); }).then(function () { return _doPut(json, 3); });
           }).finally(function () { _pendingApiPut = false; });
-        } else {
-          localStorage.setItem(STORAGE, json);
-          _lastSavedJson = json;
         }
       }
     } catch (e) {}
@@ -5087,6 +5086,8 @@
       }
       if (usuarioActual === 'admin') {
         try { localStorage.setItem('integra_admin_password', nueva); } catch (x) {}
+        if (msgEl) { msgEl.textContent = 'Contraseña actualizada correctamente.'; msgEl.style.color = 'var(--integra-success)'; }
+        perfilForm.reset();
       } else {
         var portal = findPortalUser(usuarioActual, getData());
         if (portal) {
@@ -5099,12 +5100,25 @@
             var u = arr[idx];
             arr[idx] = { nombre: u.nombre, usuario: u.usuario, clave: nueva, estado: u.estado, role: u.role, jefeInmediato: u.jefeInmediato || '' };
             saveData('portalUsuarios', trimArrayNewestLast(arr, MAX_PORTAL_USUARIOS));
-            flushSave();
+            var done = function () {
+              if (msgEl) { msgEl.textContent = 'Contraseña actualizada correctamente.'; msgEl.style.color = 'var(--integra-success)'; }
+              perfilForm.reset();
+            };
+            if (API_URL && typeof flushSaveAsync === 'function') {
+              flushSaveAsync().then(done).catch(function () { done(); });
+            } else {
+              flushSave();
+              done();
+            }
+          } else {
+            if (msgEl) { msgEl.textContent = 'Contraseña actualizada correctamente.'; msgEl.style.color = 'var(--integra-success)'; }
+            perfilForm.reset();
           }
+        } else {
+          if (msgEl) { msgEl.textContent = 'Contraseña actualizada correctamente.'; msgEl.style.color = 'var(--integra-success)'; }
+          perfilForm.reset();
         }
       }
-      if (msgEl) { msgEl.textContent = 'Contraseña actualizada correctamente.'; msgEl.style.color = 'var(--integra-success)'; }
-      perfilForm.reset();
     });
     var btnBackup = $('btnBackupDescargar');
     var btnBackupCopiar = $('btnBackupCopiar');
