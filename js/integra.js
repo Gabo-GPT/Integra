@@ -5025,7 +5025,7 @@
       }
       var portal = findPortalUser(user, getData());
       var list = (getData().portalUsuarios || []);
-      var adminPass = localStorage.getItem('integra_admin_password') || 'admin';
+      var adminPass = (getData().integra_admin_password || localStorage.getItem('integra_admin_password') || 'admin');
       if (user.toLowerCase() === 'admin') {
         if (pass !== adminPass) {
           showLoginErr('Usuario o contraseña incorrectos.');
@@ -5067,7 +5067,7 @@
       var usuarioActual = (getData().currentUserUsuario || '').trim().toLowerCase();
       var claveEsperada = '';
       if (usuarioActual === 'admin') {
-        claveEsperada = localStorage.getItem('integra_admin_password') || 'admin';
+        claveEsperada = (getData().integra_admin_password || localStorage.getItem('integra_admin_password') || 'admin');
       } else {
         var portal = findPortalUser(usuarioActual, getData());
         claveEsperada = (portal && portal.clave) ? String(portal.clave).trim() : '';
@@ -5085,9 +5085,17 @@
         return;
       }
       if (usuarioActual === 'admin') {
-        try { localStorage.setItem('integra_admin_password', nueva); } catch (x) {}
-        if (msgEl) { msgEl.textContent = 'Contraseña actualizada correctamente.'; msgEl.style.color = 'var(--integra-success)'; }
-        perfilForm.reset();
+        saveData('integra_admin_password', nueva);
+        var doneAdmin = function () {
+          if (msgEl) { msgEl.textContent = 'Contraseña actualizada correctamente.'; msgEl.style.color = 'var(--integra-success)'; }
+          perfilForm.reset();
+        };
+        if (API_URL && typeof flushSaveAsync === 'function') {
+          flushSaveAsync().then(doneAdmin).catch(function () { doneAdmin(); });
+        } else {
+          flushSave();
+          doneAdmin();
+        }
       } else {
         var portal = findPortalUser(usuarioActual, getData());
         if (portal) {
