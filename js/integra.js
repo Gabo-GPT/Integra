@@ -676,8 +676,10 @@
   function isUsuarioConectado(usuario, data) {
     if (!usuario) return false;
     if (!data) data = getData();
-    var sessions = (data.activeSessions && typeof data.activeSessions === 'object') ? data.activeSessions : {};
+    var current = (data.currentUserUsuario || '').trim().toLowerCase();
     var usr = String(usuario).trim().toLowerCase();
+    if (current && usr === current) return true;
+    var sessions = (data.activeSessions && typeof data.activeSessions === 'object') ? data.activeSessions : {};
     var s = sessions[usr];
     if (!s || !s.lastSeen) return false;
     return (Date.now() - s.lastSeen) < SESSION_TTL_MS;
@@ -5391,6 +5393,9 @@
           mergeIfEmpty(parsed, current, 'intermitenciaRegistros');
           mergeIfEmpty(parsed, current, 'auditoriasAgentes');
           mergeIfEmpty(parsed, current, 'overridesPorcentajeAgentes');
+          var svSess = parsed.activeSessions;
+          var lvSess = current.activeSessions;
+          if ((!svSess || typeof svSess !== 'object' || Object.keys(svSess).length === 0) && lvSess && typeof lvSess === 'object' && Object.keys(lvSess).length > 0) parsed.activeSessions = lvSess;
           setDataFromApi(parsed);
           if (_refreshDebounce) clearTimeout(_refreshDebounce);
           _refreshDebounce = setTimeout(refreshFromServerData, 100);
