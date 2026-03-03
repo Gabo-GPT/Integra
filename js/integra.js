@@ -672,6 +672,16 @@
     intentar();
   }
 
+  var SESSION_TTL_MS = 3 * 60 * 1000;
+  function isUsuarioConectado(usuario, data) {
+    if (!usuario) return false;
+    if (!data) data = getData();
+    var sessions = (data.activeSessions && typeof data.activeSessions === 'object') ? data.activeSessions : {};
+    var usr = String(usuario).trim().toLowerCase();
+    var s = sessions[usr];
+    if (!s || !s.lastSeen) return false;
+    return (Date.now() - s.lastSeen) < SESSION_TTL_MS;
+  }
   function refreshUsuariosPortal(data) {
     if (!data) data = getData();
     var items = (data.portalUsuarios && Array.isArray(data.portalUsuarios)) ? data.portalUsuarios : [];
@@ -689,6 +699,8 @@
     }
     if (tabla) tabla.style.display = items.length ? 'table' : 'none';
     tbody.innerHTML = items.map(function (u, i) {
+      var conectado = isUsuarioConectado(u.usuario, data);
+      var conectadoHtml = conectado ? '<span class="portal-conectado-dot" title="Conectado ahora">●</span>' : '<span class="portal-conectado-off" title="Desconectado">—</span>';
       var r = (u.role || 'fibra-optica');
       if (ROLES.indexOf(r) < 0) r = 'fibra-optica';
       var sel = '<select class="portal-rol-select" data-i="' + i + '" title="Cambiar rol">' +
@@ -703,7 +715,7 @@
         (JEFES_INMEDIATOS.map(function (j) { return '<option value="' + escapeHtml(j) + '"' + (jefe === j ? ' selected' : '') + '>' + escapeHtml(j) + '</option>'; }).join('')) +
         '</select>';
       var notaCalidad = getNotaCalidadParaAgente(u.nombre, u.usuario);
-      return '<tr><td>' + (u.nombre || '') + '</td><td>' + (u.usuario || '') + '</td><td><span class="portal-estado">' + (u.estado || 'Temporal') + '</span></td><td>' + sel + '</td><td>' + jefeSel + '</td><td><span class="portal-nota-calidad" title="Desde Matriz de Calidad">' + escapeHtml(notaCalidad) + '</span></td><td><code>' + (u.clave || '') + '</code></td><td><button type="button" class="btn-copy" data-i="' + i + '">Copiar</button><button type="button" class="btn-remove" data-i="' + i + '">Quitar</button></td></tr>';
+      return '<tr><td>' + (u.nombre || '') + '</td><td>' + (u.usuario || '') + '</td><td class="portal-conectado-cell">' + conectadoHtml + '</td><td><span class="portal-estado">' + (u.estado || 'Temporal') + '</span></td><td>' + sel + '</td><td>' + jefeSel + '</td><td><span class="portal-nota-calidad" title="Desde Matriz de Calidad">' + escapeHtml(notaCalidad) + '</span></td><td><code>' + (u.clave || '') + '</code></td><td><button type="button" class="btn-copy" data-i="' + i + '">Copiar</button><button type="button" class="btn-remove" data-i="' + i + '">Quitar</button></td></tr>';
     }).join('');
   }
 
@@ -5013,8 +5025,65 @@
     bindNocRegistroIntermitencia();
     var btnInforme = $('btnDescargarInforme');
     if (btnInforme) btnInforme.addEventListener('click', descargarInforme);
+    var _sessionHeartbeatInterval = null;
+    function stopSessionHeartbeat() {
+      if (_sessionHeartbeatInterval) {
+        clearInterval(_sessionHeartbeatInterval);
+        _sessionHeartbeatInterval = null;
+      }
+      if (API_URL) {
+        var usuario = (getData().currentUserUsuario || '').trim().toLowerCase();
+        if (usuario) {
+          fetch(getApiDataUrl(true), { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; })
+            .then(function (d) {
+              if (!d || typeof d !== 'object') return;
+              var parsed = (d.data && typeof d.data === 'object') ? d.data : d;
+              var sessions = (parsed.activeSessions && typeof parsed.activeSessions === 'object') ? parsed.activeSessions : {};
+              delete sessions[usuario];
+              parsed.activeSessions = sessions;
+              fetch(getApiBase() + '/api/data', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(parsed), cache: 'no-store' }).catch(function () {});
+            }).catch(function () {});
+        }
+      }
+    }
+    function sendSessionHeartbeat() {
+      if (!API_URL || _saveTimer || _pendingApiPut) return;
+      var d = getData();
+      var usuario = (d.currentUserUsuario || '').trim().toLowerCase();
+      var nombre = (d.currentUserName || '').trim();
+      if (!usuario) return;
+      fetch(getApiDataUrl(true), { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (serverData) {
+          if (!serverData || typeof serverData !== 'object') return;
+          var parsed = (serverData.data && typeof serverData.data === 'object') ? serverData.data : serverData;
+          var sessions = (parsed.activeSessions && typeof parsed.activeSessions === 'object') ? parsed.activeSessions : {};
+          var now = Date.now();
+          var ttl = SESSION_TTL_MS;
+          for (var k in sessions) { if (sessions[k] && (now - (sessions[k].lastSeen || 0)) > ttl) delete sessions[k]; }
+          sessions[usuario] = { lastSeen: now, nombre: nombre };
+          parsed.activeSessions = sessions;
+          return fetch(getApiBase() + '/api/data', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(parsed), cache: 'no-store' })
+            .then(function (r) {
+              if (r && r.ok && _dataCache) {
+                _dataCache.activeSessions = sessions;
+                _lastSavedJson = JSON.stringify(_dataCache);
+                try { localStorage.setItem(STORAGE, _lastSavedJson); } catch (e) {}
+                var secAgentes = document.getElementById('section-agentes');
+                if (secAgentes && secAgentes.classList.contains('active')) refreshUsuariosPortal();
+              }
+            });
+        }).catch(function () {});
+    }
+    function startSessionHeartbeat() {
+      stopSessionHeartbeat();
+      if (!API_URL) return;
+      sendSessionHeartbeat();
+      _sessionHeartbeatInterval = setInterval(sendSessionHeartbeat, 60000);
+    }
+    if (loggedIn) startSessionHeartbeat();
     var btnLogout = $('btnCerrarSesion');
     if (btnLogout) btnLogout.addEventListener('click', function () {
+      stopSessionHeartbeat();
       flushSave();
       _dataCache = null;
       _lastSavedJson = null;
@@ -5070,6 +5139,7 @@
       localStorage.setItem(SESSION_KEY, '1');
       refreshUserDisplay();
       hideLogin();
+      startSessionHeartbeat();
       window.dispatchEvent(new CustomEvent('integra:userChange'));
       loadData();
       handleHashChange();

@@ -4153,6 +4153,9 @@ body {
   border-radius: 8px;
 }
 .portal-estado { font-size: 0.8rem; color: var(--integra-success); }
+.portal-conectado-cell { text-align: center; }
+.portal-conectado-dot { color: var(--integra-success); font-size: 1rem; }
+.portal-conectado-off { color: var(--integra-text-muted); }
 .portal-table code { font-size: 0.8rem; padding: 0.15rem 0.35rem; background: rgba(0,0,0,0.2); border-radius: 4px; }
 .portal-rol-select {
   padding: 0.25rem 0.5rem;
