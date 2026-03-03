@@ -67,7 +67,7 @@
   function safeMax(arr) { if (!arr || !arr.length) return 0; var m = arr[0]; for (var i = 1; i < arr.length; i++) if (arr[i] > m) m = arr[i]; return m; }
   function safeMin(arr) { if (!arr || !arr.length) return 0; var m = arr[0]; for (var i = 1; i < arr.length; i++) if (arr[i] < m) m = arr[i]; return m; }
   var _elCount = 0;
-  var SECTION_TITLES = { dashboard: 'Inicio', gestion: 'Mi Gestión', 'tablero-mensual': 'Tablero Mensual', formacion: 'Formación', calidad: 'Matriz de Calidad', bolsa: 'Bolsa', 'bolsa-hfc': 'Bolsa HFC', agentes: 'Agentes', perfil: 'Perfil', intermitencia: 'Intermitencia' };
+  var SECTION_TITLES = { dashboard: 'Inicio', gestion: 'Mi Gestión', 'tablero-mensual': 'Tablero Mensual', formacion: 'Formación', calidad: 'Matriz de Calidad', bolsa: 'Bolsa', 'bolsa-hfc': 'Bolsa HFC', agentes: 'Agentes', diagnostico: 'Diagnostico', perfil: 'Perfil', intermitencia: 'Intermitencia' };
   var VALID_HASH_ADMIN = ['dashboard', 'formacion', 'calidad', 'bolsa', 'bolsa-hfc', 'agentes', 'perfil', 'gestion', 'tablero-mensual', 'intermitencia'];
   var VALID_HASH_USER = ['dashboard', 'gestion', 'tablero-mensual', 'formacion', 'intermitencia'];
   var GESTION_FORM_IDS = ['gestionNombre','gestionNumero','gestionNit','gestionAliado','gestionFuncion','gestionImot','gestionTransferencia','gestionCliente','gestionPqr','gestionCausa','gestionSolucion','gestionRed','gestionNodo','gestionCpe','gestionHuboSolucion','gestionAreaTransferir','gestionExtensiones'];

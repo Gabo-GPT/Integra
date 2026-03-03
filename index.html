@@ -104,6 +104,10 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
         <span>Agentes</span>
       </a>
+      <a href="#diagnostico" class="nav-item" data-section="diagnostico">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+        <span>Diagnostico</span>
+      </a>
       <a href="#perfil" class="nav-item" data-section="perfil" data-admin-only>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
         <span>Perfil</span>
@@ -150,121 +154,6 @@
           <img id="dashboardImagen" src="" alt="Imagen del dashboard" class="dashboard-imagen">
         </div>
         <div id="dashboardAdminBlocks">
-        <!-- Dashboard NOC Nivel 3: Ingesta, Selector CMTS, Gauges -->
-        <div class="noc-dashboard-integrado" id="nocDashboardIntegrado">
-          <div class="calidad-header-bar">
-            <h2 class="section-subtitle">DASHBOARD NOC · Ingesta e Inventario</h2>
-          </div>
-          <!-- Registro por diagnóstico con toggle -->
-          <div class="noc-registro-toggle-header" id="nocRegistroToggleHeader" role="button" tabindex="0" aria-expanded="true" aria-controls="nocDashboardCollapsible">
-            <h3 class="noc-registro-titulo">Registro por diagnóstico</h3>
-            <span class="noc-registro-toggle-icon" id="nocRegistroToggleIcon">−</span>
-          </div>
-          <div class="noc-dashboard-collapsible" id="nocDashboardCollapsible">
-          <form class="noc-registro-diagnostico card-noc" id="nocRegistroDiagnostico">
-            <div class="noc-registro-fila">
-              <div class="noc-registro-campo">
-                <label for="nocCuenta"># Cuenta</label>
-                <input type="text" id="nocCuenta" name="cuenta" class="noc-input" placeholder="Ej: 12345678" autocomplete="off">
-              </div>
-              <div class="noc-registro-campo">
-                <label for="nocRadicado">Radicado</label>
-                <input type="text" id="nocRadicado" name="radicado" class="noc-input" placeholder="Ej: RAD-2025-001" autocomplete="off">
-              </div>
-              <div class="noc-registro-campo">
-                <label>Escalado a QoE</label>
-                <div class="noc-registro-radio">
-                  <label><input type="radio" name="escaladoQoe" value="si" checked> SI</label>
-                  <label><input type="radio" name="escaladoQoe" value="no"> NO</label>
-                </div>
-              </div>
-              <div class="noc-registro-campo">
-                <label>Hubo solución</label>
-                <div class="noc-registro-radio">
-                  <label><input type="radio" name="huboSolucion" value="si" checked> SI</label>
-                  <label><input type="radio" name="huboSolucion" value="no"> NO</label>
-                </div>
-              </div>
-              <div class="noc-registro-campo noc-registro-lls-ot" id="nocRegistroLlsOtWrap" hidden>
-                <label for="nocLlsOt"># de LLS/OT</label>
-                <input type="text" id="nocLlsOt" name="llsOt" class="noc-input" placeholder="Digite el # de LLS/OT" autocomplete="off">
-              </div>
-              <div class="noc-registro-campo noc-registro-actions">
-                <button type="button" class="noc-btn noc-btn-primary" id="nocBtnGuardarIntermitencia">Guardar en Intermitencia</button>
-              </div>
-            </div>
-          </form>
-          <div class="noc-inline-wrap">
-            <div class="noc-cmts-selector-inline">
-              <label for="cmtsSearch" class="noc-label">CMTS / Nodo</label>
-              <div class="noc-autocomplete">
-                <input type="text" id="cmtsSearch" class="noc-input noc-input-terminal" placeholder="Escriba IP o nombre del CMTS..." autocomplete="off" aria-label="Buscar CMTS">
-                <div id="cmtsDropdown" class="noc-dropdown" role="listbox" hidden></div>
-              </div>
-              <div class="noc-ip-conexion card-noc" id="nocIpConexionBox">
-                <span class="noc-ip-label">IP de conexión</span>
-                <span class="noc-ip-valor" id="nocIpConexion">—</span>
-              </div>
-              <div id="cmtsContext" class="noc-context" hidden>
-                <span class="noc-context-item"><strong>Nombre:</strong> <span id="cmtsNombreSel">—</span></span>
-                <span class="noc-context-item"><strong>IP:</strong> <span id="cmtsIpSel">—</span></span>
-                <span class="noc-context-item"><strong>Segmento:</strong> <span id="cmtsSegmentoSel">—</span></span>
-                <span class="noc-context-item"><strong>Marca:</strong> <span id="cmtsMarcaSel">—</span></span>
-              </div>
-            </div>
-            <div class="noc-ingesta-inline">
-              <label for="ingestaTextarea" class="noc-label">Ingesta de datos</label>
-              <textarea id="ingestaTextarea" class="noc-textarea-terminal" rows="5" placeholder="Pegue output del CMTS (show cable modem verbose, etc.)"></textarea>
-              <div class="noc-inline-actions">
-                <button type="button" class="noc-btn noc-btn-parse" id="btnParsear">Parsear</button>
-                <button type="button" class="noc-btn noc-btn-primary" id="btnGenerarReporte">Generar Reporte</button>
-              </div>
-              <div id="parseStatus" class="noc-parse-status" role="status"></div>
-            </div>
-          </div>
-          <div class="noc-gauges-inline" id="nocGaugesInline">
-            <div class="noc-gauge-card card-noc" data-metric="tx"><div class="noc-gauge-label">TX</div><div class="noc-gauge-svg-wrap"><div class="noc-gauge-ring" id="gaugeTx"></div><span class="noc-gauge-val" id="valTx">—</span></div><div class="noc-gauge-estado" id="estadoTx">—</div></div>
-            <div class="noc-gauge-card card-noc" data-metric="rx"><div class="noc-gauge-label">RX</div><div class="noc-gauge-svg-wrap"><div class="noc-gauge-ring" id="gaugeRx"></div><span class="noc-gauge-val" id="valRx">—</span></div><div class="noc-gauge-estado" id="estadoRx">—</div></div>
-            <div class="noc-gauge-card card-noc" data-metric="snrUp"><div class="noc-gauge-label">SNR Up</div><div class="noc-gauge-svg-wrap"><div class="noc-gauge-ring" id="gaugeSnrUp"></div><span class="noc-gauge-val" id="valSnrUp">—</span></div><div class="noc-gauge-estado" id="estadoSnrUp">—</div></div>
-            <div class="noc-gauge-card card-noc" data-metric="snrDown"><div class="noc-gauge-label">SNR Down</div><div class="noc-gauge-svg-wrap"><div class="noc-gauge-ring" id="gaugeSnrDown"></div><span class="noc-gauge-val" id="valSnrDown">—</span></div><div class="noc-gauge-estado" id="estadoSnrDown">—</div></div>
-            <div class="noc-gauge-card card-noc" data-metric="flaps"><div class="noc-gauge-label">Flaps</div><div class="noc-gauge-svg-wrap"><div class="noc-gauge-ring" id="gaugeFlaps"></div><span class="noc-gauge-val" id="valFlaps">—</span></div><div class="noc-gauge-estado" id="estadoFlaps">—</div></div>
-          </div>
-          <div class="noc-widgets-inline">
-            <div class="noc-widget card-noc"><span class="noc-widget-label">MAC</span><span class="noc-widget-val" id="widgetMacVal">—</span></div>
-            <div class="noc-widget card-noc"><span class="noc-widget-label">IP</span><span class="noc-widget-val" id="widgetIpVal">—</span></div>
-            <div class="noc-widget card-noc"><span class="noc-widget-label">Corrected / Uncorrectable</span><span class="noc-widget-val" id="widgetErrorsVal">—</span></div>
-          </div>
-          <div class="noc-topology-inline card-noc">
-            <h3 class="noc-chart-title">Topología HFC · Flujo de señal</h3>
-            <div id="hfcTopologyContainer" class="hfc-topology-container"></div>
-          </div>
-          <div class="noc-chart-inline card-noc">
-            <h3 class="noc-chart-title">Saturación de Canal</h3>
-            <div class="noc-chart-wrap"><canvas id="chartSaturacion" width="400" height="100"></canvas></div>
-            <p class="noc-chart-desc" id="chartDesc">Pegue output de show interface upstream.</p>
-          </div>
-          <div class="noc-reporte-inline card-noc">
-            <h3 class="noc-chart-title">Motor de Decisión</h3>
-            <div id="reporteHallazgos">
-              <p class="noc-reporte-empty" id="reporteEmpty">Ejecute el parser para ver hallazgos.</p>
-              <div id="reporteContent" class="noc-reporte-content" hidden>
-                <div class="noc-reporte-riesgos" id="reporteRiesgos"></div>
-                <div class="noc-reporte-resumen" id="reporteResumen"></div>
-                <div class="noc-orden-trabajo-wrap" id="ordenTrabajoWrap" hidden>
-                  <div class="noc-orden-trabajo-masiva" id="ordenTrabajoMasiva" hidden>
-                    <button type="button" class="noc-btn noc-btn-orden-trabajo" id="btnOrdenTrabajo">Generar Orden de Trabajo</button>
-                    <span class="noc-orden-ayuda">Reportar a mantenimiento de red</span>
-                  </div>
-                  <div class="noc-orden-trabajo-individual" id="ordenTrabajoIndividual" hidden>
-                    <span class="noc-orden-sugerencia">Sugerencia: <strong>Revisión de Acometida</strong></span>
-                    <span class="noc-orden-ayuda">Enviar técnico a domicilio</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-          </div>
-        </div>
         <div id="dashboardAdminOnlyBlocks" data-admin-only>
         <hr class="section-divider" aria-hidden="true">
         <!-- Gestión Operación - QoE -->
@@ -1150,6 +1039,122 @@
             </table>
           </div>
           <p class="portal-empty" id="portalEmpty">No hay usuarios. Agrega uno o carga por nombres.</p>
+        </div>
+      </section>
+
+      <section id="section-diagnostico" class="section">
+        <div class="noc-dashboard-integrado" id="nocDashboardIntegrado">
+          <div class="calidad-header-bar">
+            <h2 class="section-subtitle">DASHBOARD NOC · Ingesta e Inventario</h2>
+          </div>
+          <div class="noc-registro-toggle-header" id="nocRegistroToggleHeader" role="button" tabindex="0" aria-expanded="true" aria-controls="nocDashboardCollapsible">
+            <h3 class="noc-registro-titulo">Registro por diagnóstico</h3>
+            <span class="noc-registro-toggle-icon" id="nocRegistroToggleIcon">−</span>
+          </div>
+          <div class="noc-dashboard-collapsible" id="nocDashboardCollapsible">
+          <form class="noc-registro-diagnostico card-noc" id="nocRegistroDiagnostico">
+            <div class="noc-registro-fila">
+              <div class="noc-registro-campo">
+                <label for="nocCuenta"># Cuenta</label>
+                <input type="text" id="nocCuenta" name="cuenta" class="noc-input" placeholder="Ej: 12345678" autocomplete="off">
+              </div>
+              <div class="noc-registro-campo">
+                <label for="nocRadicado">Radicado</label>
+                <input type="text" id="nocRadicado" name="radicado" class="noc-input" placeholder="Ej: RAD-2025-001" autocomplete="off">
+              </div>
+              <div class="noc-registro-campo">
+                <label>Escalado a QoE</label>
+                <div class="noc-registro-radio">
+                  <label><input type="radio" name="escaladoQoe" value="si" checked> SI</label>
+                  <label><input type="radio" name="escaladoQoe" value="no"> NO</label>
+                </div>
+              </div>
+              <div class="noc-registro-campo">
+                <label>Hubo solución</label>
+                <div class="noc-registro-radio">
+                  <label><input type="radio" name="huboSolucion" value="si" checked> SI</label>
+                  <label><input type="radio" name="huboSolucion" value="no"> NO</label>
+                </div>
+              </div>
+              <div class="noc-registro-campo noc-registro-lls-ot" id="nocRegistroLlsOtWrap" hidden>
+                <label for="nocLlsOt"># de LLS/OT</label>
+                <input type="text" id="nocLlsOt" name="llsOt" class="noc-input" placeholder="Digite el # de LLS/OT" autocomplete="off">
+              </div>
+              <div class="noc-registro-campo noc-registro-actions">
+                <button type="button" class="noc-btn noc-btn-primary" id="nocBtnGuardarIntermitencia">Guardar en Intermitencia</button>
+              </div>
+            </div>
+          </form>
+          <div class="noc-inline-wrap">
+            <div class="noc-cmts-selector-inline">
+              <label for="cmtsSearch" class="noc-label">CMTS / Nodo</label>
+              <div class="noc-autocomplete">
+                <input type="text" id="cmtsSearch" class="noc-input noc-input-terminal" placeholder="Escriba IP o nombre del CMTS..." autocomplete="off" aria-label="Buscar CMTS">
+                <div id="cmtsDropdown" class="noc-dropdown" role="listbox" hidden></div>
+              </div>
+              <div class="noc-ip-conexion card-noc" id="nocIpConexionBox">
+                <span class="noc-ip-label">IP de conexión</span>
+                <span class="noc-ip-valor" id="nocIpConexion">—</span>
+              </div>
+              <div id="cmtsContext" class="noc-context" hidden>
+                <span class="noc-context-item"><strong>Nombre:</strong> <span id="cmtsNombreSel">—</span></span>
+                <span class="noc-context-item"><strong>IP:</strong> <span id="cmtsIpSel">—</span></span>
+                <span class="noc-context-item"><strong>Segmento:</strong> <span id="cmtsSegmentoSel">—</span></span>
+                <span class="noc-context-item"><strong>Marca:</strong> <span id="cmtsMarcaSel">—</span></span>
+              </div>
+            </div>
+            <div class="noc-ingesta-inline">
+              <label for="ingestaTextarea" class="noc-label">Ingesta de datos</label>
+              <textarea id="ingestaTextarea" class="noc-textarea-terminal" rows="5" placeholder="Pegue output del CMTS (show cable modem verbose, etc.)"></textarea>
+              <div class="noc-inline-actions">
+                <button type="button" class="noc-btn noc-btn-parse" id="btnParsear">Parsear</button>
+                <button type="button" class="noc-btn noc-btn-primary" id="btnGenerarReporte">Generar Reporte</button>
+              </div>
+              <div id="parseStatus" class="noc-parse-status" role="status"></div>
+            </div>
+          </div>
+          <div class="noc-gauges-inline" id="nocGaugesInline">
+            <div class="noc-gauge-card card-noc" data-metric="tx"><div class="noc-gauge-label">TX</div><div class="noc-gauge-svg-wrap"><div class="noc-gauge-ring" id="gaugeTx"></div><span class="noc-gauge-val" id="valTx">—</span></div><div class="noc-gauge-estado" id="estadoTx">—</div></div>
+            <div class="noc-gauge-card card-noc" data-metric="rx"><div class="noc-gauge-label">RX</div><div class="noc-gauge-svg-wrap"><div class="noc-gauge-ring" id="gaugeRx"></div><span class="noc-gauge-val" id="valRx">—</span></div><div class="noc-gauge-estado" id="estadoRx">—</div></div>
+            <div class="noc-gauge-card card-noc" data-metric="snrUp"><div class="noc-gauge-label">SNR Up</div><div class="noc-gauge-svg-wrap"><div class="noc-gauge-ring" id="gaugeSnrUp"></div><span class="noc-gauge-val" id="valSnrUp">—</span></div><div class="noc-gauge-estado" id="estadoSnrUp">—</div></div>
+            <div class="noc-gauge-card card-noc" data-metric="snrDown"><div class="noc-gauge-label">SNR Down</div><div class="noc-gauge-svg-wrap"><div class="noc-gauge-ring" id="gaugeSnrDown"></div><span class="noc-gauge-val" id="valSnrDown">—</span></div><div class="noc-gauge-estado" id="estadoSnrDown">—</div></div>
+            <div class="noc-gauge-card card-noc" data-metric="flaps"><div class="noc-gauge-label">Flaps</div><div class="noc-gauge-svg-wrap"><div class="noc-gauge-ring" id="gaugeFlaps"></div><span class="noc-gauge-val" id="valFlaps">—</span></div><div class="noc-gauge-estado" id="estadoFlaps">—</div></div>
+          </div>
+          <div class="noc-widgets-inline">
+            <div class="noc-widget card-noc"><span class="noc-widget-label">MAC</span><span class="noc-widget-val" id="widgetMacVal">—</span></div>
+            <div class="noc-widget card-noc"><span class="noc-widget-label">IP</span><span class="noc-widget-val" id="widgetIpVal">—</span></div>
+            <div class="noc-widget card-noc"><span class="noc-widget-label">Corrected / Uncorrectable</span><span class="noc-widget-val" id="widgetErrorsVal">—</span></div>
+          </div>
+          <div class="noc-topology-inline card-noc">
+            <h3 class="noc-chart-title">Topología HFC · Flujo de señal</h3>
+            <div id="hfcTopologyContainer" class="hfc-topology-container"></div>
+          </div>
+          <div class="noc-chart-inline card-noc">
+            <h3 class="noc-chart-title">Saturación de Canal</h3>
+            <div class="noc-chart-wrap"><canvas id="chartSaturacion" width="400" height="100"></canvas></div>
+            <p class="noc-chart-desc" id="chartDesc">Pegue output de show interface upstream.</p>
+          </div>
+          <div class="noc-reporte-inline card-noc">
+            <h3 class="noc-chart-title">Motor de Decisión</h3>
+            <div id="reporteHallazgos">
+              <p class="noc-reporte-empty" id="reporteEmpty">Ejecute el parser para ver hallazgos.</p>
+              <div id="reporteContent" class="noc-reporte-content" hidden>
+                <div class="noc-reporte-riesgos" id="reporteRiesgos"></div>
+                <div class="noc-reporte-resumen" id="reporteResumen"></div>
+                <div class="noc-orden-trabajo-wrap" id="ordenTrabajoWrap" hidden>
+                  <div class="noc-orden-trabajo-masiva" id="ordenTrabajoMasiva" hidden>
+                    <button type="button" class="noc-btn noc-btn-orden-trabajo" id="btnOrdenTrabajo">Generar Orden de Trabajo</button>
+                    <span class="noc-orden-ayuda">Reportar a mantenimiento de red</span>
+                  </div>
+                  <div class="noc-orden-trabajo-individual" id="ordenTrabajoIndividual" hidden>
+                    <span class="noc-orden-sugerencia">Sugerencia: <strong>Revisión de Acometida</strong></span>
+                    <span class="noc-orden-ayuda">Enviar técnico a domicilio</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          </div>
         </div>
       </section>
 
