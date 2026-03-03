@@ -155,9 +155,13 @@
           <div class="calidad-header-bar">
             <h2 class="section-subtitle">DASHBOARD NOC · Ingesta e Inventario</h2>
           </div>
-          <!-- Registro por diagnóstico de cliente -->
-          <form class="noc-registro-diagnostico card-noc" id="nocRegistroDiagnostico">
+          <!-- Registro por diagnóstico con toggle -->
+          <div class="noc-registro-toggle-header" id="nocRegistroToggleHeader" role="button" tabindex="0" aria-expanded="true" aria-controls="nocDashboardCollapsible">
             <h3 class="noc-registro-titulo">Registro por diagnóstico</h3>
+            <span class="noc-registro-toggle-icon" id="nocRegistroToggleIcon">−</span>
+          </div>
+          <div class="noc-dashboard-collapsible" id="nocDashboardCollapsible">
+          <form class="noc-registro-diagnostico card-noc" id="nocRegistroDiagnostico">
             <div class="noc-registro-fila">
               <div class="noc-registro-campo">
                 <label for="nocCuenta"># Cuenta</label>
@@ -258,6 +262,7 @@
                 </div>
               </div>
             </div>
+          </div>
           </div>
         </div>
         <div id="dashboardAdminOnlyBlocks" data-admin-only>

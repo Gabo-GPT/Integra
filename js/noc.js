@@ -869,6 +869,21 @@
     var btnOrdenTrabajo = $('#btnOrdenTrabajo');
     if (btnOrdenTrabajo) btnOrdenTrabajo.addEventListener('click', generarOrdenTrabajo);
 
+    /* Toggle minimizar/maximizar dashboard NOC (Registro, CMTS, Topología, etc.) */
+    var toggleHeader = $('#nocRegistroToggleHeader');
+    var toggleIcon = $('#nocRegistroToggleIcon');
+    var collapsible = $('#nocDashboardCollapsible');
+    if (toggleHeader && collapsible && toggleIcon) {
+      toggleHeader.addEventListener('click', function () {
+        var collapsed = collapsible.classList.toggle('collapsed');
+        toggleIcon.textContent = collapsed ? '+' : '−';
+        toggleHeader.setAttribute('aria-expanded', !collapsed);
+      });
+      toggleHeader.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleHeader.click(); }
+      });
+    }
+
     /* Toggle campo LLS/OT cuando Hubo solución = NO */
     var huboSolucionRadios = $$('input[name="huboSolucion"]');
     var llsOtWrap = $('#nocRegistroLlsOtWrap');
