@@ -32,6 +32,10 @@
     }
     return API_URL;
   }
+  function getApiDataUrl(bustCache) {
+    var base = getApiBase() + '/api/data';
+    return bustCache ? base + '?_t=' + Date.now() : base;
+  }
 
   function debounce(fn, ms) {
     var t;
@@ -4936,6 +4940,19 @@
   function showLogin() {
     var el = $('loginOverlay');
     if (el) el.classList.remove('hidden');
+    if (API_URL) {
+      fetch(getApiDataUrl(true), { cache: 'no-store' })
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (d) {
+          if (!d || typeof d !== 'object') return;
+          var parsed = d;
+          if (parsed.data && typeof parsed.data === 'object') parsed = parsed.data;
+          if (Object.keys(parsed).length > 0) {
+            setDataFromApi(parsed);
+          }
+        })
+        .catch(function () {});
+    }
   }
 
   function hideLogin() {
@@ -5281,7 +5298,7 @@
       if (_saveTimer || _pendingApiPut) return;
       _pollAbort = new AbortController();
       var sig = _pollAbort.signal;
-      fetch(getApiBase() + '/api/data', { cache: 'no-store', signal: sig })
+      fetch(getApiDataUrl(true), { cache: 'no-store', signal: sig })
         .then(function (r) {
           if (!r.ok) return;
           return r.json();
@@ -5350,7 +5367,7 @@
         showOverlay();
         var ctrl = new AbortController();
         var tid = setTimeout(function () { ctrl.abort(); }, FETCH_TIMEOUT_MS);
-        fetch(getApiBase() + '/api/data', { signal: ctrl.signal, cache: 'no-store' })
+        fetch(getApiDataUrl(true), { signal: ctrl.signal, cache: 'no-store' })
           .then(function (r) {
             clearTimeout(tid);
             if (!r.ok) throw new Error('HTTP ' + r.status);
