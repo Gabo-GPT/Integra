@@ -469,6 +469,18 @@ body {
 .noc-reporte-wrap { min-height: 80px; }
 .noc-reporte-empty { color: var(--noc-text-muted); font-size: 0.9rem; margin: 0; }
 .noc-reporte-content[hidden] { display: none !important; }
+.noc-reporte-reincidencia {
+  display: none;
+  margin-bottom: 1rem;
+  padding: 0.85rem 1rem;
+  border-radius: 8px;
+  border-left: 4px solid #f59e0b;
+  background: rgba(245, 158, 11, 0.15);
+  color: var(--noc-text);
+  font-weight: 600;
+}
+.noc-reporte-reincidencia[hidden] { display: none !important; }
+.noc-reporte-reincidencia:not([hidden]) { display: block; }
 .noc-reporte-riesgos {
   margin-bottom: 1rem;
   padding: 0.75rem 1rem;

@@ -33,8 +33,11 @@
       flaps: d.flaps,
       correctables: d.correctables,
       uncorrectables: d.uncorrectables,
+      errorRatioFec: d.errorRatioFec,
       utilization: d.utilization,
       mac: d.mac,
+      interfaceId: d.interfaceId,
+      nodeId: d.nodeId,
       modemsOffline: opts.modemsOffline != null ? opts.modemsOffline : 0,
       snrPuerto: opts.snrPuerto != null ? opts.snrPuerto : d.snrUp,
       modemOffline: opts.modemOffline === true
@@ -44,8 +47,9 @@
   /**
    * Lógica de detección de fallos (relación entre niveles)
    * Splitter = obstáculo (TX alto + RX bajo). Conector = inestabilidad (Correcteds/Flaps). Acometida = balanceo (RX extremo).
+   * @param {Object} opts - { nodosSaturados: string[] } nodos con 3+ reportes RX alto en última hora (historial Supabase)
    */
-  function evaluarDiagnostico(diag) {
+  function evaluarDiagnostico(diag, opts) {
     var r = {
       cmts: ESTADO.normal,
       tramoCmtsNodo: ESTADO.normal,
@@ -75,10 +79,13 @@
     var snrPuerto = diag.snrPuerto != null ? diag.snrPuerto : snrUp;
     var utilization = diag.utilization;
 
-    /* FALLA MASIVA: SNR Upstream puerto < 25 O > 5 módems offline → NODO rojo neón */
+    /* FALLA MASIVA: SNR Upstream puerto < 25 O > 5 módems offline O historial: 3+ RX alto en este Nodo (última hora) → NODO rojo parpadeante */
     var snrBajo = snrPuerto != null && snrPuerto < 25;
     var muchosOffline = modemsOffline > 5;
-    if (snrBajo || muchosOffline) {
+    var nodosSaturados = (opts && opts.nodosSaturados) || [];
+    var nodoActual = (diag.nodeId || diag.interfaceId || '').toString().trim();
+    var nodoEnHistorialSaturado = nodoActual && nodosSaturados.indexOf(nodoActual) >= 0;
+    if (snrBajo || muchosOffline || nodoEnHistorialSaturado) {
       r.tramoCmtsNodo = ESTADO.masiva;
       r.cmts = ESTADO.masiva;
       r.nodo = ESTADO.masiva;
@@ -95,11 +102,13 @@
     /* RX 8–25 dBmV = interfaz upstream (config). No marcar DROP por rxAlto en ese caso. */
     var rxEsInterfazUpstream = (utilization != null && rx != null && rx >= 8 && rx <= 25);
 
-    /* FALLA EN ACOMETIDA (DROP): TX < 35 Y RX > 12 downstream, O RX < -12. RX 14 = interfaz OK */
+    /* FALLA EN ACOMETIDA (DROP): TX < 35 Y RX > 12 downstream, O RX < -12, O errores FEC > 1% del tráfico */
     var txBajo = tx != null && tx < 35;
     var rxAlto = rx != null && rx > 12 && !rxEsInterfazUpstream;
     var rxMuyBajo = rx != null && rx < -12;
-    if ((txBajo && rxAlto) || rxAlto || rxMuyBajo) {
+    var errorRatioFec = diag.errorRatioFec;
+    var erroresFecSaturacion = errorRatioFec != null && errorRatioFec > 0.01;
+    if ((txBajo && rxAlto) || rxAlto || rxMuyBajo || erroresFecSaturacion) {
       r.drop = ESTADO.masiva;
       r.tramoTapDrop = ESTADO.masiva;
       r.tramoDropSplitter = ESTADO.masiva;
@@ -154,9 +163,10 @@
     return esTramo ? COLOR.segmento : COLOR.normal;
   }
 
-  function render(container, diagnostico) {
+  function render(container, diagnostico, opts) {
     if (!container) return;
-    var e = evaluarDiagnostico(diagnostico);
+    opts = opts || {};
+    var e = evaluarDiagnostico(diagnostico, { nodosSaturados: opts.nodosSaturados || [] });
 
     var seg = function (key) { return colorParaEstado(e[key], true); };
     var nodo = function (key) { return colorParaEstado(e[key], false); };

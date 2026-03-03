@@ -185,6 +185,9 @@
             }
           }
         }
+        var corr = m.correctables, unerr = m.unerroreds || (diag.raw && diag.raw.unerroreds), uncorr = m.uncorrectables != null ? m.uncorrectables : (diag.raw && diag.raw.uncorrectablesGlobal) || (diag.raw && diag.raw.uncorrectables);
+        var totalFec = (unerr || 0) + (corr || 0) + (uncorr || 0);
+        var errorRatioFec = totalFec > 0 ? ((corr || 0) + (uncorr || 0)) / totalFec : null;
         return {
           ok: true,
           mac: m.mac || null,
@@ -194,11 +197,14 @@
           snrUp: diag.snrUp && diag.snrUp.valor != null ? diag.snrUp.valor : m.snrUp,
           snrDown: diag.snrDown && diag.snrDown.valor != null ? diag.snrDown.valor : m.snrDown,
           flaps: diag.intermitencia && diag.intermitencia.valor !== 'N/A' ? diag.intermitencia.valor : m.flaps,
-          correctables: m.correctables,
-          uncorrectables: m.uncorrectables != null ? m.uncorrectables : (diag.raw && diag.raw.uncorrectables),
+          correctables: corr,
+          uncorrectables: uncorr,
+          unerroreds: unerr,
+          errorRatioFec: errorRatioFec,
           utilization: m.utilization,
           totalModems: totalModems,
           interfaceId: m.interfaceId || (diag.raw && diag.raw.interfaceId) || null,
+          nodeId: m.node || (diag.raw && diag.raw.node) || null,
           rangingRetries: m.rangingRetries || (diag.raw && diag.raw.rangingRetries) || null,
           peakTx: peakTx,
           crcModem: crcModem,
@@ -248,12 +254,30 @@
     if (m) flaps = parseInt(String(m[1]).replace(/\D/g, ''), 10) || null;
 
     let correctables = null;
-    m = combined.match(/([\d\s,]+)\s+(?:Correctables?|Correcteds?)/i);
-    if (m) correctables = parseInt(String(m[1]).replace(/\D/g, ''), 10) || null;
-
-    let uncorrectables = null;
-    m = combined.match(/([\d\s,]+)\s+(?:Uncorrectables?|Uncorrectable)/i);
-    if (m) uncorrectables = parseInt(String(m[1]).replace(/\D/g, ''), 10) || null;
+    /* FEC: Unerroreds, Correcteds, Uncorrectables (relación para ratio de errores) */
+    let unerroreds = null;
+    m = combined.match(/([\d\s,]+)\s+Unerroreds?,\s*([\d\s,]+)\s+Correcteds?,\s*([\d\s,]+)\s+Uncorrectables?/i);
+    if (m) {
+      unerroreds = parseInt(String(m[1]).replace(/\D/g, ''), 10) || null;
+      correctables = parseInt(String(m[2]).replace(/\D/g, ''), 10) || null;
+      uncorrectables = parseInt(String(m[3]).replace(/\D/g, ''), 10) || null;
+    }
+    if (correctables == null) {
+      m = combined.match(/([\d\s,]+)\s+(?:Correctables?|Correcteds?)/i);
+      if (m) correctables = parseInt(String(m[1]).replace(/\D/g, ''), 10) || null;
+    }
+    if (uncorrectables == null) {
+      m = combined.match(/([\d\s,]+)\s+(?:Uncorrectables?|Uncorrectable)/i);
+      if (m) uncorrectables = parseInt(String(m[1]).replace(/\D/g, ''), 10) || null;
+    }
+    /* CRC/HCS del modem si hay show cable modem x errors (no sobreescribir FEC del canal) */
+    if (uncorrectables == null && combined.toLowerCase().includes('crc') && combined.toLowerCase().includes('hcs')) {
+      m = combined.match(/CRC\s+HCS[\s\S]*?(\d+)\s+(\d+)\s+[a-fA-F0-9\.\-:]+/i);
+      if (m) {
+        var crcV = parseInt(m[1], 10), hcsV = parseInt(m[2], 10);
+        if (!isNaN(crcV) && !isNaN(hcsV)) uncorrectables = crcV + hcsV;
+      }
+    }
 
     let utilization = null;
     m = combined.match(/(?:Avg\.?\s*)?(?:channel\s+)?utilization[\s:]+([\d.,]+)/i);
@@ -262,6 +286,12 @@
     var interfaceId = null;
     m = combined.match(/(?:US\s*Intf|Upstream|Cable\s*upstream|cable-upstream)[\s:]*(\d+\/\d+(?:\.\d+)?|[\w\-\.]+)/i);
     if (m) interfaceId = m[1].trim();
+    m = combined.match(/(\d+\/\d+\/\d+-\d+\/\d+\/\d+)/);
+    if (m && !interfaceId) interfaceId = m[1].trim();
+
+    var nodeId = null;
+    m = combined.match(/Nodo[\s:]+([\w\-\.]+)|Node[\s:]+([\w\-\.]+)/i);
+    if (m) nodeId = (m[1] || m[2] || '').trim();
 
     var rangingRetries = null;
     m = combined.match(/(?:RngRetry|Ranging\s*Retries?)[\s:]+(\d+)/i);
@@ -296,6 +326,8 @@
       }
     }
 
+    var totalFec = (unerroreds || 0) + (correctables || 0) + (uncorrectables || 0);
+    var errorRatioFec = totalFec > 0 ? ((correctables || 0) + (uncorrectables || 0)) / totalFec : null;
     return {
       ok: true,
       mac: mac,
@@ -307,9 +339,12 @@
       flaps: flaps,
       correctables: correctables,
       uncorrectables: uncorrectables,
+      unerroreds: unerroreds,
+      errorRatioFec: errorRatioFec,
       utilization: utilization,
       totalModems: totalModems,
       interfaceId: interfaceId,
+      nodeId: nodeId,
       rangingRetries: rangingRetries,
       peakTx: peakTx,
       crcModem: crcModem,
@@ -458,6 +493,7 @@
     var snrUp = d.snrUp;
     var flaps = d.flaps;
     var correctables = d.correctables;
+    var errorRatioFec = d.errorRatioFec;
     var utilization = d.utilization;
     var interfaceId = d.interfaceId || '—';
     var rangingRetries = d.rangingRetries;
@@ -561,6 +597,17 @@
       });
     }
 
+    /* Errores FEC > 1% del tráfico – saturación que el ojo humano puede ignorar → falla DROP */
+    if (errorRatioFec != null && errorRatioFec > 0.01) {
+      var pctStr = (errorRatioFec * 100).toFixed(2) + '%';
+      hallazgos.push({
+        tipo: 'individual',
+        riesgo: 'Riesgo: Saturación de errores FEC en DROP (Correcteds+Uncorrectables > 1% del tráfico).',
+        evidencia: 'Ratio de errores FEC = ' + pctStr + '. Relación Correcteds/Uncorrectables indica ruido en acometida.',
+        accion: 'Revisar cable coaxial (Drop) y conectores. El aplicativo detecta saturaciones que el ojo humano ignora.'
+      });
+    }
+
     /* Flaps > 50 sin contexto TAP ya cubierto */
     if (flaps != null && flaps > 50 && !hallazgos.some(function (h) { return h.evidencia && h.evidencia.indexOf('Flaps') >= 0; })) {
       var rngNote = rangingRetries != null && rangingRetries > 5 ? ' RngRetry alto (' + rangingRetries + ').' : '';
@@ -609,21 +656,34 @@
     return hallazgos;
   }
 
-  function actualizarReporte(data) {
+  function actualizarReporte(data, opts) {
+    opts = opts || {};
     const empty = $('#reporteEmpty');
     const content = $('#reporteContent');
     const riesgosEl = $('#reporteRiesgos');
     const resumenEl = $('#reporteResumen');
+    const reincidenciaEl = $('#reporteReincidencia');
 
     if (!data || !data.ok) {
       if (empty) empty.hidden = false;
       if (content) content.hidden = true;
+      if (reincidenciaEl) reincidenciaEl.hidden = true;
       actualizarOrdenTrabajo(null);
       return;
     }
 
     if (empty) empty.hidden = true;
     if (content) content.hidden = false;
+
+    var reincidencia = opts.reincidencia || {};
+    if (reincidenciaEl) {
+      if (reincidencia.reincidente && reincidencia.mensaje) {
+        reincidenciaEl.textContent = reincidencia.mensaje;
+        reincidenciaEl.hidden = false;
+      } else {
+        reincidenciaEl.hidden = true;
+      }
+    }
 
     var hallazgos = generarHallazgos(data);
     if (riesgosEl) {
@@ -656,6 +716,34 @@
       var diag = HfcTopologyView.buildDiagnostico(data, { snrPuerto: data.snrUp, modemsOffline: 0 });
       actualizarOrdenTrabajo(diag);
     }
+  }
+
+  function getApiBase() {
+    try {
+      return (window.location && window.location.origin) ? window.location.origin : '';
+    } catch (e) { return ''; }
+  }
+
+  function guardarDiagnostico(data) {
+    if (!data || !data.ok || !data.mac) return;
+    var mac = (data.mac || '').toString().trim();
+    var asesorId = (typeof localStorage !== 'undefined' && localStorage.getItem('integra_asesor_id')) || 'anon';
+    var niveles = {
+      tx: data.tx, rx: data.rx, snrUp: data.snrUp, snrDown: data.snrDown,
+      flaps: data.flaps, utilization: data.utilization
+    };
+    fetch(getApiBase() + '/api/diagnostico', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        mac: mac,
+        niveles: niveles,
+        errores_fec: data.errorRatioFec,
+        asesor_id: asesorId,
+        interface_id: data.interfaceId || null,
+        node_id: data.nodeId || null
+      })
+    }).catch(function () {});
   }
 
   function actualizarOrdenTrabajo(diagnostico) {
@@ -809,11 +897,23 @@
 
     actualizarGauges(result);
     actualizarChart(result.utilization);
-    if (typeof HfcTopologyView !== 'undefined') {
-      var diag = HfcTopologyView.buildDiagnostico(result, { snrPuerto: result.snrUp, modemsOffline: 0 });
-      HfcTopologyView.render($('#hfcTopologyContainer'), diag);
-    }
-    actualizarReporte(result);
+    guardarDiagnostico(result);
+
+    var mac = (result.mac || '').toString().trim();
+    var base = getApiBase();
+    var reincidenciaPromise = mac ? fetch(base + '/api/diagnostico/reincidencia?mac=' + encodeURIComponent(mac)).then(function (r) { return r.json(); }).catch(function () { return { reincidente: false }; }) : Promise.resolve({ reincidente: false });
+    var historialPromise = fetch(base + '/api/diagnostico/historial-nodos').then(function (r) { return r.json(); }).catch(function () { return { nodosSaturados: [] }; });
+
+    Promise.all([reincidenciaPromise, historialPromise]).then(function (arr) {
+      var reincidencia = arr[0];
+      var historial = arr[1] || {};
+      var nodosSaturados = historial.nodosSaturados || [];
+      actualizarReporte(result, { reincidencia: reincidencia });
+      if (typeof HfcTopologyView !== 'undefined') {
+        var diag = HfcTopologyView.buildDiagnostico(result, { snrPuerto: result.snrUp, modemsOffline: 0 });
+        HfcTopologyView.render($('#hfcTopologyContainer'), diag, { nodosSaturados: nodosSaturados });
+      }
+    });
   }
 
   function init() {
