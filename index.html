@@ -1202,8 +1202,10 @@
     </main>
   </div>
 
-  <!-- Modo local: todo en localStorage. Sin servidor, Render ni base de datos. -->
-  <script>window.INTEGRA_MODO_LOCAL = true;</script>
+  <!-- Modo local solo al abrir desde archivo o localhost. En Render usa API/Supabase. -->
+  <script>
+    window.INTEGRA_MODO_LOCAL = (location.protocol === 'file:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1');
+  </script>
   <!-- API inventario CMTS: misma origen por defecto; descomenta si usas otro puerto -->
   <script>
     window.INTEGRA_API_BASE = window.INTEGRA_API_BASE || ((location.protocol==='file:') ? 'http://localhost:3000' : '');
