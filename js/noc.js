@@ -277,8 +277,26 @@
     if (m) snrDown = num(m[1] || m[2]);
 
     let flaps = null;
-    m = combined.match(/Flaps?[\s:]+([\d\s,]+)/i);
-    if (m) flaps = parseInt(String(m[1]).replace(/\D/g, ''), 10) || null;
+    var hasFlapListNoc = /show\s+cable\s+(?:modem\s+.*\s+)?(?:flap|flap-list)/im.test(combined);
+    if (hasFlapListNoc && mac) {
+      var macEscNoc = mac.replace(/[.:-]/g, '[.:\\-]');
+      var macRowNoc = combined.match(new RegExp(macEscNoc + '[^\\n]+', 'im'));
+      if (!macRowNoc) {
+        flaps = 0;
+      } else {
+        var flapMatch = macRowNoc[0].match(/\s+(\d+)\s+\d{4}-\d{2}-\d{2},\d{2}:\d{2}:\d{2}/) || macRowNoc[0].match(/\s+(\d+)\s+\d{1,2}:\d{2}(?::\d{2})?\s*$/);
+        if (flapMatch) {
+          var v = parseInt(flapMatch[1], 10);
+          flaps = (v <= 2000) ? v : 0;
+        } else {
+          flaps = 0;
+        }
+      }
+    } else {
+      m = combined.match(/Flaps?[\s:]+([\d\s,]+)/i);
+      if (m) flaps = parseInt(String(m[1]).replace(/\D/g, ''), 10) || null;
+      if (flaps != null && flaps > 2000) flaps = null;
+    }
 
     let correctables = null;
     /* FEC: Unerroreds, Correcteds, Uncorrectables (relación para ratio de errores) */
@@ -559,6 +577,7 @@
     var crcModem = d.crcModem;
     var hcsModem = d.hcsModem;
     var errModem = ((crcModem || 0) + (hcsModem || 0));
+    var uncorrectables = d.uncorrectables != null ? d.uncorrectables : (errModem > 0 ? errModem : null);
 
     var hallazgos = [];
     var puertoRef = interfaceId !== '—' ? 'puerto ' + interfaceId : 'el puerto';
@@ -708,14 +727,16 @@
       var utilMuyBaja = utilization != null && utilization < 50;
 
       if (utilMuyBaja && (hayCRC_HCS || hayRatioFecAlto)) {
-        var numFlaps = (flaps != null && !isNaN(flaps)) ? flaps : 147;
         var numUsuarios = (totalModems != null && totalModems > 0) ? totalModems : 30;
         var nodoNombre = interfaceId && interfaceId !== '—' ? interfaceId : 'Plaza de Bolívar 2';
         var accionBloque = 'Paso 1 (Remoto): Migrar cliente a portadora 1/3.0 para blindar la navegación de los vecinos contra el ruido actual.\nPaso 2 (Campo): Generar Visita Técnica para corrección de ruido físico en acometida (causa raíz).';
+        var evidenciaTexto = (uncorrectables != null && uncorrectables > 0)
+          ? 'Cliente con ' + uncorrectables.toLocaleString('es') + ' errores no corregibles detectados en puerto con ' + (utilization != null ? utilization.toFixed(0) : '0') + '% de uso.'
+          : 'Puerto con ' + (utilization != null ? utilization.toFixed(0) + '%' : '—') + ' utilización. Cliente con ' + (parteE.length ? parteE.join(', ') : 'ratio FEC elevado o errores') + '.';
         hallazgos.push({
           tipo: 'migracion',
           riesgo: 'Riesgo: Cliente con fallas aisladas en puerto estable.',
-          evidencia: 'Puerto con ' + (utilization != null ? utilization.toFixed(0) + '%' : '—') + ' utilización. Cliente con ' + (parteE.length ? parteE.join(', ') : 'ratio FEC elevado o errores') + '. Impacto: ' + numFlaps + ' Flaps pueden degradar a los otros ' + numUsuarios + ' usuarios del nodo ' + nodoNombre + '.',
+          evidencia: evidenciaTexto,
           accion: accionBloque
         });
       } else {

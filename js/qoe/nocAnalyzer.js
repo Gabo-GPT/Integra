@@ -130,20 +130,39 @@
       if (m) { var dssnr = parseNum(m[2]); if (dssnr != null && !isNaN(dssnr) && String(m[2]) !== '-') out.snrDown = dssnr; }
     }
 
-    /* Flaps */
-    m = combined.match(/Flaps?[\s:]+([\d\s,]+)|(?:US|DS)\s*Flaps?[\s:]+([\d\s,]+)/i);
-    if (m) out.flaps = parseIntSafe(m[1] || m[2]);
-    /* CASA: show cable flap-list - columna Flap (antes de Time YYYY-MM-DD,HH:MM:SS) */
-    if (out.flaps == null) {
-      m = combined.match(/(?:show\s+cable\s+flap|flap-list)[\s\S]*?[a-fA-F0-9\.\-:]{12,17}[^\n]*\s+(\d+)\s+\d{4}-\d{2}-\d{2},\d{2}:\d{2}:\d{2}/im);
-      if (m) out.flaps = parseIntSafe(m[1]);
+    /* Flaps - Prioridad: si show cable flap-list para la MAC no devuelve resultados, flaps = 0 (ignorar contador general) */
+    var hasFlapList = /show\s+cable\s+(?:modem\s+.*\s+)?(?:flap|flap-list)/im.test(combined);
+    if (hasFlapList && out.mac) {
+      var macEsc = out.mac.replace(/[.:\-]/g, '[.:\\-]');
+      var flapListSection = combined.match(new RegExp('(?:show\\s+cable\\s+(?:modem\\s+.*\\s+)?(?:flap|flap-list))[\\s\\S]*?(?=show\\s+|$)', 'im'));
+      var section = flapListSection ? flapListSection[0] : combined;
+      var macRow = section.match(new RegExp(macEsc + '[^\\n]+', 'im'));
+      if (!macRow) {
+        out.flaps = 0;
+      } else {
+        var flapFromRow = null;
+        m = macRow[0].match(/\s+(\d+)\s+\d{4}-\d{2}-\d{2},\d{2}:\d{2}:\d{2}/);
+        if (m) flapFromRow = parseIntSafe(m[1]);
+        if (!m) { m = macRow[0].match(/\s+(\d+)\s+\d{1,2}:\d{2}(?::\d{2})?\s*$/); if (m) flapFromRow = parseIntSafe(m[1]); }
+        if (flapFromRow != null && flapFromRow <= 2000) out.flaps = flapFromRow;
+        else if (flapFromRow != null && flapFromRow > 2000) out.flaps = 0;
+        else out.flaps = 0;
+      }
+    } else {
+      m = combined.match(/Flaps?[\s:]+([\d\s,]+)|(?:US|DS)\s*Flaps?[\s:]+([\d\s,]+)/i);
+      if (m) out.flaps = parseIntSafe(m[1] || m[2]);
+      if (out.flaps == null) {
+        m = combined.match(/(?:show\s+cable\s+flap|flap-list)[\s\S]*?[a-fA-F0-9\.\-:]{12,17}[^\n]*\s+(\d+)\s+\d{4}-\d{2}-\d{2},\d{2}:\d{2}:\d{2}/im);
+        if (m) out.flaps = parseIntSafe(m[1]);
+      }
+      if (out.flaps == null) {
+        m = combined.match(/(?:show\s+cable\s+modem.*flap|flap-list)[\s\S]*?[a-fA-F0-9]{4}\.[a-fA-F0-9]{4}\.[a-fA-F0-9]{4}[^\n]*\s+(\d+)\s+\d{1,2}:\d{2}(?::\d{2})?\s*$/im);
+        if (!m) m = combined.match(/(?:show\s+cable\s+modem.*flap|flap-list)[\s\S]*?[a-fA-F0-9:]{12,17}[^\n]*\s+(\d+)\s+\d{1,2}:\d{2}(?::\d{2})?\s*$/im);
+        if (m) out.flaps = parseIntSafe(m[1]);
+      }
     }
-    /* Cisco: show cable modem [MAC] flap o flap-list (columna Flap antes de HH:MM:SS) */
-    if (out.flaps == null) {
-      m = combined.match(/(?:show\s+cable\s+modem.*flap|flap-list)[\s\S]*?[a-fA-F0-9]{4}\.[a-fA-F0-9]{4}\.[a-fA-F0-9]{4}[^\n]*\s+(\d+)\s+\d{1,2}:\d{2}(?::\d{2})?\s*$/im);
-      if (!m) m = combined.match(/(?:show\s+cable\s+modem.*flap|flap-list)[\s\S]*?[a-fA-F0-9:]{12,17}[^\n]*\s+(\d+)\s+\d{1,2}:\d{2}(?::\d{2})?\s*$/im);
-      if (m) out.flaps = parseIntSafe(m[1]);
-    }
+    /* Limpieza: timing_offset (ej. 2266) no debe ir a flaps. Valores > 2000 suelen ser timing, no flaps. */
+    if (out.flaps != null && out.flaps > 2000) out.flaps = null;
 
     /* CRC / Uncorrectables */
     m = combined.match(/([\d\s,]+)\s+Uncorrectables?|Uncorrectables?[\s:]+([\d\s,]+)/i);

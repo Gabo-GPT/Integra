@@ -3972,7 +3972,6 @@
 
     if (utilMuyBaja && (hayCRC_HCS || hayRatioFecAlto)) {
       var nodoNombre = (diag.node && diag.node !== '—') ? diag.node : 'Plaza de Bolívar 2';
-      var numFlaps = (flapsNum != null && !isNaN(flapsNum)) ? flapsNum : 147;
       var numUsuarios = (diag.totalModems != null && diag.totalModems > 0) ? diag.totalModems : 30;
       var bloqueQoE = [
         'Paso 1 (Remoto): Migrar cliente a portadora 1/3.0 para blindar la navegación de los vecinos contra el ruido actual.',
