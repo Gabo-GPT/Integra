@@ -1,0 +1,233 @@
+/**
+ * GaboTopology - Estilos para topología HFC funcional
+ * Sin animaciones en el segmento de medición (Drop)
+ */
+.hfc-topology-container {
+  margin-bottom: 0.5rem;
+  width: 100%;
+  max-width: 100%;
+}
+
+.noc-topology-row .gabo-topology,
+.noc-topology-inline .gabo-topology,
+.hfc-topology-container .gabo-topology {
+  width: 100%;
+}
+
+.gabo-topology.topology-container {
+  --gabo-seg-default: #38bdf8;
+  width: 100%;
+  min-height: 300px;
+  padding: 1.25rem;
+  background: rgba(10, 14, 23, 0.85);
+  border: 1px solid rgba(56, 189, 248, 0.2);
+  border-radius: 12px;
+  margin: 1rem 0;
+  box-sizing: border-box;
+}
+
+.gabo-flow {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  gap: 0.5rem;
+  flex-wrap: nowrap;
+  min-height: 260px;
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0.75rem 0;
+}
+
+.gabo-flow::-webkit-scrollbar { height: 6px; }
+.gabo-flow::-webkit-scrollbar-track { background: rgba(30, 41, 59, 0.5); border-radius: 3px; }
+.gabo-flow::-webkit-scrollbar-thumb { background: rgba(56, 189, 248, 0.4); border-radius: 3px; }
+
+.gabo-node {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 80px;
+  min-width: 80px;
+  height: 80px;
+  padding: 0.5rem;
+  border-radius: 10px;
+  border: 2px solid var(--gabo-color, #38bdf8);
+  background: rgba(15, 23, 42, 0.95);
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+  transition: border-color 0.2s;
+}
+
+.gabo-icon {
+  font-size: 2.5rem;
+  line-height: 1;
+  width: 56px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--gabo-color, #38bdf8);
+  margin-bottom: 0.35rem;
+}
+
+.gabo-label {
+  font-size: 14px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #e2e8f0;
+  text-align: center;
+  line-height: 1.1;
+}
+
+.gabo-desc {
+  font-size: 0.65rem;
+  color: #94a3b8;
+  margin-top: 0.15rem;
+}
+
+.gabo-segment {
+  flex: 1;
+  min-width: 24px;
+  height: 6px;
+  background: var(--gabo-seg, var(--gabo-seg-default));
+  border-radius: 3px;
+  margin: 0 4px;
+  transition: background 0.2s;
+}
+
+.gabo-drop-wrap {
+  flex: 1;
+  min-width: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  margin: 0 4px;
+  position: relative;
+}
+
+.gabo-drop-wrap .gabo-segment,
+.gabo-drop-segment.connector-line {
+  flex: 0 0 6px;
+  margin: 0;
+  animation: none;
+}
+
+.gabo-drop-segment[style*="#ef4444"] {
+  box-shadow: 0 0 8px rgba(239, 68, 68, 0.5);
+}
+.gabo-drop-segment[style*="#f97316"] {
+  box-shadow: 0 0 8px rgba(249, 115, 22, 0.5);
+}
+
+.gabo-distancia {
+  position: absolute;
+  top: -22px;
+  left: 0;
+  right: 0;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.distancia-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 0 6px;
+  white-space: nowrap;
+}
+
+.gabo-leyenda {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  justify-content: center;
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid rgba(71, 85, 105, 0.4);
+}
+
+.gabo-leyenda-item {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.75rem;
+  color: #94a3b8;
+}
+
+.gabo-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.gabo-empty .gabo-node {
+  border-color: rgba(71, 85, 105, 0.6);
+  opacity: 0.7;
+}
+
+.gabo-empty .gabo-segment {
+  background: linear-gradient(90deg, transparent, rgba(71, 85, 105, 0.4), transparent);
+}
+
+.gabo-empty-msg {
+  text-align: center;
+  font-size: 0.85rem;
+  color: #64748b;
+  margin-top: 0.75rem;
+}
+
+@media (max-width: 900px) {
+  .gabo-node {
+    width: 64px;
+    min-width: 64px;
+    height: 64px;
+  }
+  .gabo-icon {
+    font-size: 1.8rem;
+    width: 44px;
+    height: 44px;
+  }
+  .gabo-label { font-size: 11px; }
+}
+
+@media (max-width: 600px) {
+  .gabo-flow {
+    flex-direction: column;
+    justify-content: flex-start;
+    overflow-x: visible;
+    overflow-y: auto;
+    min-height: 300px;
+  }
+  .gabo-segment {
+    width: 6px;
+    min-width: 6px;
+    height: 24px;
+    flex: 0 0 24px;
+    margin: 0;
+  }
+  .gabo-drop-wrap {
+    flex-direction: row;
+    min-width: 6px;
+    width: 6px;
+    height: 24px;
+    margin: 0;
+  }
+  .gabo-drop-wrap .gabo-segment {
+    width: 6px;
+    height: 24px;
+    flex: 0 0 6px;
+  }
+  .gabo-distancia {
+    top: 0;
+    left: -70px;
+    right: auto;
+    width: 65px;
+    height: 24px;
+    justify-content: flex-end;
+  }
+}

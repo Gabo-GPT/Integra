@@ -101,6 +101,15 @@
     return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
+  function debounce(fn, ms) {
+    var t = null;
+    return function () {
+      var ctx = this, args = arguments;
+      if (t) clearTimeout(t);
+      t = setTimeout(function () { t = null; fn.apply(ctx, args); }, ms);
+    };
+  }
+
   function actualizarIpConexion(ip) {
     const ipVal = (ip && String(ip).trim()) ? String(ip).trim() : '';
     const ipBox = $('#nocIpConexion') || document.querySelector('.noc-ip-valor');
@@ -215,10 +224,38 @@
         var corr = m.correctables, unerr = m.unerroreds || (diag.raw && diag.raw.unerroreds), uncorr = m.uncorrectables != null ? m.uncorrectables : (diag.raw && diag.raw.uncorrectablesGlobal) || (diag.raw && diag.raw.uncorrectables);
         var totalFec = (unerr || 0) + (corr || 0) + (uncorr || 0);
         var errorRatioFec = totalFec > 0 ? ((corr || 0) + (uncorr || 0)) / totalFec : null;
+        var upstreamChannelSet = m.upstreamChannelSet || null;
+        var yaDocsisBonding = m.yaDocsisBonding === true;
+        var snrPorCanal = (m.snrPorCanal && m.snrPorCanal.length >= 2) ? m.snrPorCanal : null;
+        var timingOffset = m.timingOffset;
+        if (timingOffset == null && typeof NocAnalyzerQoE !== 'undefined' && NocAnalyzerQoE.extractTimingOffsetFromLog) {
+          timingOffset = NocAnalyzerQoE.extractTimingOffsetFromLog(combined);
+        }
+        if (timingOffset == null) {
+          var toLines = combined.split(/\r?\n/);
+          for (var ti = 0; ti < toLines.length; ti++) {
+            var toLine = toLines[ti];
+            if (/^\s*Timing\s*Offset[\s:=]+/.test(toLine) && !/^\s*Initial\s+Timing\s*Offset/.test(toLine)) {
+              var toM = toLine.match(/Timing\s*Offset[\s:=]+([\d\s,\.\-]+)/i);
+              if (toM) { timingOffset = parseFloat(String(toM[1]).replace(/[\s,]/g, '')); break; }
+            }
+          }
+          if (timingOffset == null) { toM = combined.match(/TimingOffset[\s:=]+([\d\s,\.\-]+)/i); if (toM) timingOffset = parseFloat(String(toM[1] || '').replace(/[\s,]/g, '')); }
+        }
+        var utilVal = m.utilization;
+        if (utilVal == null && (diag.raw && diag.raw.utilization != null)) utilVal = diag.raw.utilization;
+        if (utilVal == null) {
+          var utilM = combined.match(/(?:Avg\.?\s*)?(?:upstream\s+)?(?:channel\s+)?utilization[\s:]+([\d.,]+)\s*%?|Utilization[\s:]+([\d.,]+)\s*%?/i);
+          if (utilM) utilVal = parseFloat(String(utilM[1] || utilM[2]).replace(',', '.')) || null;
+        }
         return {
           ok: true,
           mac: m.mac || null,
+          timingOffset: timingOffset,
           ip: ipM ? ipM[1] : null,
+          upstreamChannelSet: upstreamChannelSet,
+          yaDocsisBonding: yaDocsisBonding,
+          snrPorCanal: snrPorCanal,
           tx: diag.tx && diag.tx.valor != null ? diag.tx.valor : m.tx,
           rx: diag.rx && diag.rx.valor != null ? diag.rx.valor : m.rx,
           snrUp: diag.snrUp && diag.snrUp.valor != null ? diag.snrUp.valor : m.snrUp,
@@ -228,7 +265,7 @@
           uncorrectables: uncorr,
           unerroreds: unerr,
           errorRatioFec: errorRatioFec,
-          utilization: m.utilization,
+          utilization: utilVal,
           totalModems: totalModems,
           interfaceId: m.interfaceId || (diag.raw && diag.raw.interfaceId) || null,
           nodeId: m.node || (diag.raw && diag.raw.node) || null,
@@ -325,8 +362,8 @@
     }
 
     let utilization = null;
-    m = combined.match(/(?:Avg\.?\s*)?(?:channel\s+)?utilization[\s:]+([\d.,]+)/i);
-    if (m) utilization = num(m[1]);
+    m = combined.match(/(?:Avg\.?\s*)?(?:upstream\s+)?(?:channel\s+)?utilization[\s:]+([\d.,]+)\s*%?|Utilization[\s:]+([\d.,]+)\s*%?/i);
+    if (m) utilization = num(m[1] || m[2]);
 
     var interfaceId = null;
     m = combined.match(/(?:US\s*Intf|Upstream|Cable\s*upstream|cable-upstream)[\s:]*(\d+\/\d+(?:\.\d+)?|[\w\-\.]+)/i);
@@ -373,10 +410,60 @@
 
     var totalFec = (unerroreds || 0) + (correctables || 0) + (uncorrectables || 0);
     var errorRatioFec = totalFec > 0 ? ((correctables || 0) + (uncorrectables || 0)) / totalFec : null;
+    var upstreamChannelSet = null;
+    m = combined.match(/Upstream\s+Channel\s+Set\s*(?:ID)?[\s:]+([\d\,\s\/\-\.]+?)(?:\n|$)/i);
+    if (m) {
+      var ucsStr = (m[1] || '').trim();
+      var ucsParts = ucsStr.split(/[\,\s]+/).filter(Boolean);
+      upstreamChannelSet = ucsParts.length > 0 ? ucsParts : null;
+    }
+    var yaDocsisBonding = upstreamChannelSet && upstreamChannelSet.length > 1;
+    var snrPorCanal = [];
+    var usTblRe = /(\d+[\/\-\.]\d+(?:[\/\-\.]\d+)?)[\s\-]+([\d.,\-]+)\s+([\d.,\-]+)/g;
+    var usTblM;
+    while ((usTblM = usTblRe.exec(combined)) !== null) {
+      var chId = usTblM[1];
+      var snrVal = parseFloat(String(usTblM[3]).replace(',', '.'));
+      if (!isNaN(snrVal) && snrVal > 0 && snrVal < 60 && !snrPorCanal.some(function (x) { return x.channel === chId; })) snrPorCanal.push({ channel: chId, snr: snrVal });
+    }
+    usTblRe.lastIndex = 0;
+    var timingOffset = null;
+    if (typeof NocAnalyzerQoE !== 'undefined' && NocAnalyzerQoE.extractTimingOffsetFromLog) {
+      timingOffset = NocAnalyzerQoE.extractTimingOffsetFromLog(combined);
+    }
+    if (timingOffset == null) {
+      var toLines = combined.split(/\r?\n/);
+      for (var ti = 0; ti < toLines.length; ti++) {
+        var toLine = toLines[ti];
+        if (/^\s*Timing\s*Offset\s*:\s*\d+/.test(toLine) && !/^\s*Initial\s+Timing\s*Offset/i.test(toLine)) {
+          m = toLine.match(/Timing\s*Offset\s*:\s*(\d+)/i);
+          if (m) { timingOffset = parseInt(m[1], 10); break; }
+        }
+      }
+    }
+    if (timingOffset == null) { m = combined.match(/TimingOffset[\s:=]+([\d\s,\.\-]+)/i); if (m) timingOffset = parseFloat(String(m[1] || '').replace(/[\s,]/g, '')); }
+    if ((timingOffset == null || isNaN(timingOffset)) && mac) {
+      var macEsc = mac.replace(/[.:-]/g, '[.:\\-]');
+      var row = combined.match(new RegExp(macEsc + '[^\\n]*', 'im'));
+      if (row) {
+        var nums = row[0].match(/\d+/g);
+        if (nums) {
+          for (var i = 0; i < nums.length; i++) {
+            var n = parseInt(nums[i], 10);
+            if (n >= 500 && n <= 5000) { timingOffset = n; break; }
+          }
+        }
+      }
+    }
+    if (isNaN(timingOffset)) timingOffset = null;
     return {
       ok: true,
       mac: mac,
       ip: ip,
+      timingOffset: timingOffset,
+      upstreamChannelSet: upstreamChannelSet,
+      yaDocsisBonding: yaDocsisBonding,
+      snrPorCanal: snrPorCanal.length >= 2 ? snrPorCanal : null,
       tx: tx,
       rx: rx,
       snrUp: snrUp,
@@ -408,11 +495,13 @@
     return { estado: 'Crítico', color: 'rojo' };
   }
 
-  /* RX: soporta downstream (-7 a +7) y upstream (hasta ~55 dBmV en interfaz) */
-  function estadoRx(v) {
+  /* RX: target 14.0 dBmV = config base interfaz CMTS. Downstream -7 a +7; upstream interfaz 12–16 óptimo */
+  var TARGET_RX = 14.0;
+  function estadoRx(v, esInterfazUpstream) {
     if (v == null) return { estado: '—', color: 'muted' };
+    if (esInterfazUpstream && v >= TARGET_RX - 2 && v <= TARGET_RX + 2) return { estado: 'Óptimo', color: 'verde' };
     if (v >= -7 && v <= 7) return { estado: 'Óptimo', color: 'verde' };   /* downstream */
-    if (v > 7 && v <= 55) return { estado: 'Óptimo', color: 'verde' };    /* upstream interfaz */
+    if (v > 7 && v <= 55) return { estado: 'Óptimo', color: 'verde' };    /* upstream interfaz genérico */
     if ((v >= -10 && v < -7) || (v > 55 && v <= 58)) return { estado: 'Aceptable', color: 'amarillo' };
     return { estado: 'Crítico', color: 'rojo' };
   }
@@ -432,16 +521,24 @@
     return { estado: 'Intermitente', color: 'rojo' };
   }
 
-  function pctParaGauge(metric, val) {
+  function pctParaGauge(metric, val, opts) {
+    opts = opts || {};
     if (val == null) return 0;
     if (metric === 'tx') return Math.max(0, Math.min(100, ((val - 20) / 60) * 100));
-    if (metric === 'rx') return Math.max(0, Math.min(100, ((val + 15) / 30) * 100));
+    if (metric === 'rx') {
+      if (opts && opts.rxEsInterfazUpstream) {
+        return Math.max(0, Math.min(100, 50 + (val - TARGET_RX) * 25));
+      }
+      return Math.max(0, Math.min(100, ((val + 15) / 30) * 100));
+    }
     if (metric === 'snrUp' || metric === 'snrDown') return Math.max(0, Math.min(100, (val / 50) * 100));
     if (metric === 'flaps') return Math.min(100, val);
     return Math.min(100, val);
   }
 
+  /* Limpieza: al pegar log nuevo, resetear todos los valores antes de mostrar el nuevo cálculo */
   function resetNocDisplayBeforeParse() {
+    datosParseados = null;
     var ids = ['valTx', 'valRx', 'valSnrUp', 'valSnrDown', 'valFlaps', 'estadoTx', 'estadoRx', 'estadoSnrUp', 'estadoSnrDown', 'estadoFlaps', 'gaugeTx', 'gaugeRx', 'gaugeSnrUp', 'gaugeSnrDown', 'gaugeFlaps'];
     ids.forEach(function (id) {
       var el = $('#' + id);
@@ -466,16 +563,18 @@
     if (reincidenciaEl) reincidenciaEl.hidden = true;
     actualizarOrdenTrabajo(null);
     if (chartSaturacion) { chartSaturacion.destroy(); chartSaturacion = null; }
-    var chartDesc = $('#chartDesc');
-    if (chartDesc) chartDesc.textContent = 'Pegue output de show interface upstream.';
+    actualizarChart(null);
     if (typeof HfcTopologyView !== 'undefined') HfcTopologyView.renderEmpty($('#hfcTopologyContainer'));
   }
 
   /* ----- Actualizar UI ----- */
   function actualizarGauges(data) {
+    var rxEsInterfazUpstream = (data.utilization != null && data.rx != null && data.rx >= 8 && data.rx <= 25);
+    var rxEstadoFn = function (v) { return estadoRx(v, rxEsInterfazUpstream); };
+    var rxPctFn = function (v) { return pctParaGauge('rx', v, { rxEsInterfazUpstream: rxEsInterfazUpstream }); };
     const metrics = [
       { key: 'tx', elVal: 'valTx', elEstado: 'estadoTx', elGauge: 'gaugeTx', fn: estadoTx, pct: pctParaGauge.bind(null, 'tx') },
-      { key: 'rx', elVal: 'valRx', elEstado: 'estadoRx', elGauge: 'gaugeRx', fn: estadoRx, pct: pctParaGauge.bind(null, 'rx') },
+      { key: 'rx', elVal: 'valRx', elEstado: 'estadoRx', elGauge: 'gaugeRx', fn: rxEstadoFn, pct: rxPctFn },
       { key: 'snrUp', elVal: 'valSnrUp', elEstado: 'estadoSnrUp', elGauge: 'gaugeSnrUp', fn: estadoSnr, pct: pctParaGauge.bind(null, 'snrUp') },
       { key: 'snrDown', elVal: 'valSnrDown', elEstado: 'estadoSnrDown', elGauge: 'gaugeSnrDown', fn: estadoSnr, pct: pctParaGauge.bind(null, 'snrDown') },
       { key: 'flaps', elVal: 'valFlaps', elEstado: 'estadoFlaps', elGauge: 'gaugeFlaps', fn: estadoFlaps, pct: pctParaGauge.bind(null, 'flaps') }
@@ -514,54 +613,44 @@
     });
   }
 
+  var CHART_OPTS = { responsive: true, maintainAspectRatio: false, indexAxis: 'y', animation: false,
+    scales: { x: { max: 100, ticks: { color: '#94a3b8' }, grid: { color: 'rgba(71,85,105,0.3)' } }, y: { ticks: { color: '#94a3b8' }, grid: { display: false } } },
+    plugins: { legend: { display: false } }
+  };
   function actualizarChart(utilization) {
-    const canvas = $('#chartSaturacion');
-    const desc = $('#chartDesc');
+    var canvas = $('#chartSaturacion');
+    var desc = $('#chartDesc');
     if (!canvas) return;
 
     if (chartSaturacion) {
-      chartSaturacion.destroy();
+      try { chartSaturacion.destroy(); } catch (e) {}
       chartSaturacion = null;
     }
 
-    const util = utilization != null && !isNaN(utilization) ? utilization : 0;
+    var util = utilization != null && !isNaN(utilization) ? Math.min(100, Math.max(0, utilization)) : null;
     if (desc) {
-      desc.textContent = util > 0
-        ? 'Utilización de canal: ' + util.toFixed(1) + '%. ' + (util > 80 ? 'Saturación crítica.' : (util > 60 ? 'Monitorear.' : 'Normal.'))
-        : 'Sin datos de utilización. Pegue output de show interface upstream.';
+      desc.textContent = util != null
+        ? 'Avg upstream channel utilization: ' + util.toFixed(1) + '%. ' + (util > 80 ? 'Saturación Crítica.' : 'Normal.')
+        : 'Sin datos. Pegue output de show interface upstream 1/3.1 stat.';
     }
 
-    const ctx = canvas.getContext('2d');
-    chartSaturacion = new Chart(ctx, {
+    var utilVal = util != null ? util : 0;
+    var isSat = util != null && util > 80;
+    chartSaturacion = new Chart(canvas.getContext('2d'), {
       type: 'bar',
       data: {
         labels: ['Utilización'],
-        datasets: [{
-          label: 'Saturación %',
-          data: [Math.min(100, util)],
-          backgroundColor: util > 80 ? 'rgba(239,68,68,0.7)' : (util > 60 ? 'rgba(245,158,11,0.7)' : 'rgba(56,189,248,0.5)'),
-          borderColor: util > 80 ? '#ef4444' : (util > 60 ? '#f59e0b' : '#38bdf8'),
-          borderWidth: 1
-        }]
+        datasets: [{ label: 'Saturación %', data: [utilVal], backgroundColor: isSat ? 'rgba(239,68,68,0.7)' : 'rgba(56,189,248,0.5)', borderColor: isSat ? '#ef4444' : '#38bdf8', borderWidth: 1 }]
       },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        indexAxis: 'y',
-        scales: {
-          x: { max: 100, ticks: { color: '#94a3b8' }, grid: { color: 'rgba(71,85,105,0.3)' } },
-          y: { ticks: { color: '#94a3b8' }, grid: { display: false } }
-        },
-        plugins: {
-          legend: { display: false }
-        }
-      }
+      options: CHART_OPTS
     });
   }
 
   /* ----- Motor de Decisión Senior (Segmentación Red vs TAP/Acometida) ----- */
-  function generarHallazgos(data) {
+  function generarHallazgos(data, opts) {
+    opts = opts || {};
     var d = data || {};
+    var historial = opts.historial || [];
     var rx = d.rx;
     var tx = d.tx;
     var peakTx = d.peakTx != null ? d.peakTx : tx;
@@ -582,29 +671,46 @@
     var hallazgos = [];
     var puertoRef = interfaceId !== '—' ? 'puerto ' + interfaceId : 'el puerto';
 
+    /* target_rx = 14.0 dBmV: power-level interfaz upstream. 14 dBmV = nivel nominal, NO saturación. Saturación solo si RX > 16.0 */
+    var target_rx = TARGET_RX;
+    var rxNominal = rx != null && rx >= target_rx - 2 && rx <= target_rx + 2;
+    var rxSaturación = rx != null && rx > target_rx + 2;
+
     /* Proxy: sin datos de vecinos, uso utilization. Alto = posible masiva, Bajo = individual */
-    var indicioRed = (utilization != null && utilization >= 80) || (rx != null && rx > 20);
+    var indicioRed = (utilization != null && utilization >= 80) || rxSaturación;
     var indicioIndividual = (utilization == null || utilization < 70);
 
     /* RX 8–25 dBmV = típico de interfaz upstream (config). No usar como falla de drop/red. */
     var rxEsInterfazUpstream = (utilization != null && rx != null && rx >= 8 && rx <= 25);
 
-    /* FALLA DE RED (Nodo/Planta): RX alto en downstream. No aplicar si RX es de interfaz upstream */
-    if (rx != null && rx > 10 && indicioRed && !rxEsInterfazUpstream) {
+    /* Prioridad de errores: si RX nominal (14.0) pero Uncorrectables > 0 o Flaps > 5 → Ruido Impulsivo, NO saturación */
+    var hayErroresConRxNominal = rxNominal && ((uncorrectables != null && uncorrectables > 0) || (flaps != null && flaps > 5));
+    if (hayErroresConRxNominal) {
+      var diagRuido = (uncorrectables != null && uncorrectables > 0) ? 'Interferencia de Ruido Impulsivo' : 'Ruido en el Retorno';
+      hallazgos.push({
+        tipo: 'individual',
+        riesgo: 'Riesgo: ' + diagRuido + '.',
+        evidencia: 'RX = ' + rx.toFixed(1) + ' dBmV (nominal). ' + (uncorrectables != null && uncorrectables > 0 ? uncorrectables.toLocaleString('es') + ' Uncorrectables. ' : '') + (flaps != null && flaps > 5 ? flaps + ' Flaps. ' : '') + 'El RX está en configuración base; los errores indican ruido en TAP/Nodo.',
+        accion: 'Monitoreo de Ruido en Tap/Nodo. Revisar conectores y cableado en poste.'
+      });
+    }
+
+    /* FALLA DE RED (Nodo/Planta): RX > target+2. No aplicar si RX nominal ni si ya hay diagnóstico de ruido impulsivo */
+    if (rxSaturación && indicioRed && !rxEsInterfazUpstream && !hayErroresConRxNominal) {
       hallazgos.push({
         tipo: 'red',
         riesgo: 'Riesgo: Falla de Red (Nodo/Planta).',
-        evidencia: 'El RX de ' + rx.toFixed(1) + ' dBmV está elevado y el puerto presenta alta utilización (' + (utilization != null ? utilization.toFixed(1) + '%' : '—') + '). Indicativo de desajuste de Nodo o amplificador.',
+        evidencia: 'El RX de ' + rx.toFixed(1) + ' dBmV está elevado (> ' + (target_rx + 2) + ' dBmV) y el puerto presenta alta utilización (' + (utilization != null ? utilization.toFixed(1) + '%' : '—') + '). Indicativo de desajuste de Nodo o amplificador.',
         accion: 'Reportar a mantenimiento de red. No enviar técnico a domicilio.'
       });
     }
 
-    /* ALERTA MASIVA: RX > 20 dBmV downstream (no aplicar si es RX de interfaz upstream) */
-    if (rx != null && rx > 20 && !rxEsInterfazUpstream && !hallazgos.some(function (h) { return h.tipo === 'red'; })) {
+    /* ALERTA MASIVA: RX > target+2 (saturación). No aplicar si RX es nominal o interfaz upstream */
+    if (rxSaturación && !rxEsInterfazUpstream && !hallazgos.some(function (h) { return h.tipo === 'red'; }) && !hayErroresConRxNominal) {
       hallazgos.push({
         tipo: 'red',
         riesgo: 'Riesgo: Desajuste de Nodo (RX downstream elevado).',
-        evidencia: 'RX = ' + rx.toFixed(1) + ' dBmV. Saturación en downstream que afecta al nodo.',
+        evidencia: 'RX = ' + rx.toFixed(1) + ' dBmV (> ' + (target_rx + 2) + ' dBmV). Saturación en downstream que afecta al nodo.',
         accion: 'Revisión de planta externa (Nodo/Amplificador).'
       });
     }
@@ -703,6 +809,7 @@
     var clienteConErroresPropios = errModem > 100 || (flaps != null && flaps > 100) || (errorRatioFec != null && errorRatioFec > 0.01);
 
     if (puertoSaturado && clienteDegradado) {
+      var yaDocsisSaturado = d.yaDocsisBonding === true;
       var parteM = [];
       if (peakTx != null && peakTx > 52) parteM.push('Peak TX ' + peakTx.toFixed(1) + ' dBmV');
       if (tx != null && tx > 52 && peakTx == null) parteM.push('TX ' + tx.toFixed(1) + ' dBmV');
@@ -715,7 +822,9 @@
         tipo: 'migracion',
         riesgo: 'Riesgo: Cliente con fallas en portadora saturada.',
         evidencia: evM,
-        accion: 'Evaluar migración de portadora. Migrar a canal con menor utilización para aliviar carga y mejorar servicio al cliente.'
+        accion: yaDocsisSaturado
+          ? 'Equipo ya en DOCSIS 3.0. Evaluar balanceo de carga entre canales del bonding o migrar a otro nodo.'
+          : 'Evaluar migración de portadora. Migrar a canal con menor utilización para aliviar carga y mejorar servicio al cliente.'
       });
     } else if (puertoEstable && clienteConErroresPropios && (totalModems == null || totalModems > 5)) {
       var parteE = [];
@@ -725,28 +834,85 @@
       var hayCRC_HCS = errModem > 0;
       var hayRatioFecAlto = errorRatioFec != null && errorRatioFec > 0.01;
       var utilMuyBaja = utilization != null && utilization < 50;
+      var yaDocsisBonding = d.yaDocsisBonding === true;
 
-      if (utilMuyBaja && (hayCRC_HCS || hayRatioFecAlto)) {
-        var numUsuarios = (totalModems != null && totalModems > 0) ? totalModems : 30;
-        var nodoNombre = interfaceId && interfaceId !== '—' ? interfaceId : 'Plaza de Bolívar 2';
-        var accionBloque = 'Paso 1 (Remoto): Migrar cliente a portadora 1/3.0 para blindar la navegación de los vecinos contra el ruido actual.\nPaso 2 (Campo): Generar Visita Técnica para corrección de ruido físico en acometida (causa raíz).';
-        var evidenciaTexto = (uncorrectables != null && uncorrectables > 0)
-          ? 'Cliente con ' + uncorrectables.toLocaleString('es') + ' errores no corregibles detectados en puerto con ' + (utilization != null ? utilization.toFixed(0) : '0') + '% de uso.'
-          : 'Puerto con ' + (utilization != null ? utilization.toFixed(0) + '%' : '—') + ' utilización. Cliente con ' + (parteE.length ? parteE.join(', ') : 'ratio FEC elevado o errores') + '.';
+      /* Validación portadoras: si ya es DOCSIS 3.0 (múltiples canales), no sugerir migración */
+      if (yaDocsisBonding) {
         hallazgos.push({
           tipo: 'migracion',
           riesgo: 'Riesgo: Cliente con fallas aisladas en puerto estable.',
-          evidencia: evidenciaTexto,
-          accion: accionBloque
+          evidencia: 'Upstream Channel Set ya tiene múltiples canales (DOCSIS 3.0 bonding). Puerto con ' + (utilization != null ? utilization.toFixed(0) + '%' : '—') + ' utilización.',
+          accion: 'No migrar: el equipo ya opera en DOCSIS 3.0. Generar Visita Técnica para corrección de ruido físico en acometida (causa raíz).'
         });
       } else {
-        var accionMigracion = 'Paso 1 (Remoto): Migrar cliente a portadora 1/3.0 para blindar la navegación de los vecinos contra el ruido actual.\nPaso 2 (Campo): Generar Visita Técnica para corrección de ruido físico en acometida (causa raíz).';
-        if (utilMuyBaja) accionMigracion += '\nNota: El puerto cuenta con capacidad suficiente; la acción es estrictamente por integridad de señal.';
+        /* Detección delta: comparar con medición anterior en Supabase */
+        var deltaAccion = null;
+        var uncActual = uncorrectables != null ? uncorrectables : 0;
+        var histOrdenado = historial.slice().sort(function (a, b) {
+          var ta = a.created_at ? new Date(a.created_at).getTime() : 0;
+          var tb = b.created_at ? new Date(b.created_at).getTime() : 0;
+          return tb - ta;
+        });
+        var anterior = histOrdenado[0];
+        if (anterior && anterior.uncorrectables != null) {
+          var uncAnterior = Number(anterior.uncorrectables);
+          var tsAnterior = anterior.created_at ? new Date(anterior.created_at).getTime() : 0;
+          var minutosDiff = (Date.now() - tsAnterior) / (60 * 1000);
+          if (minutosDiff <= 5 && uncAnterior > 0) {
+            var pctCambio = ((uncActual - uncAnterior) / uncAnterior) * 100;
+            if (pctCambio <= 0) {
+              deltaAccion = 'Observación: Errores estáticos, no requieren acción inmediata.';
+            } else if (pctCambio > 10) {
+              deltaAccion = 'URGENTE: Degradación activa en acometida. Errores aumentaron ' + pctCambio.toFixed(0) + '% en los últimos ' + minutosDiff.toFixed(0) + ' minutos.';
+            }
+          }
+        }
+
+        var accionBase = deltaAccion || 'Paso 1 (Remoto): Migrar cliente a portadora 1/3.0 para blindar la navegación de los vecinos contra el ruido actual.\nPaso 2 (Campo): Generar Visita Técnica para corrección de ruido físico en acometida (causa raíz).';
+        if (utilMuyBaja && (hayCRC_HCS || hayRatioFecAlto) && !deltaAccion) {
+          var evidenciaTexto = (uncorrectables != null && uncorrectables > 0)
+            ? 'Cliente con ' + uncorrectables.toLocaleString('es') + ' errores no corregibles detectados en puerto con ' + (utilization != null ? utilization.toFixed(0) : '0') + '% de uso.'
+            : 'Puerto con ' + (utilization != null ? utilization.toFixed(0) + '%' : '—') + ' utilización. Cliente con ' + (parteE.length ? parteE.join(', ') : 'ratio FEC elevado o errores') + '.';
+          hallazgos.push({
+            tipo: 'migracion',
+            riesgo: 'Riesgo: Cliente con fallas aisladas en puerto estable.',
+            evidencia: evidenciaTexto,
+            accion: accionBase
+          });
+        } else if (!deltaAccion) {
+          var accionMigracion = accionBase;
+          if (utilMuyBaja) accionMigracion += '\nNota: El puerto cuenta con capacidad suficiente; la acción es estrictamente por integridad de señal.';
+          hallazgos.push({
+            tipo: 'migracion',
+            riesgo: 'Riesgo: Cliente con fallas aisladas en puerto estable.',
+            evidencia: 'Puerto con ' + (utilization != null ? utilization.toFixed(0) + '%' : '—') + ' utilización. Cliente con ' + (parteE.length ? parteE.join(', ') : 'ratio FEC elevado o errores') + '.',
+            accion: accionMigracion
+          });
+        } else {
+          hallazgos.push({
+            tipo: 'migracion',
+            riesgo: 'Riesgo: Cliente con fallas aisladas en puerto estable.',
+            evidencia: 'Cliente con ' + (uncorrectables != null ? uncorrectables.toLocaleString('es') : '0') + ' errores no corregibles. Comparado con medición anterior en Supabase.',
+            accion: deltaAccion
+          });
+        }
+      }
+    }
+
+    /* Análisis por canal: SNR selectivo por frecuencia (ej: canal 10.0 con 38.2 dB vs 10.2 con 40.4 dB) */
+    var snrPorCanal = d.snrPorCanal;
+    if (snrPorCanal && snrPorCanal.length >= 2) {
+      var snrMin = Math.min.apply(null, snrPorCanal.map(function (x) { return x.snr; }));
+      var snrMax = Math.max.apply(null, snrPorCanal.map(function (x) { return x.snr; }));
+      var deltaSnr = snrMax - snrMin;
+      if (deltaSnr > 2) {
+        var canalBajo = snrPorCanal.find(function (x) { return x.snr === snrMin; });
+        var canalAlto = snrPorCanal.find(function (x) { return x.snr === snrMax; });
         hallazgos.push({
-          tipo: 'migracion',
-          riesgo: 'Riesgo: Cliente con fallas aisladas en puerto estable.',
-          evidencia: 'Puerto con ' + (utilization != null ? utilization.toFixed(0) + '%' : '—') + ' utilización. Cliente con ' + (parteE.length ? parteE.join(', ') : 'ratio FEC elevado o errores') + '.',
-          accion: accionMigracion
+          tipo: 'individual',
+          riesgo: 'Riesgo: Interferencia selectiva por frecuencia en Upstream.',
+          evidencia: 'Canal ' + (canalBajo ? canalBajo.channel : '—') + ': ' + snrMin.toFixed(1) + ' dB SNR. Canal ' + (canalAlto ? canalAlto.channel : '—') + ': ' + snrMax.toFixed(1) + ' dB. Diferencia ' + deltaSnr.toFixed(1) + ' dB.',
+          accion: 'Revisar conectores: Interferencia detectada en frecuencias bajas del Upstream.'
         });
       }
     }
@@ -783,7 +949,7 @@
       }
     }
 
-    var hallazgos = generarHallazgos(data);
+    var hallazgos = generarHallazgos(data, opts);
     if (riesgosEl) {
       if (hallazgos.length === 0) {
         riesgosEl.innerHTML = '';
@@ -814,6 +980,18 @@
       var diag = HfcTopologyView.buildDiagnostico(data, { snrPuerto: data.snrUp, modemsOffline: 0 });
       actualizarOrdenTrabajo(diag);
     }
+
+    var ordenWrap = $('#ordenTrabajoIndividual');
+    var sugerenciaEl = ordenWrap ? ordenWrap.querySelector('.noc-orden-sugerencia') : $('.noc-orden-sugerencia');
+    if (sugerenciaEl) {
+      var rx = data.rx;
+      var errModem = (data.crcModem || 0) + (data.hcsModem || 0);
+      var rxNominal = rx != null && rx >= TARGET_RX - 2 && rx <= TARGET_RX + 2;
+      var texto = (rxNominal && errModem > 0) ? 'Monitoreo de Ruido en Tap/Nodo' : 'Revisión de Acometida';
+      var strong = sugerenciaEl.querySelector('strong');
+      if (strong) strong.textContent = texto;
+      else sugerenciaEl.innerHTML = 'Sugerencia: <strong>' + escapeHtml(texto) + '</strong>';
+    }
   }
 
   function getApiBase() {
@@ -829,7 +1007,8 @@
     var niveles = {
       tx: data.tx, rx: data.rx, snrUp: data.snrUp, snrDown: data.snrDown,
       flaps: data.flaps, utilization: data.utilization,
-      uncorrectables: data.uncorrectables
+      uncorrectables: data.uncorrectables,
+      timingOffset: data.timingOffset
     };
     fetch(getApiBase() + '/api/diagnostico', {
       method: 'POST',
@@ -1019,13 +1198,17 @@
     var mac = (result.mac || '').toString().trim();
     var base = getApiBase();
     var reincidenciaPromise = mac ? fetch(base + '/api/diagnostico/reincidencia?mac=' + encodeURIComponent(mac)).then(function (r) { return r.json(); }).catch(function () { return { reincidente: false }; }) : Promise.resolve({ reincidente: false });
-    var historialPromise = fetch(base + '/api/diagnostico/historial-nodos').then(function (r) { return r.json(); }).catch(function () { return { nodosSaturados: [] }; });
+    var historialNodosPromise = fetch(base + '/api/diagnostico/historial-nodos').then(function (r) { return r.json(); }).catch(function () { return { nodosSaturados: [] }; });
+    var historialMacPromise = mac ? fetch(base + '/api/history/' + encodeURIComponent(mac)).then(function (r) { return r.json(); }).catch(function () { return { data: [] }; }) : Promise.resolve({ data: [] });
 
-    Promise.all([reincidenciaPromise, historialPromise]).then(function (arr) {
+    Promise.all([reincidenciaPromise, historialNodosPromise, historialMacPromise]).then(function (arr) {
       var reincidencia = arr[0];
-      var historial = arr[1] || {};
-      var nodosSaturados = historial.nodosSaturados || [];
-      actualizarReporte(result, { reincidencia: reincidencia });
+      var historialNodos = arr[1] || {};
+      var historialMac = arr[2] || {};
+      var nodosSaturados = historialNodos.nodosSaturados || [];
+      var historialData = Array.isArray(historialMac.data) ? historialMac.data : [];
+      actualizarReporte(result, { reincidencia: reincidencia, historial: historialData });
+      /* timingOffset en diag se actualiza al cambiar MAC: cada parse trae el offset del log actual */
       if (typeof HfcTopologyView !== 'undefined') {
         var diag = HfcTopologyView.buildDiagnostico(result, { snrPuerto: result.snrUp, modemsOffline: 0 });
         HfcTopologyView.render($('#hfcTopologyContainer'), diag, { nodosSaturados: nodosSaturados });
@@ -1052,16 +1235,18 @@
     const input = $('#cmtsSearch');
     const listbox = $('#cmtsDropdown');
     if (input) {
+      var renderDropdownDebounced = debounce(function () { renderDropdown(input.value); }, 120);
       input.addEventListener('input', function () {
         if (!input.value.trim()) {
           cmtsSeleccionado = null;
-          const ctx = $('#cmtsContext');
+          var ctx = $('#cmtsContext');
           if (ctx) ctx.hidden = true;
           actualizarIpConexion('');
+          listbox.hidden = true;
         } else {
           syncIpDesdeInput();
         }
-        renderDropdown(input.value);
+        renderDropdownDebounced();
       });
       input.addEventListener('blur', function () { syncIpDesdeInput(); });
       input.addEventListener('focus', function () { renderDropdown(input.value); });

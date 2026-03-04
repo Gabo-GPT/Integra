@@ -35,6 +35,25 @@
     return isNaN(n) ? null : n;
   }
 
+  /**
+   * Extrae Timing Offset. PRIORIDAD 1: Timing Offset\s*:\s*(\d+) (verbose, valor real).
+   * Solo si NO encuentra, se usa la tabla. Evita "Initial Timing Offset". Toma el último match (verbose suele estar al final).
+   */
+  function extractTimingOffsetFromLog(log) {
+    if (!log || typeof log !== 'string') return null;
+    var re = /Timing Offset\s*:\s*(\d+)/gi;
+    var m;
+    var lastValid = null;
+    while ((m = re.exec(log)) !== null) {
+      var lineStart = log.substring(0, m.index).lastIndexOf('\n') + 1;
+      var lineEnd = log.indexOf('\n', m.index);
+      if (lineEnd < 0) lineEnd = log.length;
+      var line = log.substring(lineStart, lineEnd);
+      if (!/^\s*Initial\s+Timing\s*Offset/i.test(line)) lastValid = m[1];
+    }
+    return lastValid ? parseInt(lastValid, 10) : null;
+  }
+
   function extractMetrics(modemRaw, upstreamRaw) {
     var combined = [modemRaw, upstreamRaw].filter(Boolean).join('\n');
     var out = {
@@ -176,6 +195,33 @@
       if (m) { var crc = parseIntSafe(m[1]), hcs = parseIntSafe(m[2]); out.uncorrectables = (crc != null ? crc : 0) + (hcs != null ? hcs : 0); }
     }
 
+    /* Timing Offset: PRIORIDAD 1 = "Timing Offset :NNN" (verbose, valor real). Solo si NO hay, buscar en tabla. */
+    out.timingOffset = extractTimingOffsetFromLog(combined);
+    if (out.timingOffset == null) {
+      var lines = combined.split(/\r?\n/);
+      for (var li = 0; li < lines.length; li++) {
+        var line = lines[li];
+        if (/^\s*Timing\s*Offset\s*:\s*\d+/.test(line) && !/^\s*Initial\s+Timing\s*Offset/i.test(line)) {
+          m = line.match(/Timing\s*Offset\s*:\s*(\d+)/i);
+          if (m) { out.timingOffset = parseInt(m[1], 10); break; }
+        }
+      }
+    }
+    if (out.timingOffset == null) { m = combined.match(/TimingOffset[\s:=]+([\d\s,\.\-]+)/i); if (m) out.timingOffset = parseNum(String(m[1]).replace(/[\s,]/g, '')); }
+    if (out.timingOffset == null && out.mac) {
+      var macEsc = (out.mac || '').replace(/[.:-]/g, '[.:\\-]');
+      var row = combined.match(new RegExp(macEsc + '[^\\n]*', 'im'));
+      if (row) {
+        var nums = row[0].match(/\d+/g);
+        if (nums) {
+          for (var i = 0; i < nums.length; i++) {
+            var n = parseInt(nums[i], 10);
+            if (n >= 500 && n <= 5000) { out.timingOffset = n; break; }
+          }
+        }
+      }
+    }
+
     /* Ranging retries */
     m = combined.match(/Ranging\s+Retries?[\s:]+([\d\s,]+)|RangingRetries?[\s:]+([\d\s,]+)|Rng\.?\s*Retries?[\s:]+([\d\s,]+)/i);
     if (m) out.rangingRetries = parseIntSafe(m[1] || m[2] || m[3]);
@@ -217,8 +263,8 @@
       if (m) out.uptime = m[1].trim();
     }
 
-    /* Utilización upstream */
-    m = combined.match(/(?:Avg\.?\s*)?(?:upstream\s+)?(?:channel\s+)?utilization[\s:]+([\d.,]+)|Utilization[\s:]+([\d.,]+)\s*%?/i);
+    /* Utilización upstream - show interface upstream X stat */
+    m = combined.match(/(?:Avg\.?\s*)?(?:upstream\s+)?(?:channel\s+)?utilization[\s:]+([\d.,]+)\s*%?|Utilization[\s:]+([\d.,]+)\s*%?/i);
     if (m) out.utilization = parseNum(m[1] || m[2]);
 
     /* Total modems en canal */
@@ -254,6 +300,27 @@
     /* power-level configurado en upstream (ej: power-level 14) - rango esperado RX ±3 dB */
     m = combined.match(/power-level\s+([\d.,\-]+)|power\s+level\s+([\d.,\-]+)/i);
     if (m) out.powerLevel = parseNum(m[1] || m[2]);
+
+    /* Upstream Channel Set: bonding DOCSIS 3.0 (múltiples canales = ya no migrar) */
+    m = combined.match(/Upstream\s+Channel\s+Set\s*(?:ID)?[\s:]+([\d\,\s\/\-\.]+?)(?:\n|$)/i);
+    if (m) {
+      var ucsStr = (m[1] || '').trim();
+      var ucsParts = ucsStr.split(/[\,\s]+/).filter(Boolean);
+      out.upstreamChannelSet = ucsParts.length > 0 ? ucsParts : null;
+    }
+    out.yaDocsisBonding = out.upstreamChannelSet && out.upstreamChannelSet.length > 1;
+
+    /* SNR por canal upstream (para interferencia selectiva por frecuencia) */
+    var snrPorCanal = [];
+    var usTblRe = /(\d+[\/\-\.]\d+(?:[\/\-\.]\d+)?)[\s\-]+([\d.,\-]+)\s+([\d.,\-]+)/g;
+    var usTblM;
+    while ((usTblM = usTblRe.exec(combined)) !== null) {
+      var chId = usTblM[1];
+      var snrVal = parseNum(String(usTblM[3]));
+      if (snrVal != null && snrVal > 0 && snrVal < 60 && !snrPorCanal.some(function (x) { return x.channel === chId; })) snrPorCanal.push({ channel: chId, snr: snrVal });
+    }
+    usTblRe.lastIndex = 0;
+    if (snrPorCanal.length >= 2) out.snrPorCanal = snrPorCanal;
 
     return out;
   }
@@ -743,12 +810,16 @@
     var now = (context && context.now) ? context.now : Date.now();
 
     var masivoResult = evaluateMasivoConScoring(metrics, history, now, { hysteresisKey: 'integra_noc_estado_' + (metrics.node || metrics.interfaceId || 'default').replace(/\W/g, '_') });
+    var powerLevelRx = metrics.powerLevel;
+    if (powerLevelRx == null && metrics.utilization != null && metrics.rx != null && metrics.rx >= 8 && metrics.rx <= 25) {
+      powerLevelRx = 14.0;
+    }
     var diag = {
       cmtsType: cmtsType,
       node: metrics.node || metrics.interfaceId || '—',
       totalModems: metrics.totalModems,
       tx: evaluateTx(metrics.tx),
-      rx: evaluateRx(metrics.rx, metrics.powerLevel, metrics.snrDown),
+      rx: evaluateRx(metrics.rx, powerLevelRx, metrics.snrDown),
       snrUp: evaluateSnrUp(metrics.snrUp),
       snrDown: evaluateSnrDown(metrics.snrDown),
       masivo: masivoResult,
@@ -791,8 +862,8 @@
   }
 
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { analyze: analyze, CMTS_TYPES: CMTS_TYPES };
+    module.exports = { analyze: analyze, CMTS_TYPES: CMTS_TYPES, extractTimingOffsetFromLog: extractTimingOffsetFromLog };
   } else {
-    global.NocAnalyzerQoE = { analyze: analyze, CMTS_TYPES: CMTS_TYPES };
+    global.NocAnalyzerQoE = { analyze: analyze, CMTS_TYPES: CMTS_TYPES, extractTimingOffsetFromLog: extractTimingOffsetFromLog };
   }
 })(typeof window !== 'undefined' ? window : this);

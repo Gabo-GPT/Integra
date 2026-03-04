@@ -172,8 +172,9 @@ app.post('/api/diagnostico', async (req, res) => {
   const node_id = (body.node_id || '').toString().trim() || null;
   const rx = niveles.rx;
   const utilization = niveles.utilization;
+  const TARGET_RX = 14.0;
   const rxEsInterfazUpstream = utilization != null && rx != null && rx >= 8 && rx <= 25;
-  const rx_alto = !!(rx != null && rx > 10 && !rxEsInterfazUpstream);
+  const rx_alto = !!(rx != null && rx > TARGET_RX + 2 && !rxEsInterfazUpstream);
 
   if (supabase) {
     try {

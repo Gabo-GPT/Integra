@@ -3969,24 +3969,46 @@
     var flapsNum = typeof flaps === 'number' ? flaps : (flaps != null && !isNaN(parseInt(flaps, 10)) ? parseInt(flaps, 10) : null);
     var hayCRC_HCS = crcHcs || (uncorr != null && uncorr > 0);
     var hayRatioFecAlto = errorRatio != null && errorRatio > 0.01;
+    var yaDocsisBonding = diag.raw && diag.raw.yaDocsisBonding === true;
+    var snrPorCanal = (diag.raw && diag.raw.snrPorCanal && diag.raw.snrPorCanal.length >= 2) ? diag.raw.snrPorCanal : null;
 
+    /* Análisis por canal: SNR selectivo por frecuencia (interferencia en frecuencias bajas) */
+    if (snrPorCanal && snrPorCanal.length >= 2) {
+      var snrMin = Math.min.apply(null, snrPorCanal.map(function (x) { return x.snr; }));
+      var snrMax = Math.max.apply(null, snrPorCanal.map(function (x) { return x.snr; }));
+      if (snrMax - snrMin > 2) {
+        var accionConectores = 'Revisar conectores: Interferencia detectada en frecuencias bajas del Upstream.';
+        if (p.accionOperativa.indexOf(accionConectores) < 0) p.accionOperativa.unshift(accionConectores);
+      }
+    }
+
+    /* Validación portadoras: si ya es DOCSIS 3.0 (múltiples canales), no sugerir migración a 1/3.0 */
     if (utilMuyBaja && (hayCRC_HCS || hayRatioFecAlto)) {
-      var nodoNombre = (diag.node && diag.node !== '—') ? diag.node : 'Plaza de Bolívar 2';
-      var numUsuarios = (diag.totalModems != null && diag.totalModems > 0) ? diag.totalModems : 30;
-      var bloqueQoE = [
-        'Paso 1 (Remoto): Migrar cliente a portadora 1/3.0 para blindar la navegación de los vecinos contra el ruido actual.',
-        'Paso 2 (Campo): Generar Visita Técnica para corrección de ruido físico en acometida (causa raíz).'
-      ];
-      p.accionOperativa = bloqueQoE.concat(p.accionOperativa.filter(function (a) {
-        return bloqueQoE.indexOf(a) < 0;
-      }));
-      p.validacionIndividual = p.validacionIndividual || {};
-      p.validacionIndividual.recomendacion = 'Paso 1 (Remoto): Migrar a portadora 1/3.0 para blindar a los vecinos. Paso 2 (Campo): Visita Técnica para corrección de ruido en acometida (causa raíz).';
+      if (yaDocsisBonding) {
+        var accionBonding = 'No migrar: equipo ya opera en DOCSIS 3.0 (Upstream Channel Set con múltiples canales). Generar Visita Técnica para corrección de ruido físico en acometida (causa raíz).';
+        p.accionOperativa = p.accionOperativa.filter(function (a) { return !/migrar.*1\/3\.0|portadora\s+1\/3/i.test(String(a)); });
+        p.accionOperativa.unshift(accionBonding);
+        p.validacionIndividual = p.validacionIndividual || {};
+        p.validacionIndividual.recomendacion = accionBonding;
+      } else {
+        var bloqueQoE = [
+          'Paso 1 (Remoto): Migrar cliente a portadora 1/3.0 para blindar la navegación de los vecinos contra el ruido actual.',
+          'Paso 2 (Campo): Generar Visita Técnica para corrección de ruido físico en acometida (causa raíz).'
+        ];
+        p.accionOperativa = bloqueQoE.concat(p.accionOperativa.filter(function (a) { return bloqueQoE.indexOf(a) < 0; }));
+        p.validacionIndividual = p.validacionIndividual || {};
+        p.validacionIndividual.recomendacion = 'Paso 1 (Remoto): Migrar a portadora 1/3.0 para blindar a los vecinos. Paso 2 (Campo): Visita Técnica para corrección de ruido en acometida (causa raíz).';
+      }
       return;
     }
 
     var tieneMigracion = p.accionOperativa.some(function (a) { return /migrar|migraci[oó]n|portadora/i.test(String(a)); });
     if (!tieneMigracion) return;
+    if (yaDocsisBonding) {
+      p.accionOperativa = p.accionOperativa.filter(function (a) { return !/migrar.*1\/3\.0|portadora\s+1\/3/i.test(String(a)); });
+      p.accionOperativa.push('No migrar: equipo ya en DOCSIS 3.0. Evaluar balanceo o Visita Técnica para corrección de ruido en acometida.');
+      return;
+    }
     var utilBaja = util != null && util < 70;
     var hayRuido = hayCRC_HCS || (flapsNum != null && flapsNum > 50);
     if (!utilBaja || !hayRuido) return;
@@ -4059,6 +4081,22 @@
       marker.className = 'noc-rf-progress-marker ' + (color ? 'noc-marker-' + color : 'noc-marker-muted');
     }
     setRfProgress('qoeNocTx', diag.tx && diag.tx.valor, diag.tx && diag.tx.color);
+    var rxEl = document.getElementById('qoeNocRx');
+    if (rxEl && diag.masivoPanel && diag.masivoPanel.utilization != null && diag.rx && diag.rx.valor != null && diag.rx.valor >= 8 && diag.rx.valor <= 25) {
+      rxEl.setAttribute('data-min', '0');
+      rxEl.setAttribute('data-max', '28');
+      rxEl.setAttribute('data-optmin', '12');
+      rxEl.setAttribute('data-optmax', '16');
+      var lbl = rxEl.querySelector('.qoe-noc-metric-label');
+      if (lbl) lbl.textContent = 'RX (interfaz US)';
+    } else if (rxEl) {
+      rxEl.setAttribute('data-min', '-25');
+      rxEl.setAttribute('data-max', '15');
+      rxEl.setAttribute('data-optmin', '-15');
+      rxEl.setAttribute('data-optmax', '10');
+      var lbl = rxEl.querySelector('.qoe-noc-metric-label');
+      if (lbl) lbl.textContent = 'RX Down';
+    }
     setRfProgress('qoeNocRx', diag.rx && diag.rx.valor, diag.rx && diag.rx.color);
     setRfProgress('qoeNocSnrUp', diag.snrUp && diag.snrUp.valor, diag.snrUp && diag.snrUp.color);
     setRfProgress('qoeNocSnrDown', diag.snrDown && diag.snrDown.valor, diag.snrDown && diag.snrDown.color);
