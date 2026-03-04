@@ -1,0 +1,13 @@
+# Render.com - Integra Dashboard NOC
+# https://render.com/docs/blueprint-spec
+services:
+  - type: web
+    name: integra
+    runtime: node
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_VERSION
+        value: 18
+      - key: NODE_ENV
+        value: production
