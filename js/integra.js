@@ -592,6 +592,47 @@
     }
   }
 
+  function syncFdfValues(editedEl) {
+    var pairs = [
+      ['fdfPlantaTotal', 'fdfPlantaTotalFormacion'],
+      ['fdfPublicoObjetivo', 'fdfPublicoObjetivoFormacion'],
+      ['fdfCertificados', 'fdfCertificadosFormacion'],
+      ['fdfPendientes', 'fdfPendientesFormacion']
+    ];
+    pairs.forEach(function (p) {
+      var a = $(p[0]), b = $(p[1]);
+      if (!a || !b) return;
+      var source = (editedEl && (editedEl.id === p[1])) ? b : a;
+      var target = source === a ? b : a;
+      if (source.textContent !== target.textContent) target.textContent = source.textContent;
+    });
+  }
+  function refreshFdfDiagnosticador() {
+    var certEl = $('fdfCertificados') || $('fdfCertificadosFormacion');
+    var pendEl = $('fdfPendientes') || $('fdfPendientesFormacion');
+    var pubEl = $('fdfPublicoObjetivo') || $('fdfPublicoObjetivoFormacion');
+    var cert = parseInt(String((certEl || {}).textContent || '21').replace(/\D/g, ''), 10) || 0;
+    var pend = parseInt(String((pendEl || {}).textContent || '10').replace(/\D/g, ''), 10) || 0;
+    var pub = parseInt(String((pubEl || {}).textContent || '31').replace(/\D/g, ''), 10) || 1;
+    var pct = pub > 0 ? Math.round((cert / pub) * 1000) / 10 : 0;
+    var ringInicio = document.getElementById('fdfCapacitacionRing');
+    var valInicio = $('fdfCapacitacionVal');
+    if (ringInicio) ringInicio.style.setProperty('--pct', String(pct));
+    if (valInicio) valInicio.textContent = pct + '%';
+    var ringForm = document.getElementById('fdfCapacitacionRingFormacion');
+    var valForm = $('fdfCapacitacionValFormacion');
+    if (ringForm) ringForm.style.setProperty('--pct', String(pct));
+    if (valForm) valForm.textContent = pct + '%';
+    var leyendaCert = $('fdfLeyendaCert');
+    var leyendaPend = $('fdfLeyendaPend');
+    var leyendaCertF = $('fdfLeyendaCertFormacion');
+    var leyendaPendF = $('fdfLeyendaPendFormacion');
+    if (leyendaCert) leyendaCert.textContent = cert;
+    if (leyendaPend) leyendaPend.textContent = pend;
+    if (leyendaCertF) leyendaCertF.textContent = cert;
+    if (leyendaPendF) leyendaPendF.textContent = pend;
+  }
+
   /* Actualiza % de Resultados
    * Aprobó + Reprobó = quienes presentaron y tuvieron resultado (base: Presentó)
    * Novedades = incidencias / No presentó (base: Público Objetivo) */
@@ -738,6 +779,9 @@
           updateResultados();
         } else if (id === 'formPublicoObjetivo' || id === 'formPlantaTotal' || id === 'formaprobo' || id === 'formReprobo' || id === 'formNovedades') {
           updateResultados();
+        } else if (id === 'fdfCertificados' || id === 'fdfPublicoObjetivo' || id === 'fdfPendientes' || id === 'fdfPlantaTotal' || id === 'fdfCertificadosFormacion' || id === 'fdfPublicoObjetivoFormacion' || id === 'fdfPendientesFormacion' || id === 'fdfPlantaTotalFormacion') {
+          syncFdfValues(t);
+          refreshFdfDiagnosticador();
         }
       }, 150);
     });
@@ -809,6 +853,10 @@
     set('formaprobo', '18');
     set('formReprobo', '2');
     set('formNovedades', '4');
+    set('fdfPlantaTotal', '34');
+    set('fdfPublicoObjetivo', '31');
+    set('fdfCertificados', '21');
+    set('fdfPendientes', '10');
     if (data.currentUserAdmin === undefined) { data.currentUserAdmin = true; saveData('currentUserAdmin', true); }
 
     var sparkCert = [72, 75, 78, 76, 80, 78, 78];
@@ -822,6 +870,8 @@
     updateMarzoDisplay();
     updateMarzoFormacion();
     refreshFormacionMensualChart();
+    syncFdfValues();
+    refreshFdfDiagnosticador();
 
     var gData = getGestionDataFromStorage();
     refreshReincidencias(data, gData);
@@ -2663,6 +2713,7 @@
         else if (key === 'publicoObjetivo') { updateResultados(); }
         else if (key === 'aprobo' || key === 'reprobo' || key === 'novedades') { updateResultados(); }
         else if (key === 'plantaTotalMarzo' || key === 'publicoObjetivoMarzo' || key === 'presentoMarzo' || key === 'pendienteMarzo' || key === 'aproboMarzo' || key === 'reproboMarzo' || key === 'novedadesMarzo') { updateMarzoFormacion(); }
+        else if (key === 'fdfPlantaTotal' || key === 'fdfPublicoObjetivo' || key === 'fdfCertificados' || key === 'fdfPendientes') { syncFdfValues(); refreshFdfDiagnosticador(); }
       } else if (t.hasAttribute('data-reinc')) {
         saveReinc();
           refreshReincidencias(getData(), getGestionDataFromStorage());
