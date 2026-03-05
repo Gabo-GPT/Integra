@@ -403,6 +403,195 @@
     return isNaN(n) ? 0 : n;
   }
 
+  function parseNumMarzo(el) {
+    if (!el || !el.textContent) return null;
+    var s = String(el.textContent).trim().replace(/\D/g, '');
+    if (s === '' || s === '—') return null;
+    var n = parseInt(s, 10);
+    return isNaN(n) ? null : n;
+  }
+  function updateMarzoFormacion() {
+    var presento = parseNumMarzo($('formPresentoMarzo'));
+    var pendiente = parseNumMarzo($('formPendienteMarzo'));
+    var aprobo = parseNumMarzo($('formaproboMarzo'));
+    var reprobo = parseNumMarzo($('formReproboMarzo'));
+    var novedades = parseNumMarzo($('formNovedadesMarzo'));
+    var publicoObjetivo = parseNumMarzo($('formPublicoObjetivoMarzo'));
+    var totalAsist = (presento != null ? presento : 0) + (pendiente != null ? pendiente : 0);
+    var cob = totalAsist > 0 ? Math.round(((presento != null ? presento : 0) / totalAsist) * 100) : null;
+    function set(id, val, isPct) {
+      var el = $(id);
+      if (el) el.textContent = val != null ? (isPct ? val + ' %' : val) : '—';
+    }
+    set('formPresentoPctMarzo', cob, true);
+    set('formCoberturaMarzo', cob, true);
+    set('coberturaValorMarzo', cob, true);
+    var p = presento != null ? presento : 0;
+    var basePresento = p > 0 ? p : 1;
+    var aPct = (p > 0 && aprobo != null) ? Math.round((aprobo / basePresento) * 100) : null;
+    var rPct = (p > 0 && reprobo != null) ? Math.round((reprobo / basePresento) * 100) : null;
+    var pub = publicoObjetivo != null ? publicoObjetivo : 0;
+    var basePublico = pub > 0 ? pub : 1;
+    var nPct = (pub > 0 && novedades != null) ? Math.round((novedades / basePublico) * 100) : null;
+    set('formaproboPctMarzo', aPct, true);
+    set('formReproboPctMarzo', rPct, true);
+    set('formNovedadesPctMarzo', nPct, true);
+    var ring = $('coberturaRingMarzo');
+    if (ring) {
+      ring.style.setProperty('--pct', cob != null ? cob : 0);
+      ring.style.background = cob != null ? 'conic-gradient(var(--integra-rose) 0 calc(' + cob + ' * 3.6deg), var(--integra-border) calc(' + cob + ' * 3.6deg) 360deg)' : 'conic-gradient(var(--integra-border) 0deg 360deg)';
+    }
+    /* Sincronizar con MARZO en Inicio */
+    var m = getFormacionMarzoData();
+    m.presento = presento != null ? presento : 0;
+    m.pendiente = pendiente != null ? pendiente : 0;
+    m.aprobo = aprobo != null ? aprobo : 0;
+    m.reprobo = reprobo != null ? reprobo : 0;
+    m.novedades = novedades != null ? novedades : 0;
+    saveData('formacionMarzo', m);
+    updateMarzoDisplay();
+  }
+  function getFormacionMarzoData() {
+    var d = getData();
+    var m = (d.formacionMarzo && typeof d.formacionMarzo === 'object') ? d.formacionMarzo : {};
+    var pMarzo = parseInt(String(d.presentoMarzo || '').replace(/\D/g, ''), 10);
+    var pendMarzo = parseInt(String(d.pendienteMarzo || '').replace(/\D/g, ''), 10);
+    var aMarzo = parseInt(String(d.aproboMarzo || '').replace(/\D/g, ''), 10);
+    var rMarzo = parseInt(String(d.reproboMarzo || '').replace(/\D/g, ''), 10);
+    var nMarzo = parseInt(String(d.novedadesMarzo || '').replace(/\D/g, ''), 10);
+    return {
+      presento: m.presento != null ? m.presento : (isNaN(pMarzo) ? 0 : pMarzo),
+      pendiente: m.pendiente != null ? m.pendiente : (isNaN(pendMarzo) ? 0 : pendMarzo),
+      aprobo: m.aprobo != null ? m.aprobo : (isNaN(aMarzo) ? 0 : aMarzo),
+      reprobo: m.reprobo != null ? m.reprobo : (isNaN(rMarzo) ? 0 : rMarzo),
+      novedades: m.novedades != null ? m.novedades : (isNaN(nMarzo) ? 0 : nMarzo)
+    };
+  }
+  function setFormacionMarzoData(field, val) {
+    var m = getFormacionMarzoData();
+    m[field] = Math.max(0, val);
+    if (m.aprobo + m.reprobo > m.presento && m.presento > 0) { m.reprobo = Math.min(m.reprobo, m.presento); m.aprobo = m.presento - m.reprobo; }
+    if (m.reprobo > m.presento) m.reprobo = m.presento;
+    if (m.aprobo > m.presento) m.aprobo = m.presento;
+    saveData('formacionMarzo', m);
+    updateMarzoDisplay();
+  }
+  function updateMarzoDisplay() {
+    var m = getFormacionMarzoData();
+    var totalAsist = m.presento + m.pendiente;
+    var cob = totalAsist > 0 ? Math.round((m.presento / totalAsist) * 100) : 0;
+    function set(id, val, isPct) {
+      var el = $(id);
+      if (el) el.textContent = (val != null && (m.presento > 0 || m.pendiente > 0 || m.aprobo > 0 || m.reprobo > 0 || m.novedades > 0)) ? (isPct ? val + ' %' : val) : '—';
+    }
+    set('kpiCertAprobadosMarzo', m.aprobo, false);
+    set('kpiCertReprobadosMarzo', m.reprobo, false);
+    set('kpiCertCoberturaMarzo', cob, true);
+    set('kpiCertPersonalFaltanteMarzo', m.pendiente, false);
+    set('aprobacionTasaNumMarzo', cob, true);
+    set('pieAprobacionValMarzo', cob, true);
+    var leyR = $('leyendaReproboMarzo');
+    var leyN = $('leyendaNovedadesMarzo');
+    var leyT = $('leyendaTotalEvalMarzo');
+    var leyRF = $('leyendaReproboFooterMarzo');
+    var leyNF = $('leyendaNovedadesFooterMarzo');
+    var leyTF = $('leyendaTotalFooterMarzo');
+    if (leyR) leyR.textContent = 'Reprobó ' + (m.presento > 0 || m.reprobo > 0 ? m.reprobo : '—');
+    if (leyN) leyN.textContent = 'Novedades ' + (m.novedades > 0 ? m.novedades : '—');
+    if (leyT) leyT.textContent = 'Total evaluados ' + (m.presento > 0 ? m.presento : '—');
+    if (leyRF) leyRF.textContent = 'Reprobó ' + (m.presento > 0 || m.reprobo > 0 ? m.reprobo : '—');
+    if (leyNF) leyNF.textContent = 'Novedades ' + (m.novedades > 0 ? m.novedades : '—');
+    if (leyTF) leyTF.textContent = 'Total evaluados ' + (m.presento > 0 ? m.presento : '—');
+    var pie = $('pieAprobacionMarzo');
+    if (pie && m.presento > 0) {
+      var totalPie = m.aprobo + m.reprobo + m.novedades || 1;
+      var pieA = totalPie > 0 ? Math.round((m.aprobo / totalPie) * 100) : 0;
+      var pieR = totalPie > 0 ? Math.round((m.reprobo / totalPie) * 100) : 0;
+      pie.style.background = 'conic-gradient(var(--integra-cyan) 0% ' + pieA + '%, var(--integra-rose) ' + pieA + '% ' + (pieA + pieR) + '%, var(--integra-orange) ' + (pieA + pieR) + '% 100%)';
+    }
+    refreshFormacionMensualChart();
+  }
+
+  var _formacionMensualChartInstance = null;
+  var _formacionMensualChartInicioInstance = null;
+  function getFormacionEneroData() {
+    var d = getData();
+    var m = (d.formacionEnero && typeof d.formacionEnero === 'object') ? d.formacionEnero : {};
+    var p = parseInt(String(d.presentoEnero || '').replace(/\D/g, ''), 10);
+    var pend = parseInt(String(d.pendienteEnero || '').replace(/\D/g, ''), 10);
+    return {
+      presento: m.presento != null ? m.presento : (isNaN(p) ? 0 : p),
+      pendiente: m.pendiente != null ? m.pendiente : (isNaN(pend) ? 0 : pend)
+    };
+  }
+  function getFormacionMensualData() {
+    var labels = ['ENERO', 'FEBRERO'];
+    var data = [0, 0];
+    var presento = parseNum($('formPresento'));
+    var pendiente = parseNum($('formPendiente'));
+    var totalFeb = presento + pendiente;
+    data[0] = totalFeb > 0 ? Math.round((presento / totalFeb) * 100) : 0;
+    var m = getFormacionMarzoData();
+    var totalMar = m.presento + m.pendiente;
+    data[1] = totalMar > 0 ? Math.round((m.presento / totalMar) * 100) : 0;
+    return { labels: labels, data: data };
+  }
+  function refreshFormacionMensualChart() {
+    var d = getFormacionMensualData();
+    var maxVal = Math.max.apply(null, d.data) || 1;
+    var bestIdx = 0;
+    for (var i = 1; i < d.data.length; i++) { if (d.data[i] > d.data[bestIdx]) bestIdx = i; }
+    var mesesNombres = ['Enero', 'Febrero'];
+    var mejorText = maxVal > 0 ? 'Mejor cobertura: ' + mesesNombres[bestIdx].toUpperCase() + ' (' + d.data[bestIdx] + '%)' : 'Sin datos. Ingresa información en Febrero y Marzo.';
+    var colors = d.data.map(function (v, i) {
+      return (v > 0 && i === bestIdx) ? 'rgba(16, 185, 129, 0.95)' : (v > 0 ? 'rgba(6, 182, 212, 0.7)' : 'rgba(148, 163, 184, 0.2)');
+    });
+    var borderColors = d.data.map(function (v, i) {
+      return (v > 0 && i === bestIdx) ? 'rgba(16, 185, 129, 1)' : 'transparent';
+    });
+    var yMax = Math.max(100, Math.ceil(maxVal * 1.15)) || 100;
+    var chartOpts = {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: function (ctx) { return ctx.raw + '%'; } } } },
+      scales: {
+        x: { title: { display: true, text: 'Mes', color: 'rgba(255,255,255,0.7)', font: { size: 12 } }, grid: { display: false }, border: { display: true, color: 'rgba(167, 139, 250, 0.3)' }, ticks: { color: 'rgba(255,255,255,0.9)', font: { size: 12, weight: '600' }, maxRotation: 0 } },
+        y: { title: { display: true, text: 'Cobertura (%)', color: 'rgba(255,255,255,0.7)', font: { size: 12 } }, min: 0, max: yMax, grid: { color: 'rgba(167, 139, 250, 0.15)' }, border: { display: true, color: 'rgba(167, 139, 250, 0.3)' }, ticks: { color: 'rgba(255,255,255,0.9)', stepSize: 10 } }
+      }
+    };
+    var dataset = { label: 'Cobertura %', data: d.data, backgroundColor: colors, borderColor: borderColors, borderWidth: 2, borderRadius: 6, borderSkipped: false };
+    var canvasFormacion = document.getElementById('formacionMensualChart');
+    var mejorFormacion = $('formacionChartMejor');
+    if (mejorFormacion) mejorFormacion.textContent = mejorText;
+    if (canvasFormacion) {
+      if (_formacionMensualChartInstance) {
+        _formacionMensualChartInstance.data.labels = d.labels;
+        _formacionMensualChartInstance.data.datasets[0].data = d.data;
+        _formacionMensualChartInstance.data.datasets[0].backgroundColor = colors;
+        _formacionMensualChartInstance.data.datasets[0].borderColor = borderColors;
+        _formacionMensualChartInstance.options.scales.y.max = yMax;
+        _formacionMensualChartInstance.update('none');
+      } else if (typeof Chart !== 'undefined') {
+        _formacionMensualChartInstance = new Chart(canvasFormacion, { type: 'bar', data: { labels: d.labels, datasets: [dataset] }, options: chartOpts });
+      }
+    }
+    var canvasInicio = document.getElementById('formacionMensualChartInicio');
+    var mejorInicio = $('formacionChartMejorInicio');
+    if (mejorInicio) mejorInicio.textContent = mejorText;
+    if (canvasInicio) {
+      if (_formacionMensualChartInicioInstance) {
+        _formacionMensualChartInicioInstance.data.labels = d.labels;
+        _formacionMensualChartInicioInstance.data.datasets[0].data = d.data;
+        _formacionMensualChartInicioInstance.data.datasets[0].backgroundColor = colors;
+        _formacionMensualChartInicioInstance.data.datasets[0].borderColor = borderColors;
+        _formacionMensualChartInicioInstance.options.scales.y.max = yMax;
+        _formacionMensualChartInicioInstance.update('none');
+      } else if (typeof Chart !== 'undefined') {
+        _formacionMensualChartInicioInstance = new Chart(canvasInicio, { type: 'bar', data: { labels: d.labels, datasets: [dataset] }, options: chartOpts });
+      }
+    }
+  }
+
   /* Actualiza % de Resultados
    * Aprobó + Reprobó = quienes presentaron y tuvieron resultado (base: Presentó)
    * Novedades = incidencias / No presentó (base: Público Objetivo) */
@@ -434,8 +623,10 @@
     if (pR) pR.textContent = rPct + ' %';
     if (pN) pN.textContent = nPct + ' %';
 
-    /* Cobertura = Aprobó % (Formación e Inicio) */
-    var cob = presento > 0 ? aPct : 0;
+    /* Cobertura = Presentó % (asistencia: Presentó / (Presentó + Pendiente)) */
+    var pendiente = parseNum($('formPendiente'));
+    var totalAsist = presento + pendiente;
+    var cob = totalAsist > 0 ? Math.round((presento / totalAsist) * 100) : 0;
     var formCob = $('formCobertura');
     var valCob = $('coberturaValor');
     var ring = $('coberturaRing');
@@ -445,11 +636,14 @@
     if (ring) ring.style.setProperty('--pct', cob);
     if (kpiCob) kpiCob.textContent = cob + ' %';
     saveData('cobertura', cob + ' %');
+    var kpiFaltante = $('kpiCertPersonalFaltante');
+    if (kpiFaltante) kpiFaltante.textContent = pendiente;
 
-    updatePieChart(basePresento, aprobo, reprobo, novedades, aPct, rPct, nPct);
+    updatePieChart(basePresento, aprobo, reprobo, novedades, aPct, rPct, nPct, cob);
+    refreshFormacionMensualChart();
   }
 
-  function updatePieChart(totalBase, aprobo, reprobo, novedades, aPct, rPct, nPct) {
+  function updatePieChart(totalBase, aprobo, reprobo, novedades, aPct, rPct, nPct, coberturaPct) {
     if (aprobo == null) aprobo = parseNum($('formaprobo'));
     if (reprobo == null) reprobo = parseNum($('formReprobo'));
     if (novedades == null) novedades = parseNum($('formNovedades'));
@@ -478,7 +672,8 @@
 
     var presento = parseNum($('formPresento'));
     var totalEval = presento > 0 ? presento : aprobo + reprobo + novedades;
-    var tasaVal = aPct + '%';
+    var cob = coberturaPct != null ? coberturaPct : (function () { var p = parseNum($('formPendiente')); var t = presento + p; return t > 0 ? Math.round((presento / t) * 100) : 0; })();
+    var tasaVal = cob + '%';
     var tasaEl = $('aprobacionTasaNum');
     var pieValEl = $('pieAprobacionVal');
     var leyendaR = $('leyendaReprobo');
@@ -624,6 +819,9 @@
 
     updateAsistencia();
     updateResultados();
+    updateMarzoDisplay();
+    updateMarzoFormacion();
+    refreshFormacionMensualChart();
 
     var gData = getGestionDataFromStorage();
     refreshReincidencias(data, gData);
@@ -1554,7 +1752,23 @@
     var top5Ag = [];
     for (var k in byAgente) top5Ag.push({ agente: k, count: byAgente[k].count, minNota: byAgente[k].minNota });
     top5Ag.sort(function (a, b) { return b.count - a.count; });
-    _calidadMetricsCache = { letraMasAfectada: letraOut, top3Macro: top3.slice(0, 3), top5Agentes: top5Ag.slice(0, 5), spark: spark, totalAuditorias: list.length };
+    var top5PorMenorGana = [];
+    try {
+      var agentes = getPortalAgentes();
+      var porLetra = getCalificacionesPorLetra();
+      var rows = buildRowsCalidad(agentes, porLetra, false);
+      rows.sort(function (a, b) {
+        var ga = a.ganaPct != null ? a.ganaPct : -1;
+        var gb = b.ganaPct != null ? b.ganaPct : -1;
+        return ga - gb;
+      });
+      top5PorMenorGana = rows.slice(0, 5).map(function (r) {
+        var gana = r.ganaPct != null ? r.ganaPct : null;
+        var impacto = gana != null ? Math.round((100 - gana) * 100) / 100 : 100;
+        return { agente: r.nombre, ganaPct: gana, impacto: impacto };
+      });
+    } catch (e) {}
+    _calidadMetricsCache = { letraMasAfectada: letraOut, top3Macro: top3.slice(0, 3), top5Agentes: top5PorMenorGana.length ? top5PorMenorGana : top5Ag.slice(0, 5), spark: spark, totalAuditorias: list.length };
     return _calidadMetricsCache;
   }
   function invalidateCalidadCache() { _calidadMetricsCache = null; }
@@ -2110,10 +2324,22 @@
         .then(function (d) {
           var parsed = d && typeof d === 'object' ? d : {};
           if (parsed.data && typeof parsed.data === 'object') parsed = parsed.data;
+          var serverEmpty = Object.keys(parsed).length === 0;
+          if (serverEmpty) {
+            try {
+              var raw = localStorage.getItem(STORAGE);
+              if (raw) {
+                var local = JSON.parse(raw);
+                if (local && typeof local === 'object' && Object.keys(local).length > 0) parsed = local;
+              }
+            } catch (e) {}
+          }
           setDataFromApi(parsed);
           refreshUsuariosPortal();
         })
-        .catch(function () { refreshUsuariosPortal(); })
+        .catch(function () {
+          refreshUsuariosPortal();
+        })
         .finally(function () { btnRecargar.disabled = false; btnRecargar.textContent = 'Recargar'; });
     });
     var btnGen = $('btnGenerarClave');
@@ -2436,6 +2662,7 @@
         if (key === 'presento' || key === 'pendiente') { updateAsistencia(); updateResultados(); }
         else if (key === 'publicoObjetivo') { updateResultados(); }
         else if (key === 'aprobo' || key === 'reprobo' || key === 'novedades') { updateResultados(); }
+        else if (key === 'plantaTotalMarzo' || key === 'publicoObjetivoMarzo' || key === 'presentoMarzo' || key === 'pendienteMarzo' || key === 'aproboMarzo' || key === 'reproboMarzo' || key === 'novedadesMarzo') { updateMarzoFormacion(); }
       } else if (t.hasAttribute('data-reinc')) {
         saveReinc();
           refreshReincidencias(getData(), getGestionDataFromStorage());
@@ -2567,14 +2794,15 @@
     var sparkStr = spark.map(function (v) { var m = safeMax(spark) || 1; return _sparkChars[Math.min(7, Math.floor((v / m) * 8))]; }).join('');
     wrap.innerHTML = '<div class="calidad-tendencia-inner"><span class="calidad-tendencia-num">' + tot + '</span><span class="calidad-tendencia-spark">' + sparkStr + '</span><span class="calidad-tendencia-label">Últimos 7 días</span></div>';
   }
+  var TOP3_MACRO_ESTATICO = [
+    { macro: 'FO - Revisión Capa 2 y 3 Equipos Core (Letra N)', count: 6 },
+    { macro: 'FO - Revisión CPE', count: 2 },
+    { macro: 'Realiza confirmación y/o actualización de datos', count: 2 }
+  ];
   function refreshTop3Macroprocesos(metrics) {
     var wrap = $('top3MacroWrap');
     if (!wrap) return;
-    var items = (metrics && metrics.top3Macro) ? metrics.top3Macro : getTop3MacroprocesosAfectados();
-    if (!items.length) {
-      wrap.innerHTML = '<div class="letra-mas-afectada-empty">Sin datos. Registra auditorías en Calidad.</div>';
-      return;
-    }
+    var items = TOP3_MACRO_ESTATICO;
     var max = safeMax(items.map(function (r) { return r.count || 0; })) || 1;
     wrap.innerHTML = '<div class="top3-macro-kpi">' + items.map(function (r, i) {
       var c = r.count || 0;
@@ -2585,21 +2813,90 @@
     }).join('') + '</div>';
   }
 
+  var _top5AgentesChartInstance = null;
   function refreshTop5AgentesAfectados(metrics) {
     var wrap = $('top5AgentesWrap');
+    var listEl = $('top5AgentesList');
+    var chartWrap = $('top5AgentesChartWrap');
+    var emptyEl = $('top5AgentesEmpty');
+    var canvas = document.getElementById('top5AgentesChart');
     if (!wrap) return;
     var items = (metrics && metrics.top5Agentes) ? metrics.top5Agentes : getTop5AgentesAfectados();
     if (!items.length) {
-      wrap.innerHTML = '<div class="letra-mas-afectada-empty">Sin datos. Registra auditorías en Calidad.</div>';
+      if (chartWrap) chartWrap.style.display = 'none';
+      if (listEl) listEl.style.display = 'none';
+      if (emptyEl) emptyEl.style.display = 'block';
+      if (_top5AgentesChartInstance) { _top5AgentesChartInstance.destroy(); _top5AgentesChartInstance = null; }
       return;
     }
-    wrap.innerHTML = '<div class="top5-agentes-list">' + items.map(function (r, i) {
-      var c = r.count || 0;
-      var nota = r.minNota;
-      var notaStr = nota != null ? (nota <= 10 ? (nota).toFixed(1).replace('.', ',') : Math.round(nota) + '') : '—';
+    if (chartWrap) chartWrap.style.display = 'block';
+    if (listEl) listEl.style.display = 'flex';
+    if (emptyEl) emptyEl.style.display = 'none';
+    var listHtml = items.map(function (r, i) {
+      var ganaPct = r.ganaPct != null ? r.ganaPct : null;
+      var ganaStr = ganaPct != null ? (ganaPct).toFixed(2).replace('.', ',') + '%' : '—';
+      var impactoStr = r.impacto != null ? r.impacto.toFixed(1) : (ganaPct != null ? (100 - ganaPct).toFixed(1) : (r.count != null ? r.count : '—'));
       var rankClass = 'top5-agentes-rank top5-agentes-rank-' + (i + 1);
-      return '<div class="top5-agentes-card"><span class="' + rankClass + '">' + (i + 1) + '</span><span class="top5-agentes-nombre">' + escapeHtml(r.agente || '—') + '</span><span class="top5-agentes-campo"><span class="top5-agentes-etiqueta">NOTA</span><span class="top5-agentes-minnota">' + notaStr + '</span></span><span class="top5-agentes-campo"><span class="top5-agentes-etiqueta">CANT MONITOREO</span><span class="top5-agentes-badge">' + c + '</span></span></div>';
-    }).join('') + '</div>';
+      return '<div class="top5-agentes-card"><span class="' + rankClass + '">' + (i + 1) + '</span><span class="top5-agentes-nombre">' + escapeHtml(r.agente || '—') + '</span><span class="top5-agentes-campo"><span class="top5-agentes-etiqueta">GANA ST</span><span class="top5-agentes-minnota">' + ganaStr + '</span></span><span class="top5-agentes-campo"><span class="top5-agentes-etiqueta">IMPACTO</span><span class="top5-agentes-badge">' + impactoStr + '</span></span></div>';
+    }).join('');
+    if (listEl) listEl.innerHTML = listHtml;
+    if (canvas && typeof Chart !== 'undefined') {
+      if (_top5AgentesChartInstance) { _top5AgentesChartInstance.destroy(); _top5AgentesChartInstance = null; }
+      var labels = items.map(function (r) {
+        var n = (r.agente || '—').trim();
+        return n.length > 20 ? n.slice(0, 18) + '…' : n;
+      });
+      var values = items.map(function (r) {
+        if (r.impacto != null) return r.impacto;
+        if (r.ganaPct != null) return 100 - r.ganaPct;
+        return r.count || 0;
+      });
+      var maxVal = Math.max.apply(null, values) || 1;
+      var colors = ['rgba(245, 158, 11, 0.9)', 'rgba(148, 163, 184, 0.9)', 'rgba(180, 83, 9, 0.9)', 'rgba(99, 102, 241, 0.7)', 'rgba(99, 102, 241, 0.5)'];
+      _top5AgentesChartInstance = new Chart(canvas, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Afectaciones',
+            data: values,
+            backgroundColor: colors.slice(0, items.length),
+            borderRadius: 8,
+            borderSkipped: false
+          }]
+        },
+        options: {
+          indexAxis: 'y',
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                title: function (ctx) { return items[ctx[0].dataIndex] ? (items[ctx[0].dataIndex].agente || '—') : ''; },
+                label: function (ctx) {
+                  var r = items[ctx[0].dataIndex];
+                  var gana = r && r.ganaPct != null ? (r.ganaPct).toFixed(2).replace('.', ',') + '%' : '—';
+                  return 'GANA ST: ' + gana + ' · Impacto: ' + ctx.raw;
+                }
+              }
+            }
+          },
+          scales: {
+            x: {
+              min: 0,
+              max: Math.ceil(maxVal * 1.15) || 1,
+              grid: { color: 'rgba(167, 139, 250, 0.12)' },
+              ticks: { color: 'rgba(167, 139, 250, 0.8)', stepSize: 1 }
+            },
+            y: {
+              grid: { display: false },
+              ticks: { color: 'rgba(255,255,255,0.9)', font: { size: 11, weight: '600' }, maxRotation: 0 }
+            }
+          }
+        }
+      });
+    }
   }
 
   function refreshAuditoriaAgenteSelect() { /* Autocomplete se actualiza al escribir */ }
@@ -2716,6 +3013,7 @@
     if (val == null || val === '') delete o[agente][col]; else o[agente][col] = val;
     if (Object.keys(o[agente]).length === 0) delete o[agente];
     saveData('overridesPorcentajeAgentes', o);
+    invalidateCalidadCache();
   }
   function calculateGanaST(row) {
     var vG = toNum(row.pctG);
@@ -2784,6 +3082,7 @@
       tbody.innerHTML = '';
       if (wrap) wrap.style.display = 'none';
       if (emptyEl) emptyEl.style.display = 'block';
+      refreshCalidadTotalChart(null, null, null, null, null);
       return;
     }
     if (wrap) wrap.style.display = '';
@@ -2797,32 +3096,100 @@
       if (!byJefe[j]) byJefe[j] = [];
       byJefe[j].push(r);
     });
-    ordenJefes.forEach(function (j) { if (byJefe[j]) byJefe[j].sort(function (a, b) { if (b.ganaPct !== a.ganaPct) return b.ganaPct - a.ganaPct; return (a.nombre || '').localeCompare(b.nombre || ''); }); });
     var jefesOrdenados = [];
     ordenJefes.forEach(function (j) { if (byJefe[j] && byJefe[j].length) jefesOrdenados.push({ jefe: j, rows: byJefe[j] }); });
     for (var k in byJefe) { if (ordenJefes.indexOf(k) < 0) jefesOrdenados.push({ jefe: k, rows: byJefe[k] }); }
-    function fmtDecimal(v) { return v != null ? (v).toFixed(2).replace('.', ',') : '0,00'; }
     function fmtPct(v) { return v != null ? (v).toFixed(2).replace('.', ',') + '%' : '—'; }
+    function agregarJefe(grp) {
+      var totQ = 0, sumG = 0, sumA1 = 0, sumN = 0, sumA2 = 0, sumGana = 0, w = 0;
+      grp.rows.forEach(function (r) {
+        totQ += r.qMont;
+        w += r.qMont;
+        if (r.pctG != null) sumG += r.pctG * r.qMont;
+        if (r.pctA1 != null) sumA1 += r.pctA1 * r.qMont;
+        if (r.pctN != null) sumN += r.pctN * r.qMont;
+        if (r.pctA2 != null) sumA2 += r.pctA2 * r.qMont;
+        sumGana += r.ganaPct * r.qMont;
+      });
+      if (w === 0 && grp.rows.length > 0) {
+        grp.rows.forEach(function (r) {
+          var rw = 1;
+          w += rw;
+          if (r.pctG != null) sumG += (r.pctG || 0) * rw;
+          if (r.pctA1 != null) sumA1 += (r.pctA1 || 0) * rw;
+          if (r.pctN != null) sumN += (r.pctN || 0) * rw;
+          if (r.pctA2 != null) sumA2 += (r.pctA2 || 0) * rw;
+          sumGana += (r.ganaPct || 0) * rw;
+        });
+      }
+      var sumWG = grp.rows.filter(function (r) { return r.pctG != null; }).reduce(function (s, r) { return s + r.qMont; }, 0);
+      var sumWA1 = grp.rows.filter(function (r) { return r.pctA1 != null; }).reduce(function (s, r) { return s + r.qMont; }, 0);
+      var sumWN = grp.rows.filter(function (r) { return r.pctN != null; }).reduce(function (s, r) { return s + r.qMont; }, 0);
+      var sumWA2 = grp.rows.filter(function (r) { return r.pctA2 != null; }).reduce(function (s, r) { return s + r.qMont; }, 0);
+      var cntG = grp.rows.filter(function (r) { return r.pctG != null; }).length;
+      var cntA1 = grp.rows.filter(function (r) { return r.pctA1 != null; }).length;
+      var cntN = grp.rows.filter(function (r) { return r.pctN != null; }).length;
+      var cntA2 = grp.rows.filter(function (r) { return r.pctA2 != null; }).length;
+      var wG = sumWG > 0 ? sumWG : cntG;
+      var wA1 = sumWA1 > 0 ? sumWA1 : cntA1;
+      var wN = sumWN > 0 ? sumWN : cntN;
+      var wA2 = sumWA2 > 0 ? sumWA2 : cntA2;
+      return { qMont: totQ, pctG: wG > 0 ? sumG / wG : null, pctA1: wA1 > 0 ? sumA1 / wA1 : null, pctN: wN > 0 ? sumN / wN : null, pctA2: wA2 > 0 ? sumA2 / wA2 : null, ganaPct: w > 0 ? sumGana / w : 0 };
+    }
+    var totalGeneral = { qMont: 0, sumG: 0, sumA1: 0, sumN: 0, sumA2: 0, sumGana: 0, w: 0, wG: 0, wA1: 0, wN: 0, wA2: 0 };
+    rows.forEach(function (r) {
+      var rw = r.qMont > 0 ? r.qMont : 0;
+      totalGeneral.qMont += r.qMont;
+      if (rw > 0) {
+        totalGeneral.w += rw;
+        totalGeneral.sumGana += r.ganaPct * rw;
+        if (r.pctG != null) { totalGeneral.sumG += r.pctG * rw; totalGeneral.wG += rw; }
+        if (r.pctA1 != null) { totalGeneral.sumA1 += r.pctA1 * rw; totalGeneral.wA1 += rw; }
+        if (r.pctN != null) { totalGeneral.sumN += r.pctN * rw; totalGeneral.wN += rw; }
+        if (r.pctA2 != null) { totalGeneral.sumA2 += r.pctA2 * rw; totalGeneral.wA2 += rw; }
+      }
+    });
+    if (totalGeneral.w === 0 && rows.length > 0) {
+      rows.forEach(function (r) {
+        var rw = 1;
+        totalGeneral.w += rw;
+        totalGeneral.sumGana += (r.ganaPct || 0) * rw;
+        if (r.pctG != null) { totalGeneral.sumG += (r.pctG || 0) * rw; totalGeneral.wG += rw; }
+        if (r.pctA1 != null) { totalGeneral.sumA1 += (r.pctA1 || 0) * rw; totalGeneral.wA1 += rw; }
+        if (r.pctN != null) { totalGeneral.sumN += (r.pctN || 0) * rw; totalGeneral.wN += rw; }
+        if (r.pctA2 != null) { totalGeneral.sumA2 += (r.pctA2 || 0) * rw; totalGeneral.wA2 += rw; }
+      });
+    }
     var html = [];
     jefesOrdenados.forEach(function (g) {
       var jefeLabel = g.jefe || 'Sin asignar';
-      html.push('<tr class="tabla-cal-jefe-row tabla-cal-jefe-collapsed"><td class="tabla-cal-jefe" colspan="6">' + escapeHtml(jefeLabel) + '</td><td class="tabla-cal-jefe-accion"><button type="button" class="tabla-cal-jefe-toggle" aria-label="Expandir/Colapsar" title="Expandir">+</button></td></tr>');
+      var agg = agregarJefe(g);
+      var aggGanaCls = getGanaSTClass(agg.ganaPct);
+      html.push('<tr class="tabla-cal-jefe-row"><td class="tabla-cal-equipo"><button type="button" class="tabla-cal-jefe-toggle" aria-label="Colapsar">−</button><span class="tabla-cal-label">' + escapeHtml(jefeLabel) + '</span></td><td class="tabla-cal-qmont tabla-cal-bold">' + displayQMont(agg.qMont) + '</td><td class="tabla-cal-pct tabla-cal-bold">' + fmtPct(agg.pctG) + '</td><td class="tabla-cal-pct tabla-cal-bold">' + fmtPct(agg.pctA1) + '</td><td class="tabla-cal-pct tabla-cal-bold">' + fmtPct(agg.pctN) + '</td><td class="tabla-cal-pct tabla-cal-bold">' + fmtPct(agg.pctA2) + '</td><td class="tabla-cal-gana tabla-cal-bold ' + aggGanaCls + '">' + fmtPct(agg.ganaPct) + '</td></tr>');
       g.rows.forEach(function (r) {
         var ganaCls = r.ganaPct > 0 ? getGanaSTClass(r.ganaPct) : 'tabla-cal-gana-vacio';
-        var fmt = fmtPct;
         var selG = '<select class="tabla-cal-pct-sel" data-agent="' + escapeHtml(r.nombre) + '" data-col="pctG" title="Elegir porcentaje">' + buildPctSelectOptions(r.pctG) + '</select>';
         var selA1 = '<select class="tabla-cal-pct-sel" data-agent="' + escapeHtml(r.nombre) + '" data-col="pctA1" title="Elegir porcentaje">' + buildPctSelectOptions(r.pctA1) + '</select>';
         var selN = '<select class="tabla-cal-pct-sel" data-agent="' + escapeHtml(r.nombre) + '" data-col="pctN" title="Elegir porcentaje">' + buildPctSelectOptions(r.pctN) + '</select>';
         var selA2 = '<select class="tabla-cal-pct-sel" data-agent="' + escapeHtml(r.nombre) + '" data-col="pctA2" title="Elegir porcentaje">' + buildPctSelectOptions(r.pctA2) + '</select>';
-        html.push('<tr class="tabla-cal-agente-row" style="display:none"><td class="tabla-cal-nombre tabla-cal-agente">' + escapeHtml(r.nombre) + '</td>' +
+        html.push('<tr class="tabla-cal-agente-row"><td class="tabla-cal-nombre tabla-cal-agente"><span class="tabla-cal-agente-icon"></span>' + escapeHtml(r.nombre) + '</td>' +
           '<td class="tabla-cal-qmont tabla-cal-editable" contenteditable="true" data-agent="' + escapeHtml(r.nombre) + '" data-col="qMont" title="Editar">' + displayQMont(r.qMont) + '</td>' +
           '<td class="tabla-cal-pct tabla-cal-pct-cell">' + selG + '</td><td class="tabla-cal-pct tabla-cal-pct-cell">' + selA1 + '</td>' +
           '<td class="tabla-cal-pct tabla-cal-pct-cell">' + selN + '</td><td class="tabla-cal-pct tabla-cal-pct-cell">' + selA2 + '</td>' +
-          '<td class="tabla-cal-gana ' + ganaCls + '">' + (r.ganaPct > 0 ? fmt(r.ganaPct) : '—') + '</td></tr>');
+          '<td class="tabla-cal-gana ' + ganaCls + '">' + (r.ganaPct > 0 ? fmtPct(r.ganaPct) : '—') + '</td></tr>');
       });
     });
+    var tg = totalGeneral;
+    var tgG = tg.wG > 0 ? tg.sumG / tg.wG : null;
+    var tgA1 = tg.wA1 > 0 ? tg.sumA1 / tg.wA1 : null;
+    var tgN = tg.wN > 0 ? tg.sumN / tg.wN : null;
+    var tgA2 = tg.wA2 > 0 ? tg.sumA2 / tg.wA2 : null;
+    var tgGana = tg.w > 0 ? tg.sumGana / tg.w : 0;
+    var tgGanaCls = getGanaSTClass(tgGana);
+    html.push('<tr class="tabla-cal-total-row"><td class="tabla-cal-equipo tabla-cal-total"><span class="tabla-cal-total-spacer"></span>Total general</td><td class="tabla-cal-qmont tabla-cal-bold">' + displayQMont(tg.qMont) + '</td><td class="tabla-cal-pct tabla-cal-bold">' + fmtPct(tgG) + '</td><td class="tabla-cal-pct tabla-cal-bold">' + fmtPct(tgA1) + '</td><td class="tabla-cal-pct tabla-cal-bold">' + fmtPct(tgN) + '</td><td class="tabla-cal-pct tabla-cal-bold">' + fmtPct(tgA2) + '</td><td class="tabla-cal-gana tabla-cal-bold ' + tgGanaCls + '">' + fmtPct(tgGana) + '</td></tr>');
     tbody.innerHTML = html.join('');
     if (emptyEl) emptyEl.style.display = 'none';
+    refreshCalidadTotalChart(tgG, tgA1, tgN, tgA2, tgGana);
     var tabla = $('tablaCalificaciones');
     if (tabla && !tabla._tablaCalToggleBound) {
       tabla._tablaCalToggleBound = true;
@@ -2833,9 +3200,9 @@
         if (!jefeRow) return;
         var collapsed = jefeRow.classList.toggle('tabla-cal-jefe-collapsed');
         btn.textContent = collapsed ? '+' : '−';
-        btn.title = collapsed ? 'Expandir' : 'Colapsar';
+        btn.setAttribute('aria-label', collapsed ? 'Expandir' : 'Colapsar');
         var next = jefeRow.nextElementSibling;
-        while (next && !next.classList.contains('tabla-cal-jefe-row')) {
+        while (next && !next.classList.contains('tabla-cal-jefe-row') && !next.classList.contains('tabla-cal-total-row')) {
           next.style.display = collapsed ? 'none' : '';
           next = next.nextElementSibling;
         }
@@ -2850,8 +3217,7 @@
         var val = raw === '' ? null : (parseInt(raw, 10) || null);
         setOverridePorcentaje(agent, col, val);
         flushSave();
-        refreshTablaCalificaciones();
-        refreshTablaPorcentaje();
+        refreshCalidadAll();
       }, true);
       tabla.addEventListener('change', function (e) {
         var sel = e.target.closest('.tabla-cal-pct-sel');
@@ -2864,11 +3230,76 @@
         var val = (v === '' || isNaN(parsed)) ? null : parsed;
         setOverridePorcentaje(agent, col, val);
         flushSave();
-        refreshTablaCalificaciones();
-        refreshTablaPorcentaje();
+        refreshCalidadAll();
       });
       tabla.addEventListener('keydown', function (e) {
         if (e.target.closest('.tabla-cal-editable') && e.key === 'Enter') { e.preventDefault(); e.target.blur(); }
+      });
+    }
+  }
+
+  var _calidadTotalChartInstance = null;
+  function refreshCalidadTotalChart(pctG, pctA1, pctN, pctA2, ganaPct) {
+    var wrap = $('calidadTotalChartWrap');
+    var ganaRing = $('calidadTotalGanaRing');
+    var ganaVal = $('calidadTotalGanaVal');
+    var canvas = document.getElementById('calidadTotalChartCanvas');
+    if (!wrap) return;
+    var hasData = ganaPct != null || pctG != null || pctA1 != null || pctN != null || pctA2 != null;
+    wrap.style.display = hasData ? 'flex' : 'none';
+    if (!hasData) return;
+    function fmtPct(v) { return v != null ? (v).toFixed(2).replace('.', ',') + '%' : '—'; }
+    if (ganaVal) ganaVal.textContent = ganaPct != null ? fmtPct(ganaPct) : '—';
+    var ganaNum = ganaPct != null ? Math.min(100, Math.max(0, ganaPct)) : 0;
+    var ganaCls = ganaNum >= 100 ? 'gana-alto' : ganaNum >= 80 ? 'gana-medio' : 'gana-bajo';
+    if (ganaRing) {
+      ganaRing.innerHTML = '<svg class="calidad-gana-ring-svg" viewBox="0 0 120 120"><path class="calidad-gana-ring-bg" d="M60 10 A50 50 0 1 1 59.99 10"/><path class="calidad-gana-ring-fill ' + ganaCls + '" stroke-dasharray="' + (ganaNum * 3.14) + ' 314" d="M60 10 A50 50 0 1 1 59.99 10"/></svg>';
+    }
+    if (canvas && typeof Chart !== 'undefined') {
+      if (_calidadTotalChartInstance) { _calidadTotalChartInstance.destroy(); _calidadTotalChartInstance = null; }
+      var labels = ['LETRA Gst', 'LETRA A1st', 'LETRA Nst', 'LETRA A2st'];
+      var values = [pctG != null ? pctG : 0, pctA1 != null ? pctA1 : 0, pctN != null ? pctN : 0, pctA2 != null ? pctA2 : 0];
+      var colors = ['rgba(6, 182, 212, 0.85)', 'rgba(6, 182, 212, 0.7)', 'rgba(6, 182, 212, 0.85)', 'rgba(6, 182, 212, 0.7)'];
+      _calidadTotalChartInstance = new Chart(canvas, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: '%',
+            data: values,
+            backgroundColor: colors,
+            borderRadius: 8,
+            borderSkipped: false
+          }]
+        },
+        options: {
+          indexAxis: 'y',
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: function (ctx) { return (ctx.raw || 0).toFixed(2).replace('.', ',') + '%'; }
+              }
+            }
+          },
+          scales: {
+            x: {
+              min: 0,
+              max: 100,
+              grid: { color: 'rgba(255,255,255,0.06)' },
+              ticks: {
+                color: 'rgba(255,255,255,0.6)',
+                callback: function (v) { return v + '%'; }
+              }
+            },
+            y: {
+              grid: { display: false },
+              ticks: { color: 'rgba(255,255,255,0.9)', font: { size: 11, weight: '600' } }
+            }
+          }
+        }
       });
     }
   }
@@ -3014,8 +3445,7 @@
         var val = raw === '' ? null : (parseInt(raw, 10) || null);
         setOverridePorcentaje(agent, col, val);
         flushSave();
-        refreshTablaPorcentaje();
-        refreshTablaCalificaciones();
+        refreshCalidadAll();
       }, true);
       tbl.addEventListener('change', function (e) {
         var sel = e.target.closest('.tabla-pct-pct-sel');
@@ -3028,8 +3458,7 @@
         var val = (v === '' || isNaN(parsed)) ? null : parsed;
         setOverridePorcentaje(agent, col, val);
         flushSave();
-        refreshTablaPorcentaje();
-        refreshTablaCalificaciones();
+        refreshCalidadAll();
       });
       tbl.addEventListener('keydown', function (e) {
         if (e.target.closest('.tabla-pct-editable') && e.key === 'Enter') { e.preventDefault(); e.target.blur(); }
@@ -5178,6 +5607,52 @@
     bindToggle('toggleGestionOperacion', 'gestionOperacionContent', 'integra_gestion_operacion_collapsed');
     bindToggle('toggleCalidad', 'calidadDashboardContent', 'integra_calidad_collapsed');
     bindToggle('toggleFormacion', 'formacionDashboardContent', 'integra_formacion_collapsed');
+    (function () {
+      var btn = $('toggleFormacionFebrero');
+      var section = $('formacionFebreroSection');
+      if (!btn || !section) return;
+      var storageKey = 'integra_formacion_febrero_collapsed';
+      if (localStorage.getItem(storageKey) === '1') {
+        section.classList.add('formacion-febrero-collapsed');
+        btn.classList.add('collapsed');
+      }
+      btn.addEventListener('click', function () {
+        section.classList.toggle('formacion-febrero-collapsed');
+        btn.classList.toggle('collapsed');
+        localStorage.setItem(storageKey, section.classList.contains('formacion-febrero-collapsed') ? '1' : '0');
+      });
+    })();
+    (function () {
+      var btn = $('toggleFormacionMarzo');
+      var section = $('formacionMarzoSection');
+      if (!btn || !section) return;
+      var storageKey = 'integra_formacion_marzo_collapsed';
+      if (localStorage.getItem(storageKey) === '1') {
+        section.classList.add('formacion-marzo-collapsed');
+        btn.classList.add('collapsed');
+      }
+      btn.addEventListener('click', function () {
+        section.classList.toggle('formacion-marzo-collapsed');
+        btn.classList.toggle('collapsed');
+        localStorage.setItem(storageKey, section.classList.contains('formacion-marzo-collapsed') ? '1' : '0');
+      });
+    })();
+    var formacionContent = $('formacionDashboardContent');
+    if (formacionContent && !formacionContent._mesBtnBound) {
+      formacionContent._mesBtnBound = true;
+      formacionContent.addEventListener('click', function (e) {
+        var btn = e.target.closest('.formacion-mes-btn');
+        if (!btn) return;
+        e.preventDefault();
+        var mes = btn.getAttribute('data-mes');
+        var section = mes === 'febrero' ? $('formacionMesFebrero') : $('formacionMesMarzo');
+        if (!section) return;
+        var content = section.querySelector('.dashboard-row1');
+        if (!content) return;
+        var collapsed = section.classList.toggle('formacion-mes-collapsed');
+        content.style.display = collapsed ? 'none' : '';
+      });
+    }
     bindNocRegistroIntermitencia();
     var btnInforme = $('btnDescargarInforme');
     if (btnInforme) btnInforme.addEventListener('click', descargarInforme);
@@ -5878,8 +6353,25 @@
       var overlay = document.getElementById('serverWakingOverlay');
       var RETRY_DELAY_MS = 4000;
       var FETCH_TIMEOUT_MS = 45000;
+      var MAX_RETRIES = 3;
+      var retryCount = 0;
       function showOverlay() { if (overlay) overlay.classList.remove('hidden'); }
       function hideOverlay() { if (overlay) overlay.classList.add('hidden'); }
+      function fallbackToLocalStorage() {
+        hideOverlay();
+        try {
+          var raw = localStorage.getItem(STORAGE);
+          if (raw) {
+            var local = JSON.parse(raw);
+            if (local && typeof local === 'object' && Object.keys(local).length > 0) {
+              setDataFromApi(local);
+              showSaveStatus('Servidor no disponible. Usando datos guardados en el navegador.', true);
+            }
+          }
+        } catch (e) {}
+        init();
+        if (typeof setupRealtimeSync === 'function') setupRealtimeSync();
+      }
       function tryFetch() {
         showOverlay();
         var ctrl = new AbortController();
@@ -5912,7 +6404,12 @@
           })
           .catch(function () {
             clearTimeout(tid);
-            setTimeout(tryFetch, RETRY_DELAY_MS);
+            retryCount++;
+            if (retryCount >= MAX_RETRIES) {
+              fallbackToLocalStorage();
+            } else {
+              setTimeout(tryFetch, RETRY_DELAY_MS);
+            }
           });
       }
       tryFetch();

@@ -329,34 +329,39 @@
             </article>
             <article class="card card-kpi-agentes">
               <h3>Top 5 agentes con más afectaciones</h3>
-              <div class="top5-agentes-wrap" id="top5AgentesWrap"></div>
+              <div class="top5-agentes-wrap" id="top5AgentesWrap">
+                <div class="top5-agentes-chart-wrap" id="top5AgentesChartWrap">
+                  <canvas id="top5AgentesChart"></canvas>
+                </div>
+                <div class="top5-agentes-list" id="top5AgentesList"></div>
+                <div class="top5-agentes-empty" id="top5AgentesEmpty">Sin datos. Registra auditorías en Calidad.</div>
+              </div>
             </article>
           </div>
           <article class="card card-tabla-calificaciones" id="calidadTablaCalificacionesCard">
-            <h3>Tabla de calificaciones por asesor</h3>
+            <h3>Agentes calificados · Afectaciones y notas</h3>
             <div class="tabla-calificaciones-wrap" id="tablaCalificacionesWrap">
               <table class="tabla-calificaciones" id="tablaCalificaciones">
                 <thead>
-                  <tr class="tabla-cal-weights"><th colspan="2"></th><th>25,00%</th><th>20,00%</th><th>35,00%</th><th>20,00%</th><th>100%</th></tr>
-                  <tr><th>Agente</th><th>Q. Mont</th><th>LETRA G</th><th>LETRA A1</th><th>LETRA N</th><th>LETRA A2</th><th>GANA ST</th></tr>
+                  <tr class="tabla-cal-weights"><th></th><th></th><th>25,00%</th><th>20,00%</th><th>35,00%</th><th>20,00%</th><th>100%</th></tr>
+                  <tr class="tabla-cal-head"><th>Agente</th><th>Q. Mont</th><th>-LETRA Gst</th><th>-LETRA A1st</th><th>-LETRA Nst</th><th>-LETRA A2st</th><th>-GANA ST</th></tr>
                 </thead>
                 <tbody id="tablaCalificacionesBody"></tbody>
               </table>
             </div>
-            <p class="tabla-calificaciones-empty" id="tablaCalificacionesEmpty">No hay asesores registrados. Agrega usuarios en Agentes.</p>
-          </article>
-          <article class="card card-tabla-porcentaje" id="calidadTablaPorcentajeCard">
-            <h3>Avance en porcentaje por equipo</h3>
-            <div class="tabla-porcentaje-wrap" id="tablaPorcentajeWrap">
-              <table class="tabla-porcentaje" id="tablaPorcentaje">
-                <thead>
-                  <tr class="tabla-pct-weights"><th></th><th></th><th>25,00%</th><th>20,00%</th><th>35,00%</th><th>20,00%</th><th>100%</th></tr>
-                  <tr class="tabla-pct-head"><th>Campaña</th><th>Q. Mont</th><th>-LETRA Gst</th><th>-LETRA A1st</th><th>-LETRA Nst</th><th>-LETRA A2st</th><th>-GANA ST</th></tr>
-                </thead>
-                <tbody id="tablaPorcentajeBody"></tbody>
-              </table>
+            <p class="tabla-calificaciones-empty" id="tablaCalificacionesEmpty">No hay asesores registrados. Agrega usuarios en Agentes y registra auditorías en Calidad.</p>
+            <div class="calidad-total-chart-wrap" id="calidadTotalChartWrap">
+              <div class="calidad-total-chart-gana" id="calidadTotalChartGana">
+                <div class="calidad-total-gana-ring" id="calidadTotalGanaRing"></div>
+                <div class="calidad-total-gana-center">
+                  <span class="calidad-total-gana-val" id="calidadTotalGanaVal">—</span>
+                  <span class="calidad-total-gana-label">GANA ST</span>
+                </div>
+              </div>
+              <div class="calidad-total-chart-bars">
+                <canvas id="calidadTotalChartCanvas"></canvas>
+              </div>
             </div>
-            <p class="tabla-porcentaje-empty" id="tablaPorcentajeEmpty">No hay datos. Registra auditorías en Calidad.</p>
           </article>
           <div class="calidad-tendencia" id="calidadTendenciaWrap"></div>
         </div>
@@ -379,59 +384,153 @@
           </button>
         </div>
         <div id="formacionDashboardContent">
-        <!-- Fila 1: Nota certificación | Certificación Mensual | Cobertura -->
-        <div class="dashboard-row1">
-          <div class="kpi-group kpi-group-teal">
-            <h3 class="kpi-group-title">Nota de certificación</h3>
-            <div class="kpi-row">
-              <div class="kpi-box">
-                <span class="kpi-val" id="kpiCertAprobados">25</span>
-                <span class="kpi-label">Aprobados</span>
-              </div>
-              <div class="kpi-box">
-                <span class="kpi-val" id="kpiCertReprobados">3</span>
-                <span class="kpi-label">Reprobados</span>
-              </div>
-              <div class="kpi-box">
-                <span class="kpi-val" id="kpiCertCobertura">65 %</span>
-                <span class="kpi-label">Cobertura</span>
-              </div>
-            </div>
-            <div class="sparkline-wrap" id="sparkCert">
-              <svg class="sparkline" viewBox="0 0 200 50" preserveAspectRatio="none">
-                <line class="sparkline-reference" x1="0" y1="25" x2="200" y2="25" stroke="#f472b6" stroke-width="1" stroke-dasharray="4 2" stroke-opacity="0.9"/>
-                <polyline fill="none" stroke="var(--integra-cyan)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
+        <!-- Febrero -->
+        <div class="formacion-mes-section" id="formacionMesFebrero">
+          <div class="formacion-mes-header">
+            <h3 class="formacion-mes-titulo">Febrero</h3>
+            <div class="formacion-mes-iconos">
+              <button type="button" class="formacion-mes-btn formacion-mes-btn-plus" data-mes="febrero" aria-label="Expandir">+</button>
             </div>
           </div>
-          <div class="panel-aprobacion panel-aprobacion-futuro">
-            <h3>Certificación Mensual</h3>
-            <div class="aprobacion-futuro-grid">
-              <div class="aprobacion-col-izq">
-                <div class="aprobacion-tasa-num" id="aprobacionTasaNum">80.6%</div>
-                <div class="aprobacion-tasa-label">Tasa de Aprobación</div>
-                <ul class="aprobacion-lista">
-                  <li><span class="aprobacion-icon aprobacion-icon-rose"></span><span id="leyendaReprobo">Reprobó 2</span></li>
-                  <li><span class="aprobacion-icon aprobacion-icon-orange"></span><span id="leyendaNovedades">Novedades 4</span></li>
-                  <li><span class="aprobacion-icon aprobacion-icon-total"></span><span id="leyendaTotalEval">Total evaluados 31</span></li>
-                </ul>
+          <div class="dashboard-row1">
+            <div class="kpi-group kpi-group-teal">
+              <h3 class="kpi-group-title">Nota de certificación</h3>
+              <div class="kpi-row">
+                <div class="kpi-box">
+                  <span class="kpi-val" id="kpiCertAprobados">25</span>
+                  <span class="kpi-label">Aprobados</span>
+                </div>
+                <div class="kpi-box">
+                  <span class="kpi-val" id="kpiCertReprobados">3</span>
+                  <span class="kpi-label">Reprobados</span>
+                </div>
+                <div class="kpi-box">
+                  <span class="kpi-val" id="kpiCertCobertura">65 %</span>
+                  <span class="kpi-label">Cobertura</span>
+                </div>
+                <div class="kpi-box">
+                  <span class="kpi-val" id="kpiCertPersonalFaltante">11</span>
+                  <span class="kpi-label">Personal faltante</span>
+                </div>
               </div>
-              <div class="aprobacion-col-der">
-                <div class="pie-aprobacion-wrap-futuro">
-                  <div class="pie-aprobacion pie-aprobacion-futuro" id="pieAprobacion" role="img" aria-label="Certificación mensual"></div>
-                  <div class="pie-aprobacion-center">
-                    <span class="pie-aprobacion-val" id="pieAprobacionVal">80.6%</span>
-                    <span class="pie-aprobacion-label">Tasa de Aprobación</span>
+              <div class="sparkline-wrap" id="sparkCert">
+                <svg class="sparkline" viewBox="0 0 200 50" preserveAspectRatio="none">
+                  <line class="sparkline-reference" x1="0" y1="25" x2="200" y2="25" stroke="#f472b6" stroke-width="1" stroke-dasharray="4 2" stroke-opacity="0.9"/>
+                  <polyline fill="none" stroke="var(--integra-cyan)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+            </div>
+            <div class="panel-aprobacion panel-aprobacion-futuro">
+              <h3>Certificación Mensual</h3>
+              <div class="aprobacion-futuro-grid">
+                <div class="aprobacion-col-izq">
+                  <div class="aprobacion-tasa-num" id="aprobacionTasaNum">80.6%</div>
+                  <div class="aprobacion-tasa-label">Cobertura</div>
+                  <ul class="aprobacion-lista">
+                    <li><span class="aprobacion-icon aprobacion-icon-rose"></span><span id="leyendaReprobo">Reprobó 2</span></li>
+                    <li><span class="aprobacion-icon aprobacion-icon-orange"></span><span id="leyendaNovedades">Novedades 4</span></li>
+                    <li><span class="aprobacion-icon aprobacion-icon-total"></span><span id="leyendaTotalEval">Total evaluados 31</span></li>
+                  </ul>
+                </div>
+                <div class="aprobacion-col-der">
+                  <div class="pie-aprobacion-wrap-futuro">
+                    <div class="pie-aprobacion pie-aprobacion-futuro" id="pieAprobacion" role="img" aria-label="Certificación mensual"></div>
+                    <div class="pie-aprobacion-center">
+                      <span class="pie-aprobacion-val" id="pieAprobacionVal">80.6%</span>
+                      <span class="pie-aprobacion-label">Cobertura</span>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-            <div class="aprobacion-footer">
-              <span class="leyenda-item"><i class="leyenda-dot" style="background:var(--integra-rose)"></i> <span id="leyendaReproboFooter">Reprobó 2</span></span>
-              <span class="leyenda-item"><i class="leyenda-dot" style="background:var(--integra-orange)"></i> <span id="leyendaNovedadesFooter">Novedades 4</span></span>
-              <span class="leyenda-item"><i class="leyenda-dot" style="background:var(--integra-text-muted)"></i> <span id="leyendaTotalFooter">Total evaluados 31</span></span>
+              <div class="aprobacion-footer">
+                <span class="leyenda-item"><i class="leyenda-dot" style="background:var(--integra-rose)"></i> <span id="leyendaReproboFooter">Reprobó 2</span></span>
+                <span class="leyenda-item"><i class="leyenda-dot" style="background:var(--integra-orange)"></i> <span id="leyendaNovedadesFooter">Novedades 4</span></span>
+                <span class="leyenda-item"><i class="leyenda-dot" style="background:var(--integra-text-muted)"></i> <span id="leyendaTotalFooter">Total evaluados 31</span></span>
+              </div>
             </div>
           </div>
+        </div>
+
+        <!-- Marzo -->
+        <div class="formacion-mes-section" id="formacionMesMarzo">
+          <div class="formacion-mes-header">
+            <h3 class="formacion-mes-titulo">Marzo</h3>
+            <div class="formacion-mes-iconos">
+              <button type="button" class="formacion-mes-btn formacion-mes-btn-plus" data-mes="marzo" aria-label="Expandir">+</button>
+            </div>
+          </div>
+          <div class="dashboard-row1">
+            <div class="kpi-group kpi-group-teal">
+              <h3 class="kpi-group-title">Nota de certificación</h3>
+              <div class="kpi-row">
+                <div class="kpi-box">
+                  <span class="kpi-val" id="kpiCertAprobadosMarzo">—</span>
+                  <span class="kpi-label">Aprobados</span>
+                </div>
+                <div class="kpi-box">
+                  <span class="kpi-val" id="kpiCertReprobadosMarzo">—</span>
+                  <span class="kpi-label">Reprobados</span>
+                </div>
+                <div class="kpi-box">
+                  <span class="kpi-val" id="kpiCertCoberturaMarzo">—</span>
+                  <span class="kpi-label">Cobertura</span>
+                </div>
+                <div class="kpi-box">
+                  <span class="kpi-val" id="kpiCertPersonalFaltanteMarzo">—</span>
+                  <span class="kpi-label">Personal faltante</span>
+                </div>
+              </div>
+              <div class="sparkline-wrap" id="sparkCertMarzo">
+                <svg class="sparkline" viewBox="0 0 200 50" preserveAspectRatio="none">
+                  <line class="sparkline-reference" x1="0" y1="25" x2="200" y2="25" stroke="#f472b6" stroke-width="1" stroke-dasharray="4 2" stroke-opacity="0.9"/>
+                  <polyline fill="none" stroke="var(--integra-cyan)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+            </div>
+            <div class="panel-aprobacion panel-aprobacion-futuro">
+              <h3>Certificación Mensual</h3>
+              <div class="aprobacion-futuro-grid">
+                <div class="aprobacion-col-izq">
+                  <div class="aprobacion-tasa-num" id="aprobacionTasaNumMarzo">—</div>
+                  <div class="aprobacion-tasa-label">Cobertura</div>
+                  <ul class="aprobacion-lista">
+                    <li><span class="aprobacion-icon aprobacion-icon-rose"></span><span id="leyendaReproboMarzo">Reprobó —</span></li>
+                    <li><span class="aprobacion-icon aprobacion-icon-orange"></span><span id="leyendaNovedadesMarzo">Novedades —</span></li>
+                    <li><span class="aprobacion-icon aprobacion-icon-total"></span><span id="leyendaTotalEvalMarzo">Total evaluados —</span></li>
+                  </ul>
+                </div>
+                <div class="aprobacion-col-der">
+                  <div class="pie-aprobacion-wrap-futuro">
+                    <div class="pie-aprobacion pie-aprobacion-futuro" id="pieAprobacionMarzo" role="img" aria-label="Certificación mensual Marzo" style="background: conic-gradient(var(--integra-border) 0deg 360deg)"></div>
+                    <div class="pie-aprobacion-center">
+                      <span class="pie-aprobacion-val" id="pieAprobacionValMarzo">—</span>
+                      <span class="pie-aprobacion-label">Cobertura</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="aprobacion-footer">
+                <span class="leyenda-item"><i class="leyenda-dot" style="background:var(--integra-rose)"></i> <span id="leyendaReproboFooterMarzo">Reprobó —</span></span>
+                <span class="leyenda-item"><i class="leyenda-dot" style="background:var(--integra-orange)"></i> <span id="leyendaNovedadesFooterMarzo">Novedades —</span></span>
+                <span class="leyenda-item"><i class="leyenda-dot" style="background:var(--integra-text-muted)"></i> <span id="leyendaTotalFooterMarzo">Total evaluados —</span></span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Cobertura por mes (Inicio) -->
+        <div class="formacion-resultados-mensuales-card" id="formacionResultadosMensualesCardInicio">
+          <h3>Cobertura por mes</h3>
+          <div class="formacion-mensual-chart-caja">
+            <div class="formacion-mensual-chart-ejes">
+              <span class="formacion-chart-eje-y">Cobertura (%)</span>
+              <div class="formacion-mensual-chart-wrap" id="formacionMensualChartWrapInicio">
+                <canvas id="formacionMensualChartInicio"></canvas>
+              </div>
+            </div>
+            <span class="formacion-chart-eje-x">Mes</span>
+          </div>
+          <p class="formacion-chart-mejor" id="formacionChartMejorInicio">—</p>
         </div>
 
         <!-- Fila 2: Estatus del preturno + Promedio -->
@@ -892,37 +991,104 @@
           <h2>Formación</h2>
           <p>Planta, cobertura y resultados de formación</p>
         </div>
-        <div class="formacion-tables">
-          <div class="formacion-table-card">
-            <h3>Alcance</h3>
-            <table class="formacion-table">
-              <tr><th>Planta Total</th><td class="editable" contenteditable="true" data-key="plantaTotal" id="formPlantaTotal">35</td></tr>
-              <tr><th>Público Objetivo</th><td class="editable" contenteditable="true" data-key="publicoObjetivo" id="formPublicoObjetivo">31</td></tr>
-            </table>
+        <div class="formacion-febrero-section" id="formacionFebreroSection">
+          <div class="formacion-febrero-header">
+            <h3 class="formacion-febrero-titulo">Febrero</h3>
+            <button type="button" class="formacion-mes-btn formacion-mes-btn-toggle" id="toggleFormacionFebrero" aria-label="Expandir o minimizar" title="Expandir/Minimizar">
+              <svg class="icon-expand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+              <svg class="icon-collapse" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/></svg>
+            </button>
           </div>
-          <div class="formacion-table-card">
-            <h3>Asistencia</h3>
-            <table class="formacion-table">
-              <tr><th>Presentó</th><td class="editable" contenteditable="true" data-key="presento" id="formPresento">20</td><td id="formPresentoPct">65 %</td></tr>
-              <tr><th>Pendiente</th><td class="editable" contenteditable="true" data-key="pendiente" id="formPendiente">11</td><td></td></tr>
-              <tr><th>Cobertura</th><td colspan="2" id="formCobertura">65 %</td></tr>
-            </table>
+          <div class="formacion-febrero-content" id="formacionFebreroContent">
+          <div class="formacion-tables">
+            <div class="formacion-table-card">
+              <h3>Alcance</h3>
+              <table class="formacion-table">
+                <tr><th>Planta Total</th><td class="editable" contenteditable="true" data-key="plantaTotal" id="formPlantaTotal">35</td></tr>
+                <tr><th>Público Objetivo</th><td class="editable" contenteditable="true" data-key="publicoObjetivo" id="formPublicoObjetivo">31</td></tr>
+              </table>
+            </div>
+            <div class="formacion-table-card">
+              <h3>Asistencia</h3>
+              <table class="formacion-table">
+                <tr><th>Presentó</th><td class="editable" contenteditable="true" data-key="presento" id="formPresento">20</td><td id="formPresentoPct">65 %</td></tr>
+                <tr><th>Pendiente</th><td class="editable" contenteditable="true" data-key="pendiente" id="formPendiente">11</td><td></td></tr>
+                <tr><th>Cobertura</th><td colspan="2" id="formCobertura">65 %</td></tr>
+              </table>
+            </div>
+            <div class="formacion-table-card">
+              <h3>Resultados</h3>
+              <table class="formacion-table">
+                <tr><th>Aprobó <span class="formacion-base-hint">(% s/ Presentó)</span></th><td class="editable" contenteditable="true" data-key="aprobo" id="formaprobo">18</td><td id="formaproboPct">90 %</td></tr>
+                <tr><th>Reprobó <span class="formacion-base-hint">(% s/ Presentó)</span></th><td class="editable" contenteditable="true" data-key="reprobo" id="formReprobo">2</td><td id="formReproboPct">10 %</td></tr>
+                <tr><th>Novedades <span class="formacion-base-hint">(% s/ Público Objetivo)</span></th><td class="editable" contenteditable="true" data-key="novedades" id="formNovedades">4</td><td id="formNovedadesPct">13 %</td></tr>
+              </table>
+            </div>
           </div>
-          <div class="formacion-table-card">
-            <h3>Resultados</h3>
-            <table class="formacion-table">
-              <tr><th>Aprobó <span class="formacion-base-hint">(% s/ Presentó)</span></th><td class="editable" contenteditable="true" data-key="aprobo" id="formaprobo">18</td><td id="formaproboPct">90 %</td></tr>
-              <tr><th>Reprobó <span class="formacion-base-hint">(% s/ Presentó)</span></th><td class="editable" contenteditable="true" data-key="reprobo" id="formReprobo">2</td><td id="formReproboPct">10 %</td></tr>
-              <tr><th>Novedades <span class="formacion-base-hint">(% s/ Público Objetivo)</span></th><td class="editable" contenteditable="true" data-key="novedades" id="formNovedades">4</td><td id="formNovedadesPct">13 %</td></tr>
-            </table>
+          <div class="formacion-cobertura-panel">
+            <h3>Cobertura</h3>
+            <div class="cobertura-ring-wrap">
+              <div class="cobertura-ring" id="coberturaRing" style="--pct:65"></div>
+              <span class="cobertura-valor" id="coberturaValor">65 %</span>
+            </div>
+          </div>
           </div>
         </div>
-        <div class="formacion-cobertura-panel">
-          <h3>Cobertura</h3>
-          <div class="cobertura-ring-wrap">
-            <div class="cobertura-ring" id="coberturaRing" style="--pct:65"></div>
-            <span class="cobertura-valor" id="coberturaValor">65 %</span>
+        <div class="formacion-marzo-section" id="formacionMarzoSection">
+          <div class="formacion-febrero-header">
+            <h3 class="formacion-febrero-titulo">Marzo</h3>
+            <button type="button" class="formacion-mes-btn formacion-mes-btn-toggle" id="toggleFormacionMarzo" aria-label="Expandir o minimizar" title="Expandir/Minimizar">
+              <svg class="icon-expand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+              <svg class="icon-collapse" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/></svg>
+            </button>
           </div>
+          <div class="formacion-febrero-content" id="formacionMarzoContent">
+          <div class="formacion-tables">
+            <div class="formacion-table-card">
+              <h3>Alcance</h3>
+              <table class="formacion-table">
+                <tr><th>Planta Total</th><td class="editable" contenteditable="true" data-key="plantaTotalMarzo" id="formPlantaTotalMarzo">—</td></tr>
+                <tr><th>Público Objetivo</th><td class="editable" contenteditable="true" data-key="publicoObjetivoMarzo" id="formPublicoObjetivoMarzo">—</td></tr>
+              </table>
+            </div>
+            <div class="formacion-table-card">
+              <h3>Asistencia</h3>
+              <table class="formacion-table">
+                <tr><th>Presentó</th><td class="editable" contenteditable="true" data-key="presentoMarzo" id="formPresentoMarzo">—</td><td id="formPresentoPctMarzo">—</td></tr>
+                <tr><th>Pendiente</th><td class="editable" contenteditable="true" data-key="pendienteMarzo" id="formPendienteMarzo">—</td><td></td></tr>
+                <tr><th>Cobertura</th><td colspan="2" id="formCoberturaMarzo">—</td></tr>
+              </table>
+            </div>
+            <div class="formacion-table-card">
+              <h3>Resultados</h3>
+              <table class="formacion-table">
+                <tr><th>Aprobó <span class="formacion-base-hint">(% s/ Presentó)</span></th><td class="editable" contenteditable="true" data-key="aproboMarzo" id="formaproboMarzo">—</td><td id="formaproboPctMarzo">—</td></tr>
+                <tr><th>Reprobó <span class="formacion-base-hint">(% s/ Presentó)</span></th><td class="editable" contenteditable="true" data-key="reproboMarzo" id="formReproboMarzo">—</td><td id="formReproboPctMarzo">—</td></tr>
+                <tr><th>Novedades <span class="formacion-base-hint">(% s/ Público Objetivo)</span></th><td class="editable" contenteditable="true" data-key="novedadesMarzo" id="formNovedadesMarzo">—</td><td id="formNovedadesPctMarzo">—</td></tr>
+              </table>
+            </div>
+          </div>
+          <div class="formacion-cobertura-panel">
+            <h3>Cobertura</h3>
+            <div class="cobertura-ring-wrap">
+              <div class="cobertura-ring" id="coberturaRingMarzo" style="--pct:0; background: conic-gradient(var(--integra-border) 0deg 360deg)"></div>
+              <span class="cobertura-valor" id="coberturaValorMarzo">—</span>
+            </div>
+          </div>
+          </div>
+        </div>
+        <div class="formacion-resultados-mensuales-card" id="formacionResultadosMensualesCard">
+          <h3>Cobertura por mes</h3>
+          <div class="formacion-mensual-chart-caja">
+            <div class="formacion-mensual-chart-ejes">
+              <span class="formacion-chart-eje-y">Cobertura (%)</span>
+              <div class="formacion-mensual-chart-wrap" id="formacionMensualChartWrap">
+                <canvas id="formacionMensualChart"></canvas>
+              </div>
+            </div>
+            <span class="formacion-chart-eje-x">Mes</span>
+          </div>
+          <p class="formacion-chart-mejor" id="formacionChartMejor">—</p>
         </div>
         <div class="formacion-staff-card">
           <h3>Estatus de Staff</h3>
