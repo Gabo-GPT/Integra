@@ -5691,6 +5691,18 @@
     var formacionContent = $('formacionDashboardContent');
     if (formacionContent && !formacionContent._mesBtnBound) {
       formacionContent._mesBtnBound = true;
+      ['febrero', 'marzo'].forEach(function (mes) {
+        var section = mes === 'febrero' ? $('formacionMesFebrero') : $('formacionMesMarzo');
+        if (!section) return;
+        var storageKey = 'integra_formacion_mes_' + mes + '_collapsed';
+        if (localStorage.getItem(storageKey) === '1') {
+          section.classList.add('formacion-mes-collapsed');
+          var c = section.querySelector('.dashboard-row1');
+          if (c) c.style.display = 'none';
+          var b = section.querySelector('.formacion-mes-btn');
+          if (b) b.textContent = '+';
+        }
+      });
       formacionContent.addEventListener('click', function (e) {
         var btn = e.target.closest('.formacion-mes-btn');
         if (!btn) return;
@@ -5702,6 +5714,8 @@
         if (!content) return;
         var collapsed = section.classList.toggle('formacion-mes-collapsed');
         content.style.display = collapsed ? 'none' : '';
+        btn.textContent = collapsed ? '+' : '−';
+        try { localStorage.setItem('integra_formacion_mes_' + mes + '_collapsed', collapsed ? '1' : '0'); } catch (err) {}
       });
     }
     bindNocRegistroIntermitencia();

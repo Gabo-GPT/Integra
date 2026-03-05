@@ -876,6 +876,10 @@ body {
   align-items: stretch;
 }
 #formacionDashboardContent .dashboard-row1 { margin-bottom: 2.5rem; }
+#formacionDashboardContent { font-size: 1.2rem; }
+#formacionDashboardContent .formacion-mes-titulo { font-size: 1.15rem; }
+#formacionDashboardContent .formacion-resultados-mensuales-card h3,
+#formacionDashboardContent .fdf-diagnosticador-card h3 { font-size: 1.1rem; }
 @media (max-width: 900px) {
   .dashboard-row1 { grid-template-columns: 1fr; }
 }
@@ -3298,6 +3302,10 @@ body {
   margin-top: 1.5rem;
   padding-top: 1.25rem;
   border-top: 1px solid var(--integra-border);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 .fdf-chart-title {
   margin: 0 0 1rem;
@@ -3310,6 +3318,7 @@ body {
 .fdf-capacitacion-chart-row {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 2rem;
   flex-wrap: wrap;
 }
