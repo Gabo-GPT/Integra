@@ -467,24 +467,6 @@ body {
   margin: 0;
   font-size: 0.9rem;
   color: var(--integra-text-muted);
-  text-align: center;
-  max-width: 320px;
-}
-.server-waking-btn {
-  margin-top: 0.5rem;
-  padding: 0.6rem 1.2rem;
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: var(--integra-cyan);
-  background: transparent;
-  border: 1px solid var(--integra-cyan);
-  border-radius: var(--integra-radius);
-  cursor: pointer;
-  transition: background 0.2s, color 0.2s;
-}
-.server-waking-btn:hover {
-  background: rgba(34, 211, 238, 0.15);
-  color: var(--integra-text);
 }
 
 .login-card {
