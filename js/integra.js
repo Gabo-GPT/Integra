@@ -6416,30 +6416,46 @@
   function start() {
     if (API_URL) {
       var overlay = document.getElementById('serverWakingOverlay');
-      var RETRY_DELAY_MS = 4000;
-      var FETCH_TIMEOUT_MS = 45000;
-      var MAX_RETRIES = 3;
+      var RETRY_DELAY_MS = 6000;
+      var FETCH_TIMEOUT_MS = 60000;
+      var MAX_RETRIES = 5;
       var retryCount = 0;
-      function showOverlay() { if (overlay) overlay.classList.remove('hidden'); }
-      function hideOverlay() { if (overlay) overlay.classList.add('hidden'); }
+      var _abortFetch = null;
+      function showOverlay() {
+        if (overlay) { overlay.classList.remove('hidden'); overlay.style.display = 'flex'; }
+      }
+      function hideOverlay() {
+        if (overlay) { overlay.classList.add('hidden'); overlay.style.display = 'none'; }
+      }
       function fallbackToLocalStorage() {
         hideOverlay();
+        var hadLocal = false;
         try {
           var raw = localStorage.getItem(STORAGE);
           if (raw) {
             var local = JSON.parse(raw);
             if (local && typeof local === 'object' && Object.keys(local).length > 0) {
               setDataFromApi(local);
+              hadLocal = true;
               showSaveStatus('Servidor no disponible. Usando datos guardados en el navegador.', true);
             }
           }
+          if (!hadLocal) showSaveStatus('Sin conexión. Los datos se guardarán solo en este navegador.', true);
         } catch (e) {}
         init();
         if (typeof setupRealtimeSync === 'function') setupRealtimeSync();
       }
+      var useLocalBtn = document.getElementById('serverWakingUseLocal');
+      if (useLocalBtn) {
+        useLocalBtn.addEventListener('click', function () {
+          if (_abortFetch) _abortFetch.abort();
+          fallbackToLocalStorage();
+        });
+      }
       function tryFetch() {
         showOverlay();
         var ctrl = new AbortController();
+        _abortFetch = ctrl;
         var tid = setTimeout(function () { ctrl.abort(); }, FETCH_TIMEOUT_MS);
         fetch(getApiDataUrl(true), { signal: ctrl.signal, cache: 'no-store' })
           .then(function (r) {
@@ -6449,6 +6465,7 @@
           })
           .then(function (d) {
             hideOverlay();
+            _abortFetch = null;
             var parsed = d && typeof d === 'object' ? d : {};
             if (parsed.data && typeof parsed.data === 'object') parsed = parsed.data;
             var serverEmpty = Object.keys(parsed).length === 0;
@@ -6469,6 +6486,7 @@
           })
           .catch(function () {
             clearTimeout(tid);
+            _abortFetch = null;
             retryCount++;
             if (retryCount >= MAX_RETRIES) {
               fallbackToLocalStorage();

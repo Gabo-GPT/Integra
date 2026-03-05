@@ -51,7 +51,12 @@
   </div>
 
   <div id="serverWakingOverlay" class="server-waking-overlay hidden" role="status" aria-live="polite" style="display:none">
-    <!-- Modo local: no se usa -->
+    <div class="server-waking-card">
+      <div class="server-waking-spinner" aria-hidden="true"></div>
+      <p class="server-waking-text">Conectando con el servidor…</p>
+      <p class="server-waking-hint">En Render el servidor puede tardar ~1 min en iniciar. Reintentando automáticamente.</p>
+      <button type="button" class="server-waking-btn" id="serverWakingUseLocal">Usar datos locales (continuar sin conexión)</button>
+    </div>
   </div>
 
   <aside class="sidebar">
