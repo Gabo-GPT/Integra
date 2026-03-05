@@ -5912,6 +5912,7 @@
       }
     });
     var btnBackup = $('btnBackupDescargar');
+    var btnBackupPortable = $('btnBackupPortable');
     var btnBackupCopiar = $('btnBackupCopiar');
     var btnBackupPegar = $('btnBackupPegar');
     var inputBackup = $('perfilBackupFile');
@@ -5928,6 +5929,23 @@
       }
       return backup;
     }
+    if (btnBackupPortable) btnBackupPortable.addEventListener('click', function () {
+      try {
+        var backup = buildBackupData();
+        var json = JSON.stringify(backup);
+        var base64 = btoa(unescape(encodeURIComponent(json)));
+        var html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Integra - Cargar datos</title></head><body><p>Cargando datos...</p><script>(function(){try{var b=JSON.parse(decodeURIComponent(escape(atob("' + base64 + '"))));if(b&&b.data&&b.app==="Integra"){for(var k in b.data)try{localStorage.setItem(k,b.data[k]);}catch(e){} window.location.replace("index.html");}else{document.body.innerHTML="<p>Datos no válidos.</p>";}}catch(e){document.body.innerHTML="<p>Error: "+e.message+"</p>";}})();</script><p>Si no redirige, <a href="index.html">haz clic aquí</a></p></body></html>';
+        var blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+        var a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'integra-datos.html';
+        a.click();
+        URL.revokeObjectURL(a.href);
+        if (msgBackup) { msgBackup.textContent = 'Descargado integra-datos.html. Guárdalo en la carpeta integra-local, copia toda la carpeta al otro PC y abre integra-datos.html primero.'; msgBackup.style.color = 'var(--integra-success)'; }
+      } catch (e) {
+        if (msgBackup) { msgBackup.textContent = 'Error: ' + (e.message || 'desconocido'); msgBackup.style.color = 'var(--integra-rose)'; }
+      }
+    });
     if (btnBackupCopiar) btnBackupCopiar.addEventListener('click', function () {
       try {
         var backup = buildBackupData();

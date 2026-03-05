@@ -1447,9 +1447,13 @@
         </div>
         <div class="portal-card">
           <h3 class="portal-card-title">Backup y restauración</h3>
-          <p class="portal-card-desc">Descarga un archivo HTML con proyecto y datos. Al abrirlo en el navegador verás todo integrado. También puedes restaurar desde HTML o JSON.</p>
+          <p class="portal-card-desc">Para copiar la carpeta a otro PC con todos los datos: 1) Guarda "Datos para copiar" y pon el archivo en esta carpeta. 2) Copia toda la carpeta. 3) En el otro PC abre primero <code>integra-datos.html</code>.</p>
           <div class="perfil-backup-actions">
-            <button type="button" class="portal-btn portal-btn-primary" id="btnBackupDescargar">
+            <button type="button" class="portal-btn portal-btn-primary" id="btnBackupPortable" title="Guarda integra-datos.html en esta carpeta. Luego copia toda la carpeta al otro PC y abre integra-datos.html primero.">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Datos para copiar
+            </button>
+            <button type="button" class="portal-btn portal-btn-secondary" id="btnBackupDescargar">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
               Descargar backup HTML
             </button>
